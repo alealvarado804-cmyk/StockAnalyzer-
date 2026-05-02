@@ -1,6 +1,6 @@
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
-// StockLens v1.0 — Stock Analysis App
+// StockLens v2.0 — Stock Analysis App
 // Stack: React 18 UMD · Financial Modeling Prep API
 // No imports — global React from CDN, pre-compiled by Babel
 // ============================================================
@@ -8,11 +8,11 @@ function _extends() { return _extends = Object.assign ? Object.assign.bind() : f
 const {
   useState,
   useCallback,
-  useMemo
+  useMemo,
+  useRef,
+  useEffect
 } = React;
 const DEFAULT_FMP_KEY = 'wXLMidktyQfzS8ADy4HvUyR6yaWKtqS2';
-
-// ─── FORMATTERS ─────────────────────────────────────────────
 const ok = v => v != null && !isNaN(v) && isFinite(v);
 const fmt = {
   pct: (v, d = 1) => ok(v) ? `${(v * 100).toFixed(d)}%` : '—',
@@ -23,69 +23,117 @@ const fmt = {
     if (!ok(v)) return '—';
     const a = Math.abs(v),
       s = v < 0 ? '-' : '';
-    if (a >= 1e12) return `${s}$${(a / 1e12).toFixed(2)}T`;
-    if (a >= 1e9) return `${s}$${(a / 1e9).toFixed(1)}B`;
-    if (a >= 1e6) return `${s}$${(a / 1e6).toFixed(1)}M`;
-    return `${s}$${a.toFixed(0)}`;
+    return a >= 1e12 ? `${s}$${(a / 1e12).toFixed(2)}T` : a >= 1e9 ? `${s}$${(a / 1e9).toFixed(1)}B` : a >= 1e6 ? `${s}$${(a / 1e6).toFixed(1)}M` : `${s}$${a.toFixed(0)}`;
   },
   ndx: v => ok(v) ? v < 0 ? `${v.toFixed(1)}x (net cash)` : `${v.toFixed(1)}x` : '—'
 };
+const SECTOR_BM = {
+  'Technology': {
+    pe: 28,
+    ev: 18,
+    gm: 0.55,
+    roic: 0.18
+  },
+  'Healthcare': {
+    pe: 22,
+    ev: 14,
+    gm: 0.60,
+    roic: 0.12
+  },
+  'Consumer Discretionary': {
+    pe: 20,
+    ev: 12,
+    gm: 0.35,
+    roic: 0.14
+  },
+  'Consumer Staples': {
+    pe: 18,
+    ev: 12,
+    gm: 0.38,
+    roic: 0.16
+  },
+  'Energy': {
+    pe: 12,
+    ev: 7,
+    gm: 0.30,
+    roic: 0.10
+  },
+  'Financials': {
+    pe: 12,
+    ev: null,
+    gm: null,
+    roic: 0.10
+  },
+  'Financial Services': {
+    pe: 12,
+    ev: null,
+    gm: null,
+    roic: 0.10
+  },
+  'Industrials': {
+    pe: 18,
+    ev: 12,
+    gm: 0.30,
+    roic: 0.12
+  },
+  'Utilities': {
+    pe: 15,
+    ev: 10,
+    gm: 0.45,
+    roic: 0.07
+  }
+};
+
+// ─── TECHNICAL ──────────────────────────────────────────────
+function computeRSI(prices, period = 14) {
+  if (!prices || prices.length < period + 1) return null;
+  const ch = prices.slice(1).map((p, i) => p - prices[i]);
+  let ag = 0,
+    al = 0;
+  ch.slice(0, period).forEach(c => {
+    if (c > 0) ag += c;else al += Math.abs(c);
+  });
+  ag /= period;
+  al /= period;
+  for (let i = period; i < ch.length; i++) {
+    const c = ch[i];
+    ag = (ag * (period - 1) + Math.max(0, c)) / period;
+    al = (al * (period - 1) + Math.max(0, -c)) / period;
+  }
+  return al === 0 ? 100 : 100 - 100 / (1 + ag / al);
+}
+function computeSMA(prices, period) {
+  if (!prices || prices.length < period) return null;
+  return prices.slice(-period).reduce((a, b) => a + b, 0) / period;
+}
 
 // ─── SCORING ────────────────────────────────────────────────
-function calcScores(metrics, ratios, history) {
+function calcScores(metrics, ratios, history, stmts) {
   let val = 0,
     hlth = 0,
-    mom = 0;
+    mom = 0,
+    growth = 0;
   if (metrics && ratios) {
-    const pe = metrics.peRatioTTM;
-    const ev = metrics.enterpriseValueOverEBITDATTM;
-    const pfcf = metrics.pfcfRatioTTM;
-    const fvr = ratios.priceFairValueTTM;
-    const gm = ratios.grossProfitMarginTTM;
-    const roic = metrics.roicTTM;
-    const nd = metrics.netDebtToEBITDATTM;
-    const roe = metrics.roeTTM;
-    const ic = metrics.interestCoverageTTM;
-
-    // P/E (0–12 pts)
-    if (ok(pe) && pe > 0) {
-      if (pe < 12) val += 12;else if (pe < 18) val += 10;else if (pe < 25) val += 8;else if (pe < 35) val += 5;else if (pe < 50) val += 3;else val += 1;
-    }
-    // EV/EBITDA (0–9 pts)
-    if (ok(ev) && ev > 0) {
-      if (ev < 8) val += 9;else if (ev < 12) val += 7;else if (ev < 18) val += 5;else if (ev < 25) val += 3;else if (ev < 35) val += 1;
-    }
-    // P/FCF (0–9 pts)
-    if (ok(pfcf) && pfcf > 0) {
-      if (pfcf < 12) val += 9;else if (pfcf < 20) val += 7;else if (pfcf < 28) val += 5;else if (pfcf < 40) val += 2;else val += 1;
-    }
-    // Fair Value ratio (0–5 pts)
-    if (ok(fvr)) {
-      if (fvr < 0.85) val += 5;else if (fvr < 1.00) val += 4;else if (fvr < 1.15) val += 2;else if (fvr < 1.30) val += 1;
-    }
-    val = Math.min(35, val);
-
-    // Gross Margin (0–8 pts)
-    if (ok(gm)) {
-      if (gm >= 0.65) hlth += 8;else if (gm >= 0.45) hlth += 7;else if (gm >= 0.30) hlth += 5;else if (gm >= 0.15) hlth += 3;else if (gm >= 0.05) hlth += 1;
-    }
-    // ROIC (0–8 pts)
-    if (ok(roic)) {
-      if (roic >= 0.25) hlth += 8;else if (roic >= 0.18) hlth += 7;else if (roic >= 0.12) hlth += 5;else if (roic >= 0.06) hlth += 3;else if (roic >= 0) hlth += 1;
-    }
-    // Net Debt/EBITDA (0–8 pts)
-    if (ok(nd)) {
-      if (nd < -1.0) hlth += 8;else if (nd < 0) hlth += 7;else if (nd < 0.5) hlth += 6;else if (nd < 1.5) hlth += 4;else if (nd < 2.5) hlth += 2;else if (nd < 4) hlth += 1;
-    }
-    // ROE (0–6 pts)
-    if (ok(roe)) {
-      if (roe >= 0.35) hlth += 6;else if (roe >= 0.20) hlth += 5;else if (roe >= 0.12) hlth += 3;else if (roe >= 0.05) hlth += 1;
-    }
-    // Interest Coverage (0–5 pts)
-    if (ok(ic)) {
-      if (ic >= 20) hlth += 5;else if (ic >= 10) hlth += 4;else if (ic >= 5) hlth += 3;else if (ic >= 2) hlth += 1;
-    }
-    hlth = Math.min(35, hlth);
+    const pe = metrics.peRatioTTM,
+      ev = metrics.enterpriseValueOverEBITDATTM;
+    const pfcf = metrics.pfcfRatioTTM,
+      fvr = ratios.priceFairValueTTM;
+    const gm = ratios.grossProfitMarginTTM,
+      roic = metrics.roicTTM;
+    const nd = metrics.netDebtToEBITDATTM,
+      roe = metrics.roeTTM,
+      ic = metrics.interestCoverageTTM;
+    if (ok(pe) && pe > 0) val += pe < 12 ? 9 : pe < 18 ? 8 : pe < 25 ? 6 : pe < 35 ? 4 : pe < 50 ? 2 : 1;
+    if (ok(ev) && ev > 0) val += ev < 8 ? 7 : ev < 12 ? 5 : ev < 18 ? 3 : ev < 25 ? 2 : ev < 35 ? 1 : 0;
+    if (ok(pfcf) && pfcf > 0) val += pfcf < 12 ? 6 : pfcf < 20 ? 5 : pfcf < 28 ? 3 : pfcf < 40 ? 1 : 0;
+    if (ok(fvr)) val += fvr < 0.85 ? 3 : fvr < 1 ? 2 : fvr < 1.15 ? 1 : 0;
+    val = Math.min(25, val);
+    if (ok(gm)) hlth += gm >= 0.65 ? 7 : gm >= 0.45 ? 6 : gm >= 0.30 ? 4 : gm >= 0.15 ? 2 : gm >= 0.05 ? 1 : 0;
+    if (ok(roic)) hlth += roic >= 0.25 ? 8 : roic >= 0.18 ? 7 : roic >= 0.12 ? 5 : roic >= 0.06 ? 3 : roic >= 0 ? 1 : 0;
+    if (ok(nd)) hlth += nd < -1 ? 7 : nd < 0 ? 6 : nd < 0.5 ? 5 : nd < 1.5 ? 3 : nd < 2.5 ? 1 : 0;
+    if (ok(roe)) hlth += roe >= 0.35 ? 5 : roe >= 0.20 ? 4 : roe >= 0.12 ? 2 : roe >= 0.05 ? 1 : 0;
+    if (ok(ic)) hlth += ic >= 20 ? 3 : ic >= 10 ? 2 : ic >= 5 ? 1 : 0;
+    hlth = Math.min(30, hlth);
   }
   if (history && history.length > 10) {
     const s = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -93,30 +141,42 @@ function calcScores(metrics, ratios, history) {
     const p3 = s[Math.max(0, s.length - 63)]?.close;
     const p6 = s[Math.max(0, s.length - 126)]?.close;
     const p12 = s[0]?.close;
-    const ret = (now, then) => ok(now) && ok(then) && then > 0 ? (now - then) / then : null;
-    const r12 = ret(cur, p12),
-      r6 = ret(cur, p6),
-      r3 = ret(cur, p3);
-
-    // 12m return (0–12 pts)
-    if (ok(r12)) {
-      if (r12 > 0.40) mom += 12;else if (r12 > 0.20) mom += 10;else if (r12 > 0.08) mom += 8;else if (r12 > 0) mom += 5;else if (r12 > -0.10) mom += 3;else if (r12 > -0.25) mom += 1;
+    const r = (n, t) => ok(n) && ok(t) && t > 0 ? (n - t) / t : null;
+    const r12 = r(cur, p12),
+      r6 = r(cur, p6),
+      r3 = r(cur, p3);
+    if (ok(r12)) mom += r12 > 0.40 ? 10 : r12 > 0.20 ? 8 : r12 > 0.08 ? 6 : r12 > 0 ? 4 : r12 > -0.10 ? 2 : r12 > -0.25 ? 1 : 0;
+    if (ok(r6)) mom += r6 > 0.20 ? 8 : r6 > 0.10 ? 6 : r6 > 0.03 ? 4 : r6 > -0.03 ? 3 : r6 > -0.12 ? 1 : 0;
+    if (ok(r3)) mom += r3 > 0.12 ? 7 : r3 > 0.06 ? 5 : r3 > 0.01 ? 3 : r3 > -0.05 ? 1 : 0;
+    mom = Math.min(25, mom);
+  }
+  if (stmts && stmts.length >= 5) {
+    const q0 = stmts[0];
+    const yoyQ = stmts.find(s => s.period === q0?.period && parseInt(s.calendarYear) === parseInt(q0?.calendarYear) - 1);
+    const ry = yoyQ?.revenue > 0 && ok(q0?.revenue) ? (q0.revenue - yoyQ.revenue) / yoyQ.revenue : null;
+    const ey = yoyQ?.eps && yoyQ.eps !== 0 && ok(q0?.eps) ? (q0.eps - yoyQ.eps) / Math.abs(yoyQ.eps) : null;
+    if (ok(ry)) growth += ry > 0.30 ? 6 : ry > 0.20 ? 5 : ry > 0.10 ? 4 : ry > 0 ? 2 : 0;
+    if (ok(ey)) growth += ey > 0.30 ? 5 : ey > 0.20 ? 4 : ey > 0.10 ? 3 : ey > 0 ? 1 : 0;
+    if (stmts.length >= 8) {
+      const old = stmts[stmts.length - 1];
+      const yrs = stmts.length / 4;
+      if (old?.revenue > 0 && q0?.revenue > 0) {
+        const cagr = Math.pow(q0.revenue / old.revenue, 1 / yrs) - 1;
+        growth += cagr > 0.20 ? 5 : cagr > 0.10 ? 4 : cagr > 0.05 ? 2 : cagr > 0 ? 1 : 0;
+      }
     }
-    // 6m return (0–10 pts)
-    if (ok(r6)) {
-      if (r6 > 0.20) mom += 10;else if (r6 > 0.10) mom += 8;else if (r6 > 0.03) mom += 6;else if (r6 > -0.03) mom += 4;else if (r6 > -0.12) mom += 2;
+    if (stmts.length >= 4) {
+      const gms = stmts.slice(0, 4).map(q => q.revenue > 0 ? q.grossProfit / q.revenue : null).filter(v => ok(v));
+      if (gms.length >= 2) growth += gms[0] > gms[gms.length - 1] ? 4 : Math.abs(gms[0] - gms[gms.length - 1]) < 0.02 ? 2 : 0;
     }
-    // 3m return (0–8 pts)
-    if (ok(r3)) {
-      if (r3 > 0.12) mom += 8;else if (r3 > 0.06) mom += 6;else if (r3 > 0.01) mom += 4;else if (r3 > -0.05) mom += 2;
-    }
-    mom = Math.min(30, mom);
+    growth = Math.min(20, growth);
   }
   return {
     val,
     hlth,
     mom,
-    total: val + hlth + mom
+    growth,
+    total: val + hlth + mom + growth
   };
 }
 function getRating(s) {
@@ -152,39 +212,192 @@ function getRating(s) {
   };
 }
 
-// ─── SMALL COMPONENTS ────────────────────────────────────────
-function Spinner() {
+// ─── SKELETON ───────────────────────────────────────────────
+function Sk({
+  w = '100%',
+  h = 16,
+  s = {}
+}) {
   return /*#__PURE__*/React.createElement("div", {
     style: {
+      background: 'linear-gradient(90deg,#0c0e14 25%,#141720 50%,#0c0e14 75%)',
+      backgroundSize: '200% 100%',
+      animation: 'shimmer 1.5s infinite',
+      borderRadius: 4,
+      width: w,
+      height: h,
+      ...s
+    }
+  });
+}
+function LoadingSkeleton() {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      paddingTop: 20,
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'center',
-      gap: 16,
-      padding: 80
+      gap: 14
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      width: 44,
-      height: 44,
-      border: '3px solid #1e2430',
-      borderTopColor: '#3b82f6',
-      borderRadius: '50%',
-      animation: 'spin 0.8s linear infinite'
+      background: '#0c0e14',
+      border: '1px solid #161b26',
+      borderRadius: 10,
+      padding: '20px 24px'
+    }
+  }, /*#__PURE__*/React.createElement(Sk, {
+    h: 11,
+    w: "25%",
+    s: {
+      marginBottom: 8
+    }
+  }), /*#__PURE__*/React.createElement(Sk, {
+    h: 30,
+    w: "55%",
+    s: {
+      marginBottom: 8
+    }
+  }), /*#__PURE__*/React.createElement(Sk, {
+    h: 10,
+    w: "70%",
+    s: {
+      marginBottom: 6
+    }
+  }), /*#__PURE__*/React.createElement(Sk, {
+    h: 10,
+    w: "45%"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '220px 1fr',
+      gap: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0c0e14',
+      border: '1px solid #161b26',
+      borderRadius: 10,
+      padding: '20px 24px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement(Sk, {
+    w: 136,
+    h: 136,
+    s: {
+      borderRadius: '50%'
+    }
+  }), [80, 90, 70].map((w, i) => /*#__PURE__*/React.createElement(Sk, {
+    key: i,
+    w: w,
+    h: 8,
+    s: {
+      marginBottom: 2
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0c0e14',
+      border: '1px solid #161b26',
+      borderRadius: 10,
+      padding: '20px 24px'
+    }
+  }, /*#__PURE__*/React.createElement(Sk, {
+    h: 11,
+    w: "30%",
+    s: {
+      marginBottom: 14
     }
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#475569',
-      fontSize: 13,
-      fontFamily: 'JetBrains Mono,monospace'
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3,1fr)',
+      gap: 9
     }
-  }, "Analyzing..."));
+  }, [...Array(9)].map((_, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      background: '#141720',
+      borderRadius: 6,
+      padding: '10px 14px'
+    }
+  }, /*#__PURE__*/React.createElement(Sk, {
+    h: 9,
+    w: "55%",
+    s: {
+      marginBottom: 7
+    }
+  }), /*#__PURE__*/React.createElement(Sk, {
+    h: 18,
+    w: "70%"
+  })))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0c0e14',
+      border: '1px solid #161b26',
+      borderRadius: 10,
+      padding: '20px 24px'
+    }
+  }, /*#__PURE__*/React.createElement(Sk, {
+    h: 200
+  })));
 }
+
+// ─── LAYOUT PRIMITIVES ──────────────────────────────────────
+function Panel({
+  children,
+  style = {}
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0c0e14',
+      border: '1px solid #161b26',
+      borderRadius: 10,
+      padding: '20px 24px',
+      ...style
+    }
+  }, children);
+}
+function SectionTitle({
+  children
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '1px',
+      color: '#334155',
+      marginBottom: 14,
+      paddingBottom: 8,
+      borderBottom: '1px solid #141720'
+    }
+  }, children);
+}
+
+// ─── KPI BADGE ──────────────────────────────────────────────
 function KPIBadge({
   label,
   value,
   sub,
-  highlight
+  highlight,
+  sector,
+  bmVal,
+  bmLabel
 }) {
+  const vsStr = useMemo(() => {
+    if (!ok(bmVal) || !ok(parseFloat(value))) return null;
+    const v = parseFloat(value.replace('x', '').replace('%', ''));
+    const diff = (v - bmVal) / Math.abs(bmVal);
+    if (Math.abs(diff) < 0.15) return null;
+    return diff > 0 ? {
+      t: `↑ vs ${bmLabel || 'sector'}`,
+      c: '#22c55e'
+    } : {
+      t: `↓ vs ${bmLabel || 'sector'}`,
+      c: '#f87171'
+    };
+  }, [bmVal, value, bmLabel]);
   return /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#141720',
@@ -210,13 +423,27 @@ function KPIBadge({
       fontFamily: 'JetBrains Mono,monospace',
       lineHeight: 1
     }
-  }, value), sub && /*#__PURE__*/React.createElement("div", {
+  }, value), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6,
+      alignItems: 'center'
+    }
+  }, sub && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
       color: '#334155'
     }
-  }, sub));
+  }, sub), vsStr && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: vsStr.c,
+      fontWeight: 700
+    }
+  }, vsStr.t)));
 }
+
+// ─── HEALTH CARD ────────────────────────────────────────────
 function HealthCard({
   label,
   value,
@@ -293,6 +520,8 @@ function HealthCard({
     }
   }, note));
 }
+
+// ─── SCORE GAUGE ────────────────────────────────────────────
 function ScoreGauge({
   score
 }) {
@@ -319,7 +548,20 @@ function ScoreGauge({
     style: {
       transform: 'rotate(-90deg)'
     }
-  }, /*#__PURE__*/React.createElement("circle", {
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
+    id: "ggrad",
+    x1: "0",
+    y1: "0",
+    x2: "1",
+    y2: "0"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0%",
+    stopColor: col,
+    stopOpacity: "0.5"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: col
+  }))), /*#__PURE__*/React.createElement("circle", {
     cx: "68",
     cy: "68",
     r: "52",
@@ -331,7 +573,7 @@ function ScoreGauge({
     cy: "68",
     r: "52",
     fill: "none",
-    stroke: col,
+    stroke: "url(#ggrad)",
     strokeWidth: "10",
     strokeDasharray: `${prog} ${cir}`,
     strokeLinecap: "round",
@@ -425,14 +667,90 @@ function ScoreBar({
     }
   })));
 }
+
+// ─── SPARKLINE ──────────────────────────────────────────────
+function Sparkline({
+  data,
+  type = 'bar',
+  color = '#3b82f6',
+  h = 48,
+  w = 120
+}) {
+  const vals = data.map(v => ok(v) ? v : 0);
+  if (!vals.length) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: w,
+      height: h,
+      background: '#141720',
+      borderRadius: 3
+    }
+  });
+  const mn = Math.min(...vals),
+    mx = Math.max(...vals),
+    rng = mx - mn || 1;
+  if (type === 'bar') {
+    const bw = w / vals.length;
+    return /*#__PURE__*/React.createElement("svg", {
+      width: w,
+      height: h,
+      style: {
+        display: 'block'
+      }
+    }, vals.map((v, i) => {
+      const bh = (v - mn) / rng * h;
+      return /*#__PURE__*/React.createElement("rect", {
+        key: i,
+        x: i * bw + 0.5,
+        y: h - bh,
+        width: Math.max(1, bw - 1),
+        height: bh,
+        fill: v < 0 ? '#f87171' : color,
+        rx: 1
+      });
+    }));
+  }
+  const pts = vals.map((v, i) => {
+    const x = (vals.length < 2 ? 0.5 : i / (vals.length - 1)) * w;
+    const y = h - (v - mn) / rng * (h - 4) - 2;
+    return `${x},${y}`;
+  }).join(' ');
+  return /*#__PURE__*/React.createElement("svg", {
+    width: w,
+    height: h,
+    style: {
+      display: 'block'
+    }
+  }, /*#__PURE__*/React.createElement("polyline", {
+    points: pts,
+    fill: "none",
+    stroke: color,
+    strokeWidth: "1.5",
+    strokeLinejoin: "round"
+  }));
+}
+
+// ─── PRICE CHART (enhanced) ─────────────────────────────────
+const PERIODS = {
+  '1M': 21,
+  '3M': 63,
+  '6M': 126,
+  '1Y': 365
+};
 function PriceChart({
   history,
-  ticker
+  ticker,
+  period
 }) {
+  const [hoverIdx, setHoverIdx] = useState(null);
+  const svgRef = useRef(null);
   const sorted = useMemo(() => [...history].sort((a, b) => new Date(a.date) - new Date(b.date)), [history]);
-  if (!sorted.length) return /*#__PURE__*/React.createElement("div", {
+  const filtered = useMemo(() => {
+    const n = PERIODS[period] || 365;
+    return sorted.slice(-n);
+  }, [sorted, period]);
+  if (!filtered.length || filtered.length < 2) return /*#__PURE__*/React.createElement("div", {
     style: {
-      height: 110,
+      height: 200,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -440,30 +758,51 @@ function PriceChart({
       fontSize: 12
     }
   }, "No price data");
-  const prices = sorted.map(d => d.close);
-  const minP = Math.min(...prices);
-  const maxP = Math.max(...prices);
-  const range = maxP - minP || 1;
+  const prices = filtered.map(d => d.close);
+  const volumes = filtered.map(d => d.volume || 0);
   const W = 800,
-    H = 110,
-    pt = 8,
-    pb = 22,
-    pl = 8,
-    pr = 8;
-  const cw = W - pl - pr,
-    ch = H - pt - pb;
-  const px = i => pl + i / (prices.length - 1) * cw;
-  const py = p => pt + (1 - (p - minP) / range) * ch;
-  const points = prices.map((p, i) => `${px(i)},${py(p)}`).join(' ');
-  const fillPts = `${pl},${H - pb} ${points} ${W - pr},${H - pb}`;
+    H = 230,
+    pt = 10,
+    pb = 30,
+    pl = 12,
+    pr = 12;
+  const priceH = 160,
+    volH = 30;
+  const priceBottom = pt + priceH;
+  const volTop = priceBottom + 8;
+  const volBottom = volTop + volH;
+  const cw = W - pl - pr;
+  const minP = Math.min(...prices),
+    maxP = Math.max(...prices),
+    rngP = maxP - minP || 1;
+  const maxV = Math.max(...volumes, 1);
+  const px = i => pl + i / Math.max(1, filtered.length - 1) * cw;
+  const py = p => pt + (1 - (p - minP) / rngP) * priceH;
+  const vy = v => volBottom - v / maxV * volH;
   const isUp = prices[prices.length - 1] >= prices[0];
   const stroke = isUp ? '#22c55e' : '#f87171';
-  const ret12m = prices[0] > 0 ? (prices[prices.length - 1] - prices[0]) / prices[0] : null;
+  const pts = prices.map((p, i) => `${px(i)},${py(p)}`).join(' ');
+  const fillPts = `${pl},${priceBottom} ${pts} ${W - pr},${priceBottom}`;
 
-  // Month tick labels
+  // 50-day SMA
+  const sma50pts = useMemo(() => {
+    if (prices.length < 50) return null;
+    const points = [];
+    for (let i = 49; i < prices.length; i++) {
+      const avg = prices.slice(i - 49, i + 1).reduce((a, b) => a + b, 0) / 50;
+      points.push(`${px(i)},${py(avg)}`);
+    }
+    return points.join(' ');
+  }, [prices, px, py]);
+
+  // 52W markers
+  const hi52 = Math.max(...prices),
+    lo52 = Math.min(...prices);
+
+  // Month ticks
   const ticks = [];
   let lastM = -1;
-  sorted.forEach((d, i) => {
+  filtered.forEach((d, i) => {
     const m = new Date(d.date).getMonth();
     if (m !== lastM) {
       ticks.push({
@@ -473,38 +812,33 @@ function PriceChart({
       lastM = m;
     }
   });
-  const mLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  const mLbls = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const handleMouseMove = useCallback(e => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / rect.width;
+    const idx = Math.round(frac * (filtered.length - 1));
+    setHoverIdx(Math.max(0, Math.min(filtered.length - 1, idx)));
+  }, [filtered.length]);
+  const hd = hoverIdx != null ? filtered[hoverIdx] : null;
+  const hx = hoverIdx != null ? px(hoverIdx) : null;
+  return /*#__PURE__*/React.createElement("div", {
     style: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8
+      position: 'relative'
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: '#475569'
-    }
-  }, ticker, " \u2014 12-month price history"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      color: isUp ? '#22c55e' : '#f87171',
-      fontFamily: 'JetBrains Mono,monospace'
-    }
-  }, "$", prices[prices.length - 1].toFixed(2), " ", ok(ret12m) && /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11
-    }
-  }, "(", fmt.chg(ret12m), " 12m)"))), /*#__PURE__*/React.createElement("svg", {
+  }, /*#__PURE__*/React.createElement("svg", {
+    ref: svgRef,
     viewBox: `0 0 ${W} ${H}`,
+    preserveAspectRatio: "none",
     style: {
       width: '100%',
-      height: 110
-    }
+      height: 200,
+      display: 'block'
+    },
+    onMouseMove: handleMouseMove,
+    onMouseLeave: () => setHoverIdx(null)
   }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
-    id: "sg",
+    id: "sg2",
     x1: "0",
     y1: "0",
     x2: "0",
@@ -521,41 +855,565 @@ function PriceChart({
     key: f,
     x1: pl,
     x2: W - pr,
-    y1: pt + f * ch,
-    y2: pt + f * ch,
-    stroke: "#1a1e28",
+    y1: pt + f * priceH,
+    y2: pt + f * priceH,
+    stroke: "#161b26",
     strokeWidth: "1"
-  })), /*#__PURE__*/React.createElement("polygon", {
+  })), /*#__PURE__*/React.createElement("line", {
+    x1: pl,
+    x2: W - pr,
+    y1: py(hi52),
+    y2: py(hi52),
+    stroke: "#334155",
+    strokeWidth: "0.8",
+    strokeDasharray: "4 4"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: pl,
+    x2: W - pr,
+    y1: py(lo52),
+    y2: py(lo52),
+    stroke: "#334155",
+    strokeWidth: "0.8",
+    strokeDasharray: "4 4"
+  }), /*#__PURE__*/React.createElement("polygon", {
     points: fillPts,
-    fill: "url(#sg)"
+    fill: "url(#sg2)"
   }), /*#__PURE__*/React.createElement("polyline", {
-    points: points,
+    points: pts,
     fill: "none",
     stroke: stroke,
-    strokeWidth: "2",
+    strokeWidth: "1.8",
     strokeLinejoin: "round"
-  }), ticks.filter((_, i) => i % 2 === 0).map(({
+  }), sma50pts && /*#__PURE__*/React.createElement("polyline", {
+    points: sma50pts,
+    fill: "none",
+    stroke: "#60a5fa",
+    strokeWidth: "1",
+    strokeOpacity: "0.7",
+    strokeDasharray: "3 2"
+  }), volumes.map((v, i) => /*#__PURE__*/React.createElement("rect", {
+    key: i,
+    x: pl + i * (cw / filtered.length),
+    y: vy(v),
+    width: Math.max(1, cw / filtered.length - 0.5),
+    height: volBottom - vy(v),
+    fill: "#1e2430",
+    opacity: "0.8"
+  })), ticks.filter((_, i) => i % 2 === 0).map(({
     i,
     m
   }) => /*#__PURE__*/React.createElement("text", {
     key: m,
     x: px(i),
-    y: H - 5,
-    fontSize: "8.5",
+    y: H - 8,
+    fontSize: "8",
     fill: "#334155",
     textAnchor: "middle"
-  }, mLabels[m])), /*#__PURE__*/React.createElement("text", {
+  }, mLbls[m])), /*#__PURE__*/React.createElement("text", {
     x: pl + 2,
     y: pt + 10,
-    fontSize: "8.5",
+    fontSize: "8",
     fill: "#334155"
   }, "$", maxP.toFixed(0)), /*#__PURE__*/React.createElement("text", {
     x: pl + 2,
-    y: H - pb - 3,
-    fontSize: "8.5",
+    y: priceBottom - 4,
+    fontSize: "8",
     fill: "#334155"
-  }, "$", minP.toFixed(0))));
+  }, "$", minP.toFixed(0)), /*#__PURE__*/React.createElement("text", {
+    x: W - pr - 2,
+    y: py(hi52) - 3,
+    fontSize: "7.5",
+    fill: "#475569",
+    textAnchor: "end"
+  }, "52W H"), /*#__PURE__*/React.createElement("text", {
+    x: W - pr - 2,
+    y: py(lo52) + 8,
+    fontSize: "7.5",
+    fill: "#475569",
+    textAnchor: "end"
+  }, "52W L"), hx != null && /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("line", {
+    x1: hx,
+    x2: hx,
+    y1: pt,
+    y2: priceBottom,
+    stroke: "#475569",
+    strokeWidth: "0.8",
+    strokeDasharray: "3 2"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: hx,
+    cy: py(prices[hoverIdx]),
+    r: "3.5",
+    fill: stroke,
+    stroke: "#0c0e14",
+    strokeWidth: "1.5"
+  })), sma50pts && /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("line", {
+    x1: W - 80,
+    x2: W - 68,
+    y1: pt + 10,
+    y2: pt + 10,
+    stroke: "#60a5fa",
+    strokeWidth: "1.2",
+    strokeDasharray: "3 2"
+  }), /*#__PURE__*/React.createElement("text", {
+    x: W - 65,
+    y: pt + 13,
+    fontSize: "7.5",
+    fill: "#60a5fa"
+  }, "50 SMA"))), hd && hx != null && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      top: 8,
+      left: Math.min(hx / 800 * 100, 72) + '%',
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 6,
+      padding: '8px 11px',
+      fontSize: 11,
+      fontFamily: 'JetBrains Mono,monospace',
+      pointerEvents: 'none',
+      minWidth: 130,
+      zIndex: 10,
+      boxShadow: '0 4px 16px rgba(0,0,0,0.5)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#64748b',
+      fontSize: 9,
+      marginBottom: 5
+    }
+  }, hd.date?.substring(0, 10)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#e2e8f0',
+      marginBottom: 2
+    }
+  }, "C: ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: stroke
+    }
+  }, "$", hd.close?.toFixed(2))), hd.open && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#94a3b8'
+    }
+  }, "O: $", hd.open?.toFixed(2)), hd.high && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#94a3b8'
+    }
+  }, "H: $", hd.high?.toFixed(2)), hd.low && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#94a3b8'
+    }
+  }, "L: $", hd.low?.toFixed(2)), hd.volume && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#475569',
+      fontSize: 9,
+      marginTop: 3
+    }
+  }, "Vol: ", fmt.usd(hd.volume))));
 }
+
+// ─── TECHNICAL SIGNALS ──────────────────────────────────────
+function TechnicalSignals({
+  history
+}) {
+  const data = useMemo(() => {
+    if (!history || history.length < 20) return null;
+    const s = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const closes = s.map(d => d.close);
+    const cur = closes[closes.length - 1];
+    const rsi = computeRSI(closes, 14);
+    const sma50 = computeSMA(closes, 50);
+    const sma200 = computeSMA(closes, 200);
+    const hi52 = Math.max(...closes);
+    const lo52 = Math.min(...closes);
+    const rangePct = (cur - lo52) / Math.max(hi52 - lo52, 1);
+    return {
+      cur,
+      rsi,
+      sma50,
+      sma200,
+      hi52,
+      lo52,
+      rangePct
+    };
+  }, [history]);
+  if (!data) return null;
+  const {
+    cur,
+    rsi,
+    sma50,
+    sma200,
+    hi52,
+    lo52,
+    rangePct
+  } = data;
+  const rsiColor = !ok(rsi) ? '#475569' : rsi > 70 ? '#f87171' : rsi < 30 ? '#22c55e' : '#fbbf24';
+  const rsiLabel = !ok(rsi) ? '—' : rsi > 70 ? 'OVERBOUGHT' : rsi < 30 ? 'OVERSOLD' : 'NEUTRAL';
+  const vs50 = sma50 ? (cur - sma50) / sma50 : null;
+  const vs200 = sma200 ? (cur - sma200) / sma200 : null;
+  const Sig = ({
+    label,
+    val,
+    color,
+    extra
+  }) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#141720',
+      border: `1px solid #1e2430`,
+      borderRadius: 6,
+      padding: '10px 13px',
+      flex: 1,
+      minWidth: 120
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      marginBottom: 5
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: color || '#e2e8f0',
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, val), extra && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#334155',
+      marginTop: 3
+    }
+  }, extra));
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Technical Signals"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement(Sig, {
+    label: "RSI 14",
+    val: ok(rsi) ? rsi.toFixed(1) : '—',
+    color: rsiColor,
+    extra: rsiLabel
+  }), /*#__PURE__*/React.createElement(Sig, {
+    label: "vs 50-day SMA",
+    val: ok(vs50) ? fmt.chg(vs50) : '—',
+    color: ok(vs50) ? vs50 > 0 ? '#22c55e' : '#f87171' : '#475569',
+    extra: ok(sma50) ? `SMA $${sma50.toFixed(2)}` : 'insufficient data'
+  }), /*#__PURE__*/React.createElement(Sig, {
+    label: "vs 200-day SMA",
+    val: ok(vs200) ? fmt.chg(vs200) : '—',
+    color: ok(vs200) ? vs200 > 0 ? '#22c55e' : '#f87171' : '#475569',
+    extra: ok(sma200) ? `SMA $${sma200.toFixed(2)}` : 'insufficient data'
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 6,
+      padding: '10px 13px',
+      flex: 2,
+      minWidth: 160
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      marginBottom: 5
+    }
+  }, "52-Week Range  ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#e2e8f0',
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, "$", lo52.toFixed(0), " \u2014 $", hi52.toFixed(0))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e2430',
+      borderRadius: 3,
+      height: 6,
+      overflow: 'hidden',
+      position: 'relative'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: `${rangePct * 100}%`,
+      height: '100%',
+      background: '#3b82f6',
+      borderRadius: 3,
+      transition: 'width 0.5s ease'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#475569',
+      marginTop: 3
+    }
+  }, (rangePct * 100).toFixed(0), "% of range \xB7 Current $", ok(cur) ? cur.toFixed(2) : '—'))));
+}
+
+// ─── ANALYST PANEL ──────────────────────────────────────────
+function AnalystPanel({
+  ptC,
+  udC,
+  analystEst,
+  currentPrice
+}) {
+  if (!ptC && !udC) return null;
+  const pt = Array.isArray(ptC) ? ptC[0] : ptC;
+  const ud = Array.isArray(udC) ? udC[0] : udC;
+  const ae = Array.isArray(analystEst) ? analystEst[0] : analystEst;
+  const targetMed = pt?.targetMedian || pt?.targetConsensus;
+  const upside = ok(targetMed) && ok(currentPrice) && currentPrice > 0 ? (targetMed - currentPrice) / currentPrice : null;
+  const rating = ud?.consensus || pt?.consensus;
+  const sb = ud?.strongBuy || 0,
+    b = ud?.buy || 0,
+    h = ud?.hold || 0,
+    s = ud?.sell || 0,
+    ss = ud?.strongSell || 0;
+  const total = sb + b + h + s + ss;
+  const buyPct = total > 0 ? (sb + b) / total : null;
+  const holdPct = total > 0 ? h / total : null;
+  const sellPct = total > 0 ? (s + ss) / total : null;
+  const ratingColor = rating === 'Strong Buy' ? '#22c55e' : rating === 'Buy' ? '#4ade80' : rating === 'Hold' ? '#fbbf24' : '#f87171';
+  const fwdEps = ae?.estimatedEpsAvg;
+  const fwdPE = ok(fwdEps) && fwdEps > 0 && ok(currentPrice) ? currentPrice / fwdEps : null;
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Analyst Consensus"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10
+    }
+  }, rating && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '5px 14px',
+      borderRadius: 20,
+      background: ratingColor + '22',
+      border: `1px solid ${ratingColor}55`,
+      fontSize: 12,
+      fontWeight: 700,
+      color: ratingColor,
+      letterSpacing: '1px'
+    }
+  }, rating.toUpperCase()), total > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569'
+    }
+  }, total, " analysts")), ok(targetMed) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 3
+    }
+  }, "Consensus Price Target"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 800,
+      color: '#e2e8f0',
+      fontFamily: 'JetBrains Mono,monospace',
+      lineHeight: 1
+    }
+  }, fmt.price(targetMed), ok(upside) && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 600,
+      color: upside > 0 ? '#22c55e' : '#f87171',
+      marginLeft: 8
+    }
+  }, upside > 0 ? '▲' : '▼', " ", Math.abs(upside * 100).toFixed(1), "% upside")), ok(pt?.targetHigh) && ok(pt?.targetLow) && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#334155',
+      marginTop: 2
+    }
+  }, "Range: ", fmt.price(pt.targetLow), " \u2014 ", fmt.price(pt.targetHigh))), ok(fwdPE) && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#141720',
+      borderRadius: 6,
+      padding: '8px 12px',
+      display: 'inline-block'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: '#475569'
+    }
+  }, "Fwd P/E "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: '#e2e8f0',
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, fwdPE.toFixed(1), "x"))), total > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 8
+    }
+  }, "Analyst Distribution (", total, ")"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 5
+    }
+  }, [{
+    label: 'Buy / Strong Buy',
+    pct: buyPct,
+    color: '#22c55e',
+    cnt: sb + b
+  }, {
+    label: 'Hold',
+    pct: holdPct,
+    color: '#fbbf24',
+    cnt: h
+  }, {
+    label: 'Sell / Strong Sell',
+    pct: sellPct,
+    color: '#f87171',
+    cnt: s + ss
+  }].map(({
+    label,
+    pct,
+    color,
+    cnt
+  }) => /*#__PURE__*/React.createElement("div", {
+    key: label
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginBottom: 3,
+      fontSize: 10,
+      color: '#64748b'
+    }
+  }, /*#__PURE__*/React.createElement("span", null, label), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color,
+      fontFamily: 'JetBrains Mono,monospace',
+      fontWeight: 600
+    }
+  }, cnt, " (", ok(pct) ? (pct * 100).toFixed(0) : 0, "%)")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e2430',
+      borderRadius: 3,
+      height: 5
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: `${(pct || 0) * 100}%`,
+      height: '100%',
+      background: color,
+      borderRadius: 3,
+      transition: 'width 0.8s ease'
+    }
+  }))))))));
+}
+
+// ─── GROWTH PANEL ───────────────────────────────────────────
+function GrowthPanel({
+  stmts
+}) {
+  if (!stmts || stmts.length < 2) return null;
+  const rows = [...stmts].reverse();
+  const revs = rows.map(q => q.revenue);
+  const netI = rows.map(q => q.netIncome);
+  const gms = rows.map(q => q.revenue > 0 ? q.grossProfit / q.revenue : null);
+  const eps = rows.map(q => q.eps);
+
+  // 3Y CAGR approx
+  const cagr = (first, last, yrs) => ok(first) && ok(last) && first > 0 && last > 0 ? Math.pow(last / first, 1 / yrs) - 1 : null;
+  const years = stmts.length / 4;
+  const revCagr = cagr(rows[0]?.revenue, rows[rows.length - 1]?.revenue, years);
+  const Row = ({
+    label,
+    data,
+    type,
+    color,
+    cagrVal
+  }) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '9px 0',
+      borderBottom: '1px solid #161b26'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 130,
+      fontSize: 11,
+      color: '#94a3b8',
+      flexShrink: 0
+    }
+  }, label), /*#__PURE__*/React.createElement(Sparkline, {
+    data: data,
+    type: type,
+    color: color,
+    h: 44,
+    w: 140
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginLeft: 'auto',
+      textAlign: 'right'
+    }
+  }, ok(cagrVal) && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: cagrVal > 0 ? '#22c55e' : '#f87171',
+      fontFamily: 'JetBrains Mono,monospace',
+      fontWeight: 700
+    }
+  }, "CAGR ", fmt.chg(cagrVal)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginTop: 2
+    }
+  }, stmts.length, " qtrs")));
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Growth Profile \u2014 ", stmts.length, " Quarters"), /*#__PURE__*/React.createElement(Row, {
+    label: "Revenue",
+    data: revs,
+    type: "bar",
+    color: "#3b82f6",
+    cagrVal: revCagr
+  }), /*#__PURE__*/React.createElement(Row, {
+    label: "Net Income",
+    data: netI,
+    type: "bar",
+    color: "#22c55e",
+    cagrVal: null
+  }), /*#__PURE__*/React.createElement(Row, {
+    label: "Gross Margin %",
+    data: gms,
+    type: "line",
+    color: "#a78bfa",
+    cagrVal: null
+  }), /*#__PURE__*/React.createElement(Row, {
+    label: "EPS",
+    data: eps,
+    type: "line",
+    color: "#fbbf24",
+    cagrVal: null
+  }));
+}
+
+// ─── QUARTERLY TABLE ─────────────────────────────────────────
 function QuarterlyTable({
   stmts
 }) {
@@ -582,12 +1440,12 @@ function QuarterlyTable({
       whiteSpace: 'nowrap',
       fontSize: 10
     }
-  }, h)))), /*#__PURE__*/React.createElement("tbody", null, rows.map((q, i) => {
-    const prev = stmts[stmts.length - 1 - i + 4]; // year-ago Q
-    const yoy = prev?.revenue > 0 ? (q.revenue - prev.revenue) / prev.revenue : null;
+  }, h)))), /*#__PURE__*/React.createElement("tbody", null, rows.map(q => {
+    const yoyQ = stmts.find(s => s.period === q.period && parseInt(s.calendarYear) === parseInt(q.calendarYear) - 1);
+    const yoy = yoyQ?.revenue > 0 && ok(q.revenue) ? (q.revenue - yoyQ.revenue) / yoyQ.revenue : null;
     const gm = q.revenue > 0 ? q.grossProfit / q.revenue : null;
     return /*#__PURE__*/React.createElement("tr", {
-      key: q.date,
+      key: q.date || q.period + q.calendarYear,
       style: {
         borderBottom: '1px solid #141720'
       }
@@ -631,6 +1489,8 @@ function QuarterlyTable({
     }, ok(q.eps) ? `$${q.eps.toFixed(2)}` : '—'));
   })))));
 }
+
+// ─── NEWS ───────────────────────────────────────────────────
 function NewsCard({
   items
 }) {
@@ -673,6 +1533,8 @@ function NewsCard({
     }
   }, /*#__PURE__*/React.createElement("span", null, n.site), /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, n.publishedDate?.substring(0, 10))))))));
 }
+
+// ─── VERDICT SECTION ────────────────────────────────────────
 function VerdictSection({
   scores,
   profile,
@@ -682,29 +1544,39 @@ function VerdictSection({
   const r = getRating(scores.total);
   const moat = [],
     risks = [];
-  const gm = ratios?.grossProfitMarginTTM;
-  const roic = metrics?.roicTTM;
-  const nd = metrics?.netDebtToEBITDATTM;
-  const ic = metrics?.interestCoverageTTM;
-  const pfcf = metrics?.pfcfRatioTTM;
-  const pe = metrics?.peRatioTTM;
+  const gm = ratios?.grossProfitMarginTTM,
+    roic = metrics?.roicTTM;
+  const nd = metrics?.netDebtToEBITDATTM,
+    ic = metrics?.interestCoverageTTM;
+  const pfcf = metrics?.pfcfRatioTTM,
+    pe = metrics?.peRatioTTM;
   if (ok(gm) && gm >= 0.50) moat.push('Gross margin >50% — strong pricing power');
-  if (ok(roic) && roic >= 0.20) moat.push('ROIC >20% — deep competitive moat');
+  if (ok(roic) && roic >= 0.20) moat.push('ROIC >20% — deep competitive moat (Escudero framework)');
   if (ok(nd) && nd < 0) moat.push('Net cash balance sheet — fortress');
   if (ok(ic) && ic >= 15) moat.push('Interest coverage >15x — zero financing risk');
-  if (ok(pfcf) && pfcf < 22) moat.push('Attractive P/FCF — solid FCF yield');
+  if (ok(pfcf) && pfcf < 22) moat.push('Attractive P/FCF — solid free cash flow yield');
+  if (ok(roic) && roic >= 0.15 && scores.mom >= 18) moat.push('Quality + momentum combo — Druckenmiller highest-conviction setup');
   if (ok(pe) && pe > 50) risks.push('Premium P/E >50x — requires flawless execution');
   if (ok(nd) && nd > 3) risks.push('High leverage Net Debt/EBITDA >3x');
   if (ok(gm) && gm < 0.15) risks.push('Thin gross margins — pricing vulnerability');
-  if (ok(roic) && roic < 0.05) risks.push('Low ROIC — weak capital allocation');
+  if (ok(roic) && roic < 0.05) risks.push('Low ROIC — weak capital allocation efficiency');
+  if (scores.mom < 8) risks.push('Weak price momentum — not confirming the bull case');
   if (scores.total < 50) risks.push('Composite score below Hold threshold');
   const co = profile?.companyName || 'This company';
+  const verdictText = {
+    'STRONG BUY': `${co} shows exceptional quality fundamentals confirmed by strong price momentum — the combination Druckenmiller calls the highest-conviction setup. ROIC signals a durable economic moat (Escudero framework). Scoring ${scores.total}/100.`,
+    'BUY': `${co} demonstrates solid quality metrics with favorable risk/reward at current prices. Fundamentals support the thesis; momentum is constructive. Scoring ${scores.total}/100.`,
+    'HOLD': `${co} has decent fundamentals but current valuation or weak momentum limits near-term upside. Good business, but wait for a better entry or catalyst (Escudero). Scoring ${scores.total}/100.`,
+    'CAUTION': `${co} shows warning signs on valuation or fundamentals. Momentum is not confirming the bull case. When price and fundamentals diverge negatively, respect the signal (Druckenmiller). Scoring ${scores.total}/100.`,
+    'AVOID': `${co} fails multiple quality, value, and momentum criteria. High risk of capital impairment. Scoring ${scores.total}/100.`
+  }[r.label];
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Investment Verdict"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
+      gridTemplateColumns: '1fr auto 1fr',
       gap: 12,
-      marginBottom: 16
+      marginBottom: 14,
+      alignItems: 'start'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -722,13 +1594,13 @@ function VerdictSection({
       textTransform: 'uppercase',
       letterSpacing: '1px'
     }
-  }, "\uD83C\uDFF0 Quality Signals"), moat.length ? moat.map((m, i) => /*#__PURE__*/React.createElement("div", {
+  }, "\uD83C\uDFF0 Bull Case"), moat.length ? moat.map((m, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
       fontSize: 11,
       color: '#86efac',
       marginBottom: 5,
-      lineHeight: 1.4
+      lineHeight: 1.5
     }
   }, "\xB7 ", m)) : /*#__PURE__*/React.createElement("div", {
     style: {
@@ -736,6 +1608,40 @@ function VerdictSection({
       color: '#334155'
     }
   }, "No strong moat signals at current levels")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 8,
+      padding: '0 8px'
+    }
+  }, /*#__PURE__*/React.createElement(ScoreGauge, {
+    score: scores.total
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 140
+    }
+  }, /*#__PURE__*/React.createElement(ScoreBar, {
+    label: "Valuation",
+    value: scores.val,
+    max: 25,
+    color: "#60a5fa"
+  }), /*#__PURE__*/React.createElement(ScoreBar, {
+    label: "Financial Health",
+    value: scores.hlth,
+    max: 30,
+    color: "#22c55e"
+  }), /*#__PURE__*/React.createElement(ScoreBar, {
+    label: "Momentum",
+    value: scores.mom,
+    max: 25,
+    color: "#fbbf24"
+  }), /*#__PURE__*/React.createElement(ScoreBar, {
+    label: "Growth",
+    value: scores.growth,
+    max: 20,
+    color: "#a78bfa"
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#2a0d0d',
       border: '1px solid #7f1d1d',
@@ -751,15 +1657,15 @@ function VerdictSection({
       textTransform: 'uppercase',
       letterSpacing: '1px'
     }
-  }, "\u26A0 Risk Flags"), risks.length ? risks.map((r, i) => /*#__PURE__*/React.createElement("div", {
+  }, "\u26A0 Bear Case"), risks.length ? risks.map((rk, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
       fontSize: 11,
       color: '#fca5a5',
       marginBottom: 5,
-      lineHeight: 1.4
+      lineHeight: 1.5
     }
-  }, "\xB7 ", r)) : /*#__PURE__*/React.createElement("div", {
+  }, "\xB7 ", rk)) : /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: '#334155'
@@ -791,13 +1697,9 @@ function VerdictSection({
     style: {
       fontSize: 13,
       color: '#cbd5e1',
-      lineHeight: 1.6
+      lineHeight: 1.65
     }
-  }, co, " scores ", /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: r.color
-    }
-  }, scores.total, "/100"), " on the StockLens composite model (Valuation ", scores.val, "/35 \xB7 Health ", scores.hlth, "/35 \xB7 Momentum ", scores.mom, "/30).", ' ', r.label === 'STRONG BUY' && 'Exceptional quality, reasonable valuation, and strong momentum. High-conviction opportunity.', r.label === 'BUY' && 'Solid fundamentals with favourable risk/reward at current levels.', r.label === 'HOLD' && 'Decent business but valuation or momentum limits near-term upside. Wait for pullback.', r.label === 'CAUTION' && 'Weak signals on valuation or fundamentals — risk/reward unattractive at current price.', r.label === 'AVOID' && 'Multiple red flags across valuation, financial health, or momentum. High risk.')), /*#__PURE__*/React.createElement("div", {
+  }, verdictText)), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '10px 22px',
       borderRadius: 6,
@@ -813,38 +1715,6 @@ function VerdictSection({
   }, r.label)));
 }
 
-// ─── LAYOUT HELPERS ──────────────────────────────────────────
-function Panel({
-  children,
-  style = {}
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: '#0d0f14',
-      border: '1px solid #1e2430',
-      borderRadius: 10,
-      padding: '20px 24px',
-      ...style
-    }
-  }, children);
-}
-function SectionTitle({
-  children
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      fontWeight: 700,
-      textTransform: 'uppercase',
-      letterSpacing: '1px',
-      color: '#334155',
-      marginBottom: 14,
-      paddingBottom: 8,
-      borderBottom: '1px solid #141720'
-    }
-  }, children);
-}
-
 // ─── MAIN APP ────────────────────────────────────────────────
 function App() {
   const [fmpKey, setFmpKey] = useState(() => localStorage.getItem('sl_fmp') || DEFAULT_FMP_KEY);
@@ -853,6 +1723,10 @@ function App() {
   const [error, setError] = useState(null);
   const [showCfg, setShowCfg] = useState(false);
   const [ticker, setTicker] = useState(null);
+  const [activeTab, setActiveTab] = useState('Overview');
+  const [chartPeriod, setChartPeriod] = useState('1Y');
+  const [scrolled, setScrolled] = useState(false);
+  const [recentTickers, setRecentTickers] = useState(() => JSON.parse(localStorage.getItem('sl_history') || '[]'));
 
   // Data state
   const [quote, setQuote] = useState(null);
@@ -862,21 +1736,35 @@ function App() {
   const [hist, setHist] = useState([]);
   const [stmts, setStmts] = useState([]);
   const [news, setNews] = useState([]);
-  const scores = useMemo(() => calcScores(met, rat, hist), [met, rat, hist]);
+  const [ptC, setPtC] = useState(null);
+  const [analystEst, setAnalystEst] = useState(null);
+  const [udC, setUdC] = useState(null);
+  const [dcf, setDcf] = useState(null);
+  const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 180);
+    window.addEventListener('scroll', fn, {
+      passive: true
+    });
+    return () => window.removeEventListener('scroll', fn);
+  }, []);
+
+  // Bug fix: returns null on empty array instead of throwing
   const fmpGet = useCallback(async path => {
     const sep = path.includes('?') ? '&' : '?';
     const url = `https://financialmodelingprep.com/api/v3${path}${sep}apikey=${fmpKey}`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status} on ${path}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data?.['Error Message']) throw new Error(data['Error Message']);
-    if (Array.isArray(data) && data.length === 0) throw new Error(`No data found for ticker`);
+    if (Array.isArray(data) && data.length === 0) return null;
     return data;
   }, [fmpKey]);
   const analyze = useCallback(async sym => {
     if (!sym) return;
     setLoading(true);
     setError(null);
+    setActiveTab('Overview');
     setQuote(null);
     setProf(null);
     setMet(null);
@@ -884,11 +1772,38 @@ function App() {
     setHist([]);
     setStmts([]);
     setNews([]);
+    setPtC(null);
+    setAnalystEst(null);
+    setUdC(null);
+    setDcf(null);
     try {
-      const results = await Promise.allSettled([fmpGet(`/quote/${sym}`), fmpGet(`/profile/${sym}`), fmpGet(`/key-metrics-ttm/${sym}`), fmpGet(`/ratios-ttm/${sym}`), fmpGet(`/historical-price-full/${sym}?timeseries=365`), fmpGet(`/income-statement/${sym}?period=quarter&limit=8`), fmpGet(`/stock_news?tickers=${sym}&limit=8`)]);
+      const results = await Promise.allSettled([fmpGet(`/quote/${sym}`),
+      // 0
+      fmpGet(`/profile/${sym}`),
+      // 1
+      fmpGet(`/key-metrics-ttm/${sym}`),
+      // 2
+      fmpGet(`/ratios-ttm/${sym}`),
+      // 3
+      fmpGet(`/historical-price-full/${sym}?timeseries=365`),
+      // 4
+      fmpGet(`/income-statement/${sym}?period=quarter&limit=8`),
+      // 5
+      fmpGet(`/stock_news?tickers=${sym}&limit=8`),
+      // 6
+      fmpGet(`/price-target-consensus/${sym}`),
+      // 7
+      fmpGet(`/analyst-estimates/${sym}?limit=2`),
+      // 8
+      fmpGet(`/upgrades-downgrades-consensus/${sym}`),
+      // 9
+      fmpGet(`/discounted-cash-flow/${sym}`) // 10
+      ]);
       const get = r => r.status === 'fulfilled' ? r.value : null;
-      const [qD, pD, mD, rD, hD, sD, nD] = results.map(get);
-      if (!qD) throw new Error(`Ticker "${sym}" not found — check the symbol and try again`);
+      const [qD, pD, mD, rD, hD, sD, nD, ptD, aeD, udD, dcfD] = results.map(get);
+
+      // Only fail if BOTH quote and profile are missing
+      if (!qD && !pD) throw new Error(`Ticker "${sym}" not found — check the symbol and try again`);
       setQuote(Array.isArray(qD) ? qD[0] : qD);
       setProf(Array.isArray(pD) ? pD[0] : pD);
       setMet(Array.isArray(mD) ? mD[0] : mD);
@@ -896,7 +1811,16 @@ function App() {
       setHist(hD?.historical || []);
       setStmts(Array.isArray(sD) ? sD : []);
       setNews(Array.isArray(nD) ? nD : []);
+      setPtC(ptD);
+      setAnalystEst(aeD);
+      setUdC(udD);
+      setDcf(Array.isArray(dcfD) ? dcfD[0] : dcfD);
       setTicker(sym.toUpperCase());
+
+      // Save to history
+      const hist5 = [sym, ...JSON.parse(localStorage.getItem('sl_history') || '[]')].filter((t, i, a) => a.indexOf(t) === i).slice(0, 5);
+      localStorage.setItem('sl_history', JSON.stringify(hist5));
+      setRecentTickers(hist5);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -904,42 +1828,46 @@ function App() {
     }
   }, [fmpGet]);
   const handleSearch = () => {
-    const sym = inputTicker.trim().toUpperCase();
-    if (sym) analyze(sym);
+    const s = inputTicker.trim().toUpperCase();
+    if (s) analyze(s);
   };
 
-  // Derived stats
+  // Derived
   const sorted = useMemo(() => [...hist].sort((a, b) => new Date(a.date) - new Date(b.date)), [hist]);
   const priceNow = quote?.price || sorted[sorted.length - 1]?.close;
   const price12m = sorted[0]?.close;
   const ret12m = ok(priceNow) && ok(price12m) && price12m > 0 ? (priceNow - price12m) / price12m : null;
   const chg1d = quote?.changesPercentage;
   const isUpDay = (chg1d || 0) >= 0;
+  const hasData = !!(quote || prof);
+  const r = scores ? getRating(scores.total) : null;
 
-  // Revenue growth YoY (Q0 vs Q4)
-  const revGrowthYoY = useMemo(() => {
-    if (stmts.length >= 5 && stmts[0]?.revenue > 0 && stmts[4]?.revenue > 0) return (stmts[0].revenue - stmts[4].revenue) / stmts[4].revenue;
-    return null;
-  }, [stmts]);
+  // Sector benchmarks for KPI badges
+  const bm = useMemo(() => SECTOR_BM[prof?.sector] || null, [prof?.sector]);
 
-  // Health cards config
+  // DCF display
+  const dcfVal = dcf?.dcf;
+  const mosFrac = ok(dcfVal) && ok(priceNow) && dcfVal > 0 ? (dcfVal - priceNow) / dcfVal : null;
+  const mosColor = !ok(mosFrac) ? '#475569' : mosFrac > 0.15 ? '#22c55e' : mosFrac > -0.15 ? '#fbbf24' : '#f87171';
+
+  // Health cards
   const healthCards = useMemo(() => {
     if (!met || !rat) return [];
-    const pe = met.peRatioTTM;
-    const ev = met.enterpriseValueOverEBITDATTM;
-    const pfcf = met.pfcfRatioTTM;
-    const gm = rat.grossProfitMarginTTM;
-    const roic = met.roicTTM;
-    const nd = met.netDebtToEBITDATTM;
+    const pe = met.peRatioTTM,
+      ev = met.enterpriseValueOverEBITDATTM;
+    const pfcf = met.pfcfRatioTTM,
+      gm = rat.grossProfitMarginTTM;
+    const roic = met.roicTTM,
+      nd = met.netDebtToEBITDATTM;
     return [{
       label: 'P/E Ratio',
       value: fmt.mult(pe),
-      note: 'price / earnings (TTM)',
+      note: 'trailing 12 months',
       status: ok(pe) && pe > 0 ? pe < 25 ? 'green' : pe < 45 ? 'amber' : 'red' : 'neutral'
     }, {
       label: 'EV / EBITDA',
       value: fmt.mult(ev),
-      note: 'enterprise value multiple',
+      note: 'enterprise multiple',
       status: ok(ev) && ev > 0 ? ev < 14 ? 'green' : ev < 22 ? 'amber' : 'red' : 'neutral'
     }, {
       label: 'P / FCF',
@@ -959,39 +1887,109 @@ function App() {
     }, {
       label: 'Net Debt/EBITDA',
       value: fmt.ndx(nd),
-      note: ok(nd) && nd < 0 ? 'fortress balance sheet' : 'leverage ratio',
+      note: ok(nd) && nd < 0 ? 'net cash position' : 'leverage ratio',
       status: ok(nd) ? nd < 0.5 ? 'green' : nd < 2.5 ? 'amber' : 'red' : 'neutral'
     }];
   }, [met, rat]);
-  const hasData = !!(quote || prof);
+  const tabs = ['Overview', 'Fundamentals', 'Chart', 'Research'];
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: '100vh',
-      background: '#08090d',
+      background: '#07080c',
       color: '#e2e8f0',
       fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif",
       paddingBottom: 60
     }
   }, /*#__PURE__*/React.createElement("style", null, `
         @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:5px;height:5px}
-        ::-webkit-scrollbar-track{background:#08090d}
+        ::-webkit-scrollbar-track{background:#07080c}
         ::-webkit-scrollbar-thumb{background:#1e2430;border-radius:3px}
         input::placeholder{color:#334155}
         a{color:inherit;text-decoration:none}
-      `), /*#__PURE__*/React.createElement("div", {
+        button:hover{opacity:0.88}
+      `), scrolled && hasData && ticker && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'fixed',
+      top: 52,
+      left: 0,
+      right: 0,
+      zIndex: 190,
+      background: '#0a0b10ee',
+      backdropFilter: 'blur(8px)',
+      borderBottom: '1px solid #161b26',
+      padding: '8px 24px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12
+    }
+  }, prof?.image && /*#__PURE__*/React.createElement("img", {
+    src: prof.image,
+    alt: ticker,
+    style: {
+      width: 22,
+      height: 22,
+      objectFit: 'contain',
+      borderRadius: 3,
+      background: '#fff',
+      padding: 2
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 800,
+      color: '#fff',
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, ticker), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: '#64748b'
+    }
+  }, prof?.companyName), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: '#e2e8f0',
+      fontFamily: 'JetBrains Mono,monospace',
+      marginLeft: 'auto'
+    }
+  }, fmt.price(priceNow)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 600,
+      color: isUpDay ? '#22c55e' : '#f87171'
+    }
+  }, isUpDay ? '▲' : '▼', Math.abs(chg1d || 0).toFixed(2), "%"), r && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '2px 10px',
+      borderRadius: 12,
+      background: r.bg,
+      border: `1px solid ${r.border}`,
+      fontSize: 10,
+      fontWeight: 700,
+      color: r.color,
+      letterSpacing: '1px'
+    }
+  }, r.label)), /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#0a0b10',
       borderBottom: '1px solid #161b26',
       padding: '0 24px',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      height: 52,
+      flexDirection: 'column',
       position: 'sticky',
       top: 0,
       zIndex: 200
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      height: 52
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1015,7 +2013,7 @@ function App() {
       padding: '2px 7px',
       borderRadius: 4
     }
-  }, "v1.0")), /*#__PURE__*/React.createElement("div", {
+  }, "v2.0")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -1053,7 +2051,6 @@ function App() {
       cursor: loading ? 'not-allowed' : 'pointer',
       fontSize: 13,
       fontWeight: 600,
-      transition: 'background 0.2s',
       whiteSpace: 'nowrap'
     }
   }, loading ? '…' : 'Analyze'), /*#__PURE__*/React.createElement("button", {
@@ -1066,10 +2063,41 @@ function App() {
       padding: '7px 11px',
       borderRadius: 6,
       cursor: 'pointer',
-      fontSize: 13,
-      lineHeight: 1
+      fontSize: 13
     }
-  }, "\u2699"))), showCfg && /*#__PURE__*/React.createElement("div", {
+  }, "\u2699"))), recentTickers.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6,
+      paddingBottom: 8,
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#334155',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      marginRight: 2
+    }
+  }, "Recent:"), recentTickers.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t,
+    onClick: () => {
+      setInputTicker(t);
+      analyze(t);
+    },
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      color: '#64748b',
+      padding: '2px 10px',
+      borderRadius: 4,
+      cursor: 'pointer',
+      fontSize: 11,
+      fontFamily: 'JetBrains Mono,monospace',
+      fontWeight: 600
+    }
+  }, t)))), showCfg && /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#0a0b10',
       borderBottom: '1px solid #161b26',
@@ -1137,7 +2165,7 @@ function App() {
       color: '#fff',
       marginBottom: 8
     }
-  }, "StockLens"), /*#__PURE__*/React.createElement("div", {
+  }, "StockLens v2.0"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: '#334155',
@@ -1145,7 +2173,7 @@ function App() {
       margin: '0 auto 32px',
       lineHeight: 1.7
     }
-  }, "Enter any ticker to get an InvestingPro-style deep analysis \u2014 risk score, fundamentals, price chart, and investment verdict."), /*#__PURE__*/React.createElement("div", {
+  }, "Enter any US ticker for an InvestingPro-style deep analysis \u2014 4-dimensional scoring, analyst consensus, DCF value, technical signals, and investment verdict."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -1169,7 +2197,7 @@ function App() {
       fontFamily: 'JetBrains Mono,monospace',
       fontWeight: 600
     }
-  }, t)))), loading && /*#__PURE__*/React.createElement(Spinner, null), !loading && error && /*#__PURE__*/React.createElement("div", {
+  }, t)))), loading && /*#__PURE__*/React.createElement(LoadingSkeleton, null), !loading && error && /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#2a0d0d',
       border: '1px solid #7f1d1d',
@@ -1184,9 +2212,16 @@ function App() {
       paddingTop: 20,
       display: 'flex',
       flexDirection: 'column',
-      gap: 14
+      gap: 0
     }
-  }, /*#__PURE__*/React.createElement(Panel, null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(Panel, {
+    style: {
+      marginBottom: 0,
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      borderBottom: 'none'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       justifyContent: 'space-between',
@@ -1194,48 +2229,89 @@ function App() {
       flexWrap: 'wrap',
       gap: 12
     }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 14,
+      alignItems: 'flex-start'
+    }
+  }, prof?.image && /*#__PURE__*/React.createElement("img", {
+    src: prof.image,
+    alt: ticker,
+    style: {
+      width: 44,
+      height: 44,
+      objectFit: 'contain',
+      borderRadius: 6,
+      background: '#fff',
+      padding: 4,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 4,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
-      color: '#334155',
-      marginBottom: 5
+      color: '#334155'
     }
-  }, [prof?.exchange, prof?.sector, prof?.industry].filter(Boolean).join(' · ')), /*#__PURE__*/React.createElement("div", {
+  }, [prof?.exchange, prof?.sector, prof?.industry].filter(Boolean).join(' · ')), prof?.exchange && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      padding: '1px 6px',
+      borderRadius: 3,
+      fontWeight: 700,
+      background: prof.exchange.includes('NASDAQ') ? '#1e3a5f' : prof.exchange.includes('NYSE') ? '#1a3a1a' : '#2a2a1a',
+      color: prof.exchange.includes('NASDAQ') ? '#60a5fa' : prof.exchange.includes('NYSE') ? '#4ade80' : '#fbbf24'
+    }
+  }, prof.exchange)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'baseline',
-      gap: 12,
+      gap: 10,
       flexWrap: 'wrap'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 30,
+      fontSize: 28,
       fontWeight: 800,
       color: '#fff',
       fontFamily: 'JetBrains Mono,monospace'
     }
   }, ticker), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 17,
+      fontSize: 16,
       color: '#94a3b8',
       fontWeight: 500
     }
   }, prof?.companyName)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
-      gap: 16,
-      marginTop: 8,
+      gap: 14,
+      marginTop: 6,
       fontSize: 11,
       color: '#475569',
       flexWrap: 'wrap'
     }
-  }, prof?.country && /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF0D ", prof.country), prof?.employees && /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC65 ", Number(prof.employees).toLocaleString(), " employees"), prof?.ipoDate && /*#__PURE__*/React.createElement("span", null, "\uD83D\uDCC5 IPO ", prof.ipoDate?.substring(0, 4)))), /*#__PURE__*/React.createElement("div", {
+  }, prof?.ceo && /*#__PURE__*/React.createElement("span", null, "CEO: ", prof.ceo), prof?.fullTimeEmployees && /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC65 ", Number(prof.fullTimeEmployees).toLocaleString(), " employees"), prof?.ipoDate && /*#__PURE__*/React.createElement("span", null, "Est. ", prof.ipoDate?.substring(0, 4)), prof?.website && /*#__PURE__*/React.createElement("a", {
+    href: prof.website,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      color: '#3b82f6'
+    }
+  }, prof.website?.replace(/^https?:\/\//, ''))))), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'right'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 34,
+      fontSize: 32,
       fontWeight: 800,
       color: '#fff',
       fontFamily: 'JetBrains Mono,monospace',
@@ -1253,24 +2329,97 @@ function App() {
       fontSize: 11,
       color: ret12m >= 0 ? '#4ade80' : '#f87171'
     }
-  }, ret12m >= 0 ? '▲' : '▼', " ", Math.abs(ret12m * 100).toFixed(1), "% past 12 months"), /*#__PURE__*/React.createElement("div", {
+  }, ret12m >= 0 ? '▲' : '▼', " ", Math.abs(ret12m * 100).toFixed(1), "% past 12m"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: '#334155',
-      marginTop: 4
+      marginTop: 3
     }
-  }, "Mkt Cap ", fmt.usd(quote?.marketCap), " \xB7 Vol ", fmt.usd(quote?.avgVolume))))), /*#__PURE__*/React.createElement("div", {
+  }, "Mkt Cap ", fmt.usd(quote?.marketCap), " \xB7 Avg Vol ", fmt.usd(quote?.avgVolume)), ok(dcfVal) && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      padding: '5px 10px',
+      borderRadius: 5,
+      background: mosColor + '18',
+      border: `1px solid ${mosColor}44`,
+      display: 'inline-block'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: '#475569'
+    }
+  }, "DCF Intrinsic Value: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: mosColor,
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, fmt.price(dcfVal)), ok(mosFrac) && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: mosColor,
+      marginLeft: 5
+    }
+  }, "(", mosFrac > 0 ? '+' : '', (mosFrac * 100).toFixed(1), "% ", mosFrac > 0 ? 'upside' : 'overvalued', ")"))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0c0e14',
+      borderLeft: '1px solid #161b26',
+      borderRight: '1px solid #161b26',
+      display: 'flex',
+      gap: 0,
+      position: 'sticky',
+      top: 52 + (recentTickers.length > 0 ? 32 : 0),
+      zIndex: 100
+    }
+  }, tabs.map(tab => /*#__PURE__*/React.createElement("button", {
+    key: tab,
+    onClick: () => setActiveTab(tab),
+    style: {
+      background: 'none',
+      border: 'none',
+      borderBottom: activeTab === tab ? '2px solid #3b82f6' : '2px solid transparent',
+      color: activeTab === tab ? '#e2e8f0' : '#475569',
+      padding: '10px 20px',
+      cursor: 'pointer',
+      fontSize: 12,
+      fontWeight: 600,
+      letterSpacing: '0.3px',
+      transition: 'color 0.15s',
+      whiteSpace: 'nowrap'
+    }
+  }, tab))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0c0e14',
+      border: '1px solid #161b26',
+      borderTop: 'none',
+      borderBottomLeftRadius: 10,
+      borderBottomRightRadius: 10,
+      padding: '20px 24px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
+    }
+  }, activeTab === 'Overview' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '220px 1fr',
       gap: 14
     }
-  }, /*#__PURE__*/React.createElement(Panel, {
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: 18
+      gap: 18,
+      padding: '4px 0'
     }
   }, /*#__PURE__*/React.createElement(ScoreGauge, {
     score: scores.total
@@ -1281,19 +2430,24 @@ function App() {
   }, /*#__PURE__*/React.createElement(ScoreBar, {
     label: "Valuation",
     value: scores.val,
-    max: 35,
+    max: 25,
     color: "#60a5fa"
   }), /*#__PURE__*/React.createElement(ScoreBar, {
     label: "Financial Health",
     value: scores.hlth,
-    max: 35,
+    max: 30,
     color: "#22c55e"
   }), /*#__PURE__*/React.createElement(ScoreBar, {
     label: "Momentum",
     value: scores.mom,
-    max: 30,
+    max: 25,
     color: "#fbbf24"
-  }))), /*#__PURE__*/React.createElement(Panel, null, /*#__PURE__*/React.createElement(SectionTitle, null, "Key Metrics \u2014 TTM"), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement(ScoreBar, {
+    label: "Growth",
+    value: scores.growth,
+    max: 20,
+    color: "#a78bfa"
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Key Metrics \u2014 TTM"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: 'repeat(3,1fr)',
@@ -1302,11 +2456,15 @@ function App() {
   }, /*#__PURE__*/React.createElement(KPIBadge, {
     label: "P/E Ratio",
     value: fmt.mult(met?.peRatioTTM),
-    sub: "trailing 12 months"
+    sub: "trailing 12 months",
+    bmVal: bm?.pe,
+    bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "EV/EBITDA",
     value: fmt.mult(met?.enterpriseValueOverEBITDATTM),
-    sub: "enterprise value mult."
+    sub: "enterprise value mult.",
+    bmVal: bm?.ev,
+    bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "P/FCF",
     value: fmt.mult(met?.pfcfRatioTTM),
@@ -1315,22 +2473,21 @@ function App() {
     label: "Gross Margin",
     value: fmt.pct(rat?.grossProfitMarginTTM),
     sub: "TTM",
-    highlight: ok(rat?.grossProfitMarginTTM) ? rat.grossProfitMarginTTM >= 0.4 ? '#22c55e' : rat.grossProfitMarginTTM >= 0.2 ? '#fbbf24' : '#f87171' : undefined
+    highlight: ok(rat?.grossProfitMarginTTM) ? rat.grossProfitMarginTTM >= 0.4 ? '#22c55e' : rat.grossProfitMarginTTM >= 0.2 ? '#fbbf24' : '#f87171' : undefined,
+    bmVal: bm?.gm,
+    bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "ROIC",
     value: fmt.pct(met?.roicTTM),
     sub: "return on inv. capital",
-    highlight: ok(met?.roicTTM) ? met.roicTTM >= 0.15 ? '#22c55e' : met.roicTTM >= 0.06 ? '#fbbf24' : '#f87171' : undefined
+    highlight: ok(met?.roicTTM) ? met.roicTTM >= 0.15 ? '#22c55e' : met.roicTTM >= 0.06 ? '#fbbf24' : '#f87171' : undefined,
+    bmVal: bm?.roic,
+    bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "Net Debt/EBITDA",
     value: fmt.ndx(met?.netDebtToEBITDATTM),
     sub: ok(met?.netDebtToEBITDATTM) && met.netDebtToEBITDATTM < 0 ? 'net cash position' : 'leverage',
     highlight: ok(met?.netDebtToEBITDATTM) ? met.netDebtToEBITDATTM < 0 ? '#22c55e' : met.netDebtToEBITDATTM < 2 ? '#fbbf24' : '#f87171' : undefined
-  }), /*#__PURE__*/React.createElement(KPIBadge, {
-    label: "Revenue Growth",
-    value: fmt.chg(revGrowthYoY),
-    sub: "year-over-year (Q)",
-    highlight: ok(revGrowthYoY) ? revGrowthYoY >= 0.1 ? '#22c55e' : revGrowthYoY >= 0 ? '#fbbf24' : '#f87171' : undefined
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "FCF Yield",
     value: fmt.pct(met?.freeCashFlowYieldTTM),
@@ -1339,18 +2496,24 @@ function App() {
     label: "ROE",
     value: fmt.pct(met?.roeTTM),
     sub: "return on equity"
-  })))), /*#__PURE__*/React.createElement(Panel, null, /*#__PURE__*/React.createElement(PriceChart, {
-    history: hist,
-    ticker: ticker
-  })), /*#__PURE__*/React.createElement(Panel, null, /*#__PURE__*/React.createElement(SectionTitle, null, "Health Checks \u2014 Valuation \xB7 Profitability \xB7 Leverage"), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement(KPIBadge, {
+    label: "Interest Coverage",
+    value: fmt.mult(met?.interestCoverageTTM),
+    sub: "EBIT / interest expense",
+    highlight: ok(met?.interestCoverageTTM) ? met.interestCoverageTTM >= 10 ? '#22c55e' : met.interestCoverageTTM >= 3 ? '#fbbf24' : '#f87171' : undefined
+  })))), (ptC || udC) && /*#__PURE__*/React.createElement("div", {
     style: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(3,1fr)',
-      gap: 10
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 8,
+      padding: '16px 20px'
     }
-  }, healthCards.map((c, i) => /*#__PURE__*/React.createElement(HealthCard, _extends({
-    key: i
-  }, c))))), prof?.description && /*#__PURE__*/React.createElement(Panel, null, /*#__PURE__*/React.createElement(SectionTitle, null, "About ", prof.companyName), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(AnalystPanel, {
+    ptC: ptC,
+    udC: udC,
+    analystEst: analystEst,
+    currentPrice: priceNow
+  })), prof?.description && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "About ", prof.companyName), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: '#94a3b8',
@@ -1360,22 +2523,93 @@ function App() {
       WebkitBoxOrient: 'vertical',
       overflow: 'hidden'
     }
-  }, prof.description)), stmts.length > 0 && /*#__PURE__*/React.createElement(Panel, null, /*#__PURE__*/React.createElement(QuarterlyTable, {
+  }, prof.description))), activeTab === 'Fundamentals' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Health Checks \u2014 Valuation \xB7 Profitability \xB7 Leverage"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3,1fr)',
+      gap: 10
+    }
+  }, healthCards.map((c, i) => /*#__PURE__*/React.createElement(HealthCard, _extends({
+    key: i
+  }, c))))), stmts.length >= 2 && /*#__PURE__*/React.createElement(GrowthPanel, {
     stmts: stmts
-  })), news.length > 0 && /*#__PURE__*/React.createElement(Panel, null, /*#__PURE__*/React.createElement(NewsCard, {
-    items: news
-  })), /*#__PURE__*/React.createElement(Panel, null, /*#__PURE__*/React.createElement(VerdictSection, {
+  }), stmts.length > 0 && /*#__PURE__*/React.createElement(QuarterlyTable, {
+    stmts: stmts
+  })), activeTab === 'Chart' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6,
+      marginBottom: 10,
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginRight: 4
+    }
+  }, "PERIOD:"), ['1M', '3M', '6M', '1Y'].map(p => /*#__PURE__*/React.createElement("button", {
+    key: p,
+    onClick: () => setChartPeriod(p),
+    style: {
+      background: chartPeriod === p ? '#1e3a5f' : '#141720',
+      color: chartPeriod === p ? '#60a5fa' : '#475569',
+      border: `1px solid ${chartPeriod === p ? '#3b82f6' : '#1e2430'}`,
+      padding: '3px 12px',
+      borderRadius: 4,
+      cursor: 'pointer',
+      fontSize: 11,
+      fontFamily: 'JetBrains Mono,monospace',
+      fontWeight: 600
+    }
+  }, p))), hist.length > 0 ? /*#__PURE__*/React.createElement(PriceChart, {
+    history: hist,
+    ticker: ticker,
+    period: chartPeriod
+  }) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 200,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#334155',
+      fontSize: 12
+    }
+  }, "No price data")), /*#__PURE__*/React.createElement(TechnicalSignals, {
+    history: hist
+  })), activeTab === 'Research' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement(VerdictSection, {
     scores: scores,
     profile: prof,
     metrics: met,
     ratios: rat
-  })))), /*#__PURE__*/React.createElement("div", {
+  }), news.length > 0 && /*#__PURE__*/React.createElement(NewsCard, {
+    items: news
+  }))))), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       marginTop: 48,
       fontSize: 10,
-      color: '#141720'
+      color: '#1e2430',
+      lineHeight: 1.8
     }
-  }, "StockLens \xB7 Data: Financial Modeling Prep \xB7 Not financial advice \xB7 ", new Date().getFullYear()));
+  }, "StockLens v2.0 \xB7 Data: Financial Modeling Prep \xB7 Not financial advice \xB7 ", new Date().getFullYear(), ticker && quote && /*#__PURE__*/React.createElement("span", null, " \xB7 Last updated: ", new Date().toLocaleTimeString())));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
