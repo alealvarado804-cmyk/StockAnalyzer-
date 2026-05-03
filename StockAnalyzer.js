@@ -1,7 +1,7 @@
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
-// StockLens v2.0 — Stock Analysis App
-// Stack: React 18 UMD · Financial Modeling Prep API
+// StockLens v3.0 — Stock Analysis App
+// Stack: React 18 UMD · Financial Modeling Prep API (stable)
 // No imports — global React from CDN, pre-compiled by Babel
 // ============================================================
 
@@ -12,7 +12,7 @@ const {
   useRef,
   useEffect
 } = React;
-const DEFAULT_FMP_KEY = 'wXLMidktyQfzS8ADy4HvUyR6yaWKtqS2';
+const DEFAULT_FMP_KEY = '';
 const ok = v => v != null && !isNaN(v) && isFinite(v);
 const fmt = {
   pct: (v, d = 1) => ok(v) ? `${(v * 100).toFixed(d)}%` : '—',
@@ -114,15 +114,15 @@ function calcScores(metrics, ratios, history, stmts) {
     mom = 0,
     growth = 0;
   if (metrics && ratios) {
-    const pe = metrics.peRatioTTM,
-      ev = metrics.enterpriseValueOverEBITDATTM;
-    const pfcf = metrics.pfcfRatioTTM,
-      fvr = ratios.priceFairValueTTM;
+    const pe = metrics.priceToEarningsRatioTTM,
+      ev = metrics.evToEBITDATTM;
+    const pfcf = metrics.priceToFreeCashFlowRatioTTM,
+      fvr = ratios.priceToFairValueTTM;
     const gm = ratios.grossProfitMarginTTM,
-      roic = metrics.roicTTM;
+      roic = metrics.returnOnInvestedCapitalTTM;
     const nd = metrics.netDebtToEBITDATTM,
-      roe = metrics.roeTTM,
-      ic = metrics.interestCoverageTTM;
+      roe = metrics.returnOnEquityTTM,
+      ic = metrics.interestCoverageRatioTTM;
     if (ok(pe) && pe > 0) val += pe < 12 ? 9 : pe < 18 ? 8 : pe < 25 ? 6 : pe < 35 ? 4 : pe < 50 ? 2 : 1;
     if (ok(ev) && ev > 0) val += ev < 8 ? 7 : ev < 12 ? 5 : ev < 18 ? 3 : ev < 25 ? 2 : ev < 35 ? 1 : 0;
     if (ok(pfcf) && pfcf > 0) val += pfcf < 12 ? 6 : pfcf < 20 ? 5 : pfcf < 28 ? 3 : pfcf < 40 ? 1 : 0;
@@ -783,8 +783,6 @@ function PriceChart({
   const stroke = isUp ? '#22c55e' : '#f87171';
   const pts = prices.map((p, i) => `${px(i)},${py(p)}`).join(' ');
   const fillPts = `${pl},${priceBottom} ${pts} ${W - pr},${priceBottom}`;
-
-  // 50-day SMA
   const sma50pts = useMemo(() => {
     if (prices.length < 50) return null;
     const points = [];
@@ -794,12 +792,8 @@ function PriceChart({
     }
     return points.join(' ');
   }, [prices, px, py]);
-
-  // 52W markers
   const hi52 = Math.max(...prices),
     lo52 = Math.min(...prices);
-
-  // Month ticks
   const ticks = [];
   let lastM = -1;
   filtered.forEach((d, i) => {
@@ -1335,8 +1329,6 @@ function GrowthPanel({
   const netI = rows.map(q => q.netIncome);
   const gms = rows.map(q => q.revenue > 0 ? q.grossProfit / q.revenue : null);
   const eps = rows.map(q => q.eps);
-
-  // 3Y CAGR approx
   const cagr = (first, last, yrs) => ok(first) && ok(last) && first > 0 && last > 0 ? Math.pow(last / first, 1 / yrs) - 1 : null;
   const years = stmts.length / 4;
   const revCagr = cagr(rows[0]?.revenue, rows[rows.length - 1]?.revenue, years);
@@ -1534,22 +1526,197 @@ function NewsCard({
   }, /*#__PURE__*/React.createElement("span", null, n.site), /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, n.publishedDate?.substring(0, 10))))))));
 }
 
+// ─── FINNHUB COMPONENTS ─────────────────────────────────────
+function EarningsCalendarBadge({
+  earn
+}) {
+  if (!earn) return null;
+  const date = earn.date;
+  const est = earn.epsEstimate;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 6,
+      padding: '10px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      marginBottom: 4
+    }
+  }, "Next Earnings"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 700,
+      color: '#e2e8f0',
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, date || '—'), est != null && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginTop: 3
+    }
+  }, "Est. EPS: ", est.toFixed(2)));
+}
+function EarningsSurpriseChart({
+  data
+}) {
+  if (!data || data.length === 0) return null;
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Earnings Beat / Miss \u2014 Last ", data.length, " Quarters"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6,
+      alignItems: 'flex-end',
+      height: 80
+    }
+  }, [...data].reverse().map((q, i) => {
+    const surprise = q.surprisePercent || 0;
+    const isPos = surprise >= 0;
+    const h = Math.min(70, Math.abs(surprise) * 3 + 10);
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 3
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: isPos ? '#22c55e' : '#f87171',
+        fontWeight: 700
+      }
+    }, isPos ? '+' : '', surprise.toFixed(1), "%"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: '100%',
+        height: h,
+        background: isPos ? '#22c55e33' : '#f8717133',
+        border: `1px solid ${isPos ? '#22c55e' : '#f87171'}`,
+        borderRadius: 3
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 8,
+        color: '#334155'
+      }
+    }, q.period));
+  })));
+}
+function InsiderTable({
+  data
+}) {
+  if (!data || data.length === 0) return null;
+  const buys = data.filter(t => t.transactionType === 'P - Purchase' || t.change > 0);
+  const sells = data.filter(t => t.transactionType === 'S - Sale' || t.change < 0);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Insider Transactions (Last 90 Days)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 10,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0d2e1a',
+      border: '1px solid #166534',
+      borderRadius: 6,
+      padding: '10px 14px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 800,
+      color: '#22c55e'
+    }
+  }, buys.length), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#4ade80'
+    }
+  }, "Insider Buys")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#2a0d0d',
+      border: '1px solid #7f1d1d',
+      borderRadius: 6,
+      padding: '10px 14px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 800,
+      color: '#f87171'
+    }
+  }, sells.length), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#fca5a5'
+    }
+  }, "Insider Sells"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 4
+    }
+  }, data.slice(0, 6).map((t, i) => {
+    const isBuy = t.change > 0;
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        background: '#141720',
+        borderRadius: 5,
+        padding: '7px 12px',
+        fontSize: 11
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: '#64748b',
+        flex: 1
+      }
+    }, t.name), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: '#94a3b8',
+        marginRight: 12
+      }
+    }, t.filingDate?.substring(0, 10)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 700,
+        color: isBuy ? '#22c55e' : '#f87171',
+        fontFamily: 'JetBrains Mono,monospace'
+      }
+    }, isBuy ? '▲ Buy' : '▼ Sell', " ", Math.abs(t.change || 0).toLocaleString(), " shares"));
+  })));
+}
+
 // ─── VERDICT SECTION ────────────────────────────────────────
 function VerdictSection({
   scores,
   profile,
   metrics,
-  ratios
+  ratios,
+  aiVerdict,
+  aiLoading
 }) {
   const r = getRating(scores.total);
   const moat = [],
     risks = [];
   const gm = ratios?.grossProfitMarginTTM,
-    roic = metrics?.roicTTM;
+    roic = metrics?.returnOnInvestedCapitalTTM;
   const nd = metrics?.netDebtToEBITDATTM,
-    ic = metrics?.interestCoverageTTM;
-  const pfcf = metrics?.pfcfRatioTTM,
-    pe = metrics?.peRatioTTM;
+    ic = metrics?.interestCoverageRatioTTM;
+  const pfcf = metrics?.priceToFreeCashFlowRatioTTM,
+    pe = metrics?.priceToEarningsRatioTTM;
   if (ok(gm) && gm >= 0.50) moat.push('Gross margin >50% — strong pricing power');
   if (ok(roic) && roic >= 0.20) moat.push('ROIC >20% — deep competitive moat (Escudero framework)');
   if (ok(nd) && nd < 0) moat.push('Net cash balance sheet — fortress');
@@ -1693,13 +1860,25 @@ function VerdictSection({
       letterSpacing: '1px',
       marginBottom: 5
     }
-  }, "Bottom Line"), /*#__PURE__*/React.createElement("div", {
+  }, "Bottom Line ", aiVerdict && /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#a78bfa',
+      fontWeight: 400,
+      textTransform: 'none',
+      letterSpacing: 0
+    }
+  }, "\u2728 AI")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: '#cbd5e1',
       lineHeight: 1.65
     }
-  }, verdictText)), /*#__PURE__*/React.createElement("div", {
+  }, aiLoading ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#475569',
+      fontStyle: 'italic'
+    }
+  }, "\u2728 Generating AI analysis...") : aiVerdict ? /*#__PURE__*/React.createElement("span", null, aiVerdict) : verdictText)), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '10px 22px',
       borderRadius: 6,
@@ -1717,7 +1896,21 @@ function VerdictSection({
 
 // ─── MAIN APP ────────────────────────────────────────────────
 function App() {
+  const [keysSubmitted, setKeysSubmitted] = useState(() => {
+    try {
+      const stored = localStorage.getItem('sl_fmp');
+      return !!(stored && stored.trim().length > 10);
+    } catch {
+      return false;
+    }
+  });
+  const [setupKey, setSetupKey] = useState('');
+  const [setupStatus, setSetupStatus] = useState(null);
   const [fmpKey, setFmpKey] = useState(() => localStorage.getItem('sl_fmp') || DEFAULT_FMP_KEY);
+  const [finnhubKey, setFinnhubKey] = useState(() => localStorage.getItem('sl_finnhub') || '');
+  const [anthropicKey, setAnthropicKey] = useState(() => localStorage.getItem('sl_anthropic') || localStorage.getItem('ic_api_keys.anthropic') || '');
+  const [aiVerdict, setAiVerdict] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [inputTicker, setInputTicker] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1740,6 +1933,11 @@ function App() {
   const [analystEst, setAnalystEst] = useState(null);
   const [udC, setUdC] = useState(null);
   const [dcf, setDcf] = useState(null);
+
+  // Finnhub data state
+  const [earnCalendar, setEarnCalendar] = useState(null);
+  const [earnSurprise, setEarnSurprise] = useState([]);
+  const [insiderTxns, setInsiderTxns] = useState([]);
   const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 180);
@@ -1748,18 +1946,93 @@ function App() {
     });
     return () => window.removeEventListener('scroll', fn);
   }, []);
-
-  // Bug fix: returns null on empty array instead of throwing
-  const fmpGet = useCallback(async path => {
-    const sep = path.includes('?') ? '&' : '?';
-    const url = `https://financialmodelingprep.com/api/v3${path}${sep}apikey=${fmpKey}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const fmpGet = useCallback(async (endpoint, params = {}) => {
+    const base = 'https://financialmodelingprep.com/stable';
+    const qs = new URLSearchParams({
+      ...params,
+      apikey: fmpKey
+    }).toString();
+    const url = `${base}/${endpoint}?${qs}`;
+    let res;
+    try {
+      res = await fetch(url);
+    } catch (e) {
+      throw new Error('Network error — check your internet connection');
+    }
+    if (res.status === 401 || res.status === 403) throw new Error('Invalid API key — go to Settings ⚙ to update it');
+    if (!res.ok) throw new Error(`API error (HTTP ${res.status})`);
     const data = await res.json();
-    if (data?.['Error Message']) throw new Error(data['Error Message']);
+    if (data?.['Error Message']) {
+      const msg = data['Error Message'];
+      if (msg.toLowerCase().includes('limit') || msg.toLowerCase().includes('upgrade')) throw new Error('API daily limit reached (250 calls/day on free plan) — try again tomorrow');
+      if (msg.toLowerCase().includes('legacy')) throw new Error('FMP Legacy endpoint error — please update your key in Settings ⚙');
+      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('apikey')) throw new Error('Invalid API key — go to Settings ⚙ to update it');
+      throw new Error(msg);
+    }
     if (Array.isArray(data) && data.length === 0) return null;
     return data;
   }, [fmpKey]);
+  const finnhubGet = useCallback(async (endpoint, params = {}) => {
+    if (!finnhubKey) return null;
+    const base = 'https://finnhub.io/api/v1';
+    const qs = new URLSearchParams({
+      ...params,
+      token: finnhubKey
+    }).toString();
+    try {
+      const res = await fetch(`${base}/${endpoint}?${qs}`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }, [finnhubKey]);
+  const fetchAiVerdict = useCallback(async (sym, scoreData, profileData, metricsData) => {
+    if (!anthropicKey || !sym) return;
+    setAiLoading(true);
+    setAiVerdict(null);
+    try {
+      const prompt = `You are a concise equity analyst. Provide a 2-3 sentence investment verdict for ${sym} (${profileData?.companyName || ''}).
+
+Key data:
+- Composite score: ${scoreData?.total}/100 (${getRating(scoreData?.total)?.label})
+- Valuation score: ${scoreData?.val}/25
+- Financial Health score: ${scoreData?.hlth}/30
+- Momentum score: ${scoreData?.mom}/25
+- Growth score: ${scoreData?.growth}/20
+- Sector: ${profileData?.sector || 'Unknown'}
+- Market Cap: ${profileData?.mktCap ? '$' + (profileData.mktCap / 1e9).toFixed(1) + 'B' : 'Unknown'}
+- P/E (TTM): ${metricsData?.priceToEarningsRatioTTM?.toFixed(1) || 'N/A'}
+- ROIC (TTM): ${metricsData?.returnOnInvestedCapitalTTM ? (metricsData.returnOnInvestedCapitalTTM * 100).toFixed(1) + '%' : 'N/A'}
+- Net Debt/EBITDA: ${metricsData?.netDebtToEBITDATTM?.toFixed(1) || 'N/A'}
+
+Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End with the rating word (STRONG BUY / BUY / HOLD / CAUTION / AVOID).`;
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 200,
+          messages: [{
+            role: 'user',
+            content: prompt
+          }]
+        })
+      });
+      const data = await res.json();
+      const text = data?.content?.[0]?.text;
+      if (text) setAiVerdict(text);
+    } catch (e) {
+      // Silently fail — fall back to rule-based text
+    } finally {
+      setAiLoading(false);
+    }
+  }, [anthropicKey]);
   const analyze = useCallback(async sym => {
     if (!sym) return;
     setLoading(true);
@@ -1776,39 +2049,46 @@ function App() {
     setAnalystEst(null);
     setUdC(null);
     setDcf(null);
+    setAiVerdict(null);
+    setEarnCalendar(null);
+    setEarnSurprise([]);
+    setInsiderTxns([]);
     try {
-      const results = await Promise.allSettled([fmpGet(`/quote/${sym}`),
-      // 0
-      fmpGet(`/profile/${sym}`),
-      // 1
-      fmpGet(`/key-metrics-ttm/${sym}`),
-      // 2
-      fmpGet(`/ratios-ttm/${sym}`),
-      // 3
-      fmpGet(`/historical-price-full/${sym}?timeseries=365`),
-      // 4
-      fmpGet(`/income-statement/${sym}?period=quarter&limit=8`),
-      // 5
-      fmpGet(`/stock_news?tickers=${sym}&limit=8`),
-      // 6
-      fmpGet(`/price-target-consensus/${sym}`),
-      // 7
-      fmpGet(`/analyst-estimates/${sym}?limit=2`),
-      // 8
-      fmpGet(`/upgrades-downgrades-consensus/${sym}`),
-      // 9
-      fmpGet(`/discounted-cash-flow/${sym}`) // 10
-      ]);
+      const results = await Promise.allSettled([fmpGet('quote', {
+        symbol: sym
+      }), fmpGet('profile', {
+        symbol: sym
+      }), fmpGet('key-metrics-ttm', {
+        symbol: sym
+      }), fmpGet('ratios-ttm', {
+        symbol: sym
+      }), fmpGet('historical-price-eod/full', {
+        symbol: sym
+      }), fmpGet('income-statement', {
+        symbol: sym,
+        period: 'quarter',
+        limit: '4'
+      }), fmpGet('news', {
+        tickers: sym,
+        limit: '8'
+      }), fmpGet('price-target-consensus', {
+        symbol: sym
+      }), fmpGet('analyst-estimates', {
+        symbol: sym,
+        limit: '2'
+      }), fmpGet('upgrades-downgrades-consensus', {
+        symbol: sym
+      }), fmpGet('discounted-cash-flow', {
+        symbol: sym
+      })]);
       const get = r => r.status === 'fulfilled' ? r.value : null;
       const [qD, pD, mD, rD, hD, sD, nD, ptD, aeD, udD, dcfD] = results.map(get);
-
-      // Only fail if BOTH quote and profile are missing
       if (!qD && !pD) throw new Error(`Ticker "${sym}" not found — check the symbol and try again`);
       setQuote(Array.isArray(qD) ? qD[0] : qD);
       setProf(Array.isArray(pD) ? pD[0] : pD);
       setMet(Array.isArray(mD) ? mD[0] : mD);
       setRat(Array.isArray(rD) ? rD[0] : rD);
-      setHist(hD?.historical || []);
+      setHist(Array.isArray(hD) ? hD : []);
       setStmts(Array.isArray(sD) ? sD : []);
       setNews(Array.isArray(nD) ? nD : []);
       setPtC(ptD);
@@ -1816,17 +2096,47 @@ function App() {
       setUdC(udD);
       setDcf(Array.isArray(dcfD) ? dcfD[0] : dcfD);
       setTicker(sym.toUpperCase());
-
-      // Save to history
       const hist5 = [sym, ...JSON.parse(localStorage.getItem('sl_history') || '[]')].filter((t, i, a) => a.indexOf(t) === i).slice(0, 5);
       localStorage.setItem('sl_history', JSON.stringify(hist5));
       setRecentTickers(hist5);
+
+      // Finnhub data (optional)
+      if (finnhubKey) {
+        const today = new Date();
+        const from = today.toISOString().substring(0, 10);
+        const to = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+        const [earnCalRes, earnSurpRes, insiderRes] = await Promise.allSettled([finnhubGet('calendar/earnings', {
+          symbol: sym,
+          from,
+          to
+        }), finnhubGet('stock/earnings', {
+          symbol: sym,
+          limit: '8'
+        }), finnhubGet('stock/insider-transactions', {
+          symbol: sym
+        })]);
+        const fg = r => r.status === 'fulfilled' ? r.value : null;
+        const [ec, es, it] = [earnCalRes, earnSurpRes, insiderRes].map(fg);
+        setEarnCalendar(ec?.earningsCalendar?.[0] || null);
+        setEarnSurprise(Array.isArray(es) ? es.slice(0, 8) : []);
+        setInsiderTxns(Array.isArray(it?.data) ? it.data.slice(0, 10) : []);
+      }
+
+      // AI verdict (optional)
+      if (anthropicKey) {
+        const mFinal = Array.isArray(mD) ? mD[0] : mD;
+        const pFinal = Array.isArray(pD) ? pD[0] : pD;
+        const rFinal = Array.isArray(rD) ? rD[0] : rD;
+        const hFinal = Array.isArray(hD) ? hD : [];
+        const sFinal = Array.isArray(sD) ? sD : [];
+        fetchAiVerdict(sym, calcScores(mFinal, rFinal, hFinal, sFinal), pFinal, mFinal);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [fmpGet]);
+  }, [fmpGet, finnhubGet, finnhubKey, anthropicKey, fetchAiVerdict]);
   const handleSearch = () => {
     const s = inputTicker.trim().toUpperCase();
     if (s) analyze(s);
@@ -1837,27 +2147,21 @@ function App() {
   const priceNow = quote?.price || sorted[sorted.length - 1]?.close;
   const price12m = sorted[0]?.close;
   const ret12m = ok(priceNow) && ok(price12m) && price12m > 0 ? (priceNow - price12m) / price12m : null;
-  const chg1d = quote?.changesPercentage;
+  const chg1d = quote?.changePercentage;
   const isUpDay = (chg1d || 0) >= 0;
   const hasData = !!(quote || prof);
   const r = scores ? getRating(scores.total) : null;
-
-  // Sector benchmarks for KPI badges
   const bm = useMemo(() => SECTOR_BM[prof?.sector] || null, [prof?.sector]);
-
-  // DCF display
   const dcfVal = dcf?.dcf;
   const mosFrac = ok(dcfVal) && ok(priceNow) && dcfVal > 0 ? (dcfVal - priceNow) / dcfVal : null;
   const mosColor = !ok(mosFrac) ? '#475569' : mosFrac > 0.15 ? '#22c55e' : mosFrac > -0.15 ? '#fbbf24' : '#f87171';
-
-  // Health cards
   const healthCards = useMemo(() => {
     if (!met || !rat) return [];
-    const pe = met.peRatioTTM,
-      ev = met.enterpriseValueOverEBITDATTM;
-    const pfcf = met.pfcfRatioTTM,
+    const pe = met.priceToEarningsRatioTTM,
+      ev = met.evToEBITDATTM;
+    const pfcf = met.priceToFreeCashFlowRatioTTM,
       gm = rat.grossProfitMarginTTM;
-    const roic = met.roicTTM,
+    const roic = met.returnOnInvestedCapitalTTM,
       nd = met.netDebtToEBITDATTM;
     return [{
       label: 'P/E Ratio',
@@ -1892,6 +2196,267 @@ function App() {
     }];
   }, [met, rat]);
   const tabs = ['Overview', 'Fundamentals', 'Chart', 'Research'];
+
+  // ── Setup screen ──────────────────────────────────────────
+  if (!keysSubmitted) {
+    const testAndSave = async () => {
+      if (!setupKey.trim()) return;
+      setSetupStatus('testing');
+      try {
+        const res = await fetch(`https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=${setupKey.trim()}`);
+        const data = await res.json();
+        if (data?.['Error Message']) {
+          const msg = data['Error Message'].toLowerCase();
+          if (msg.includes('limit') || msg.includes('upgrade')) return setSetupStatus({
+            error: 'This key has reached its daily limit (250 calls/day on free plan). Try again tomorrow or use a different key.'
+          });
+          if (msg.includes('legacy')) return setSetupStatus({
+            error: 'This key returned a legacy endpoint error. Try generating a new key at financialmodelingprep.com.'
+          });
+          return setSetupStatus({
+            error: 'Invalid API key. Check it and try again.'
+          });
+        }
+        if (!Array.isArray(data) || data.length === 0) return setSetupStatus({
+          error: 'Could not validate key — unexpected response. Check the key and try again.'
+        });
+        localStorage.setItem('sl_fmp', setupKey.trim());
+        setFmpKey(setupKey.trim());
+        const fhKey = document.getElementById('sl_setup_finnhub')?.value?.trim();
+        const antKey = document.getElementById('sl_setup_anthropic')?.value?.trim();
+        if (fhKey) {
+          localStorage.setItem('sl_finnhub', fhKey);
+          setFinnhubKey(fhKey);
+        }
+        if (antKey) {
+          localStorage.setItem('sl_anthropic', antKey);
+          setAnthropicKey(antKey);
+        }
+        setKeysSubmitted(true);
+      } catch (e) {
+        setSetupStatus({
+          error: 'Network error — check your internet connection.'
+        });
+      }
+    };
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        minHeight: '100vh',
+        background: '#07080c',
+        color: '#e2e8f0',
+        fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24
+      }
+    }, /*#__PURE__*/React.createElement("style", null, `*{box-sizing:border-box} @keyframes spin{to{transform:rotate(360deg)}} input::placeholder{color:#334155}`), /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: '#0c0e14',
+        border: '1px solid #1e2430',
+        borderRadius: 14,
+        padding: '44px 40px',
+        maxWidth: 460,
+        width: '100%',
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 44,
+        marginBottom: 12
+      }
+    }, "\u26A1"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 26,
+        fontWeight: 800,
+        color: '#fff',
+        marginBottom: 6
+      }
+    }, "StockLens"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: '#475569',
+        marginBottom: 32,
+        lineHeight: 1.7
+      }
+    }, "Professional stock analysis \u2014 powered by Financial Modeling Prep.", /*#__PURE__*/React.createElement("br", null), "Enter your free API key to get started."), /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: '#141720',
+        border: '1px solid #1e2430',
+        borderRadius: 8,
+        padding: '14px 16px',
+        marginBottom: 20,
+        textAlign: 'left'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        fontWeight: 700,
+        color: '#3b82f6',
+        textTransform: 'uppercase',
+        letterSpacing: '1px',
+        marginBottom: 8
+      }
+    }, "Step 1 \u2014 Get a free API key"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: '#64748b',
+        lineHeight: 1.7,
+        marginBottom: 8
+      }
+    }, "Create a free account at Financial Modeling Prep to get your API key:"), /*#__PURE__*/React.createElement("a", {
+      href: "https://site.financialmodelingprep.com/register",
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: {
+        display: 'inline-block',
+        fontSize: 12,
+        color: '#60a5fa',
+        background: '#1e3a5f44',
+        border: '1px solid #1e3a5f',
+        padding: '5px 12px',
+        borderRadius: 5,
+        textDecoration: 'none'
+      }
+    }, "financialmodelingprep.com/register \u2197")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'left',
+        marginBottom: 20
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        fontWeight: 700,
+        color: '#3b82f6',
+        textTransform: 'uppercase',
+        letterSpacing: '1px',
+        marginBottom: 8
+      }
+    }, "Step 2 \u2014 Paste your key below"), /*#__PURE__*/React.createElement("input", {
+      value: setupKey,
+      onChange: e => setSetupKey(e.target.value),
+      onKeyDown: e => e.key === 'Enter' && testAndSave(),
+      placeholder: "Enter your FMP API key...",
+      style: {
+        width: '100%',
+        background: '#141720',
+        border: '1px solid #1e2430',
+        color: '#e2e8f0',
+        padding: '10px 14px',
+        borderRadius: 6,
+        fontSize: 13,
+        outline: 'none',
+        marginBottom: 10
+      }
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: testAndSave,
+      disabled: setupStatus === 'testing' || !setupKey.trim(),
+      style: {
+        width: '100%',
+        background: setupStatus === 'testing' ? '#1e2430' : '#3b82f6',
+        color: '#fff',
+        border: 'none',
+        padding: '10px 0',
+        borderRadius: 6,
+        cursor: setupStatus === 'testing' ? 'not-allowed' : 'pointer',
+        fontSize: 14,
+        fontWeight: 700
+      }
+    }, setupStatus === 'testing' ? /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'inline-block',
+        width: 14,
+        height: 14,
+        border: '2px solid #64748b',
+        borderTopColor: '#fff',
+        borderRadius: '50%',
+        animation: 'spin 0.7s linear infinite'
+      }
+    }), "Testing...") : 'Test & Save Key')), setupStatus && typeof setupStatus === 'object' && setupStatus.error && /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: '#2a0d0d',
+        border: '1px solid #7f1d1d',
+        borderRadius: 6,
+        padding: '10px 14px',
+        fontSize: 12,
+        color: '#f87171',
+        marginBottom: 12,
+        textAlign: 'left'
+      }
+    }, "\u26A0 ", setupStatus.error), /*#__PURE__*/React.createElement("details", {
+      style: {
+        textAlign: 'left',
+        marginTop: 20
+      }
+    }, /*#__PURE__*/React.createElement("summary", {
+      style: {
+        fontSize: 11,
+        color: '#475569',
+        cursor: 'pointer',
+        marginBottom: 12
+      }
+    }, "\u2728 Optional: Add more data sources (Finnhub + Anthropic AI)"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        marginTop: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: '#475569',
+        marginBottom: 4
+      }
+    }, "Finnhub API Key \u2014 earnings calendar + insider transactions (free)"), /*#__PURE__*/React.createElement("input", {
+      placeholder: "Get free key at finnhub.io",
+      id: "sl_setup_finnhub",
+      style: {
+        width: '100%',
+        background: '#141720',
+        border: '1px solid #1e2430',
+        color: '#e2e8f0',
+        padding: '8px 12px',
+        borderRadius: 6,
+        fontSize: 12,
+        outline: 'none'
+      }
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: '#475569',
+        marginBottom: 4
+      }
+    }, "Anthropic API Key \u2014 AI-powered investment verdict"), /*#__PURE__*/React.createElement("input", {
+      placeholder: "sk-ant-...",
+      type: "password",
+      id: "sl_setup_anthropic",
+      style: {
+        width: '100%',
+        background: '#141720',
+        border: '1px solid #1e2430',
+        color: '#e2e8f0',
+        padding: '8px 12px',
+        borderRadius: 6,
+        fontSize: 12,
+        outline: 'none'
+      }
+    })))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: '#1e2430',
+        marginTop: 16,
+        lineHeight: 1.6
+      }
+    }, "Free plan: 250 API calls/day \u2014 enough for ~25 tickers/day.", /*#__PURE__*/React.createElement("br", null), "Your key is stored locally in your browser only.")));
+  }
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: '100vh',
@@ -2004,16 +2569,7 @@ function App() {
       color: '#fff',
       letterSpacing: '-0.5px'
     }
-  }, "\u26A1 StockLens"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10,
-      color: '#334155',
-      background: '#141720',
-      border: '1px solid #1e2430',
-      padding: '2px 7px',
-      borderRadius: 4
-    }
-  }, "v2.0")), /*#__PURE__*/React.createElement("div", {
+  }, "\u26A1 StockLens")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -2101,10 +2657,25 @@ function App() {
     style: {
       background: '#0a0b10',
       borderBottom: '1px solid #161b26',
-      padding: '14px 24px',
+      padding: '16px 24px',
       display: 'flex',
-      gap: 14,
-      alignItems: 'flex-end'
+      flexDirection: 'column',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '1px'
+    }
+  }, "API Settings"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 12,
+      alignItems: 'flex-end',
+      flexWrap: 'wrap'
     }
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2124,12 +2695,13 @@ function App() {
       padding: '6px 11px',
       borderRadius: 6,
       fontSize: 12,
-      width: 280,
+      width: 300,
       outline: 'none'
     }
   })), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       localStorage.setItem('sl_fmp', fmpKey);
+      localStorage.setItem('sl_finnhub', finnhubKey);
       setShowCfg(false);
     },
     style: {
@@ -2140,9 +2712,170 @@ function App() {
       borderRadius: 6,
       cursor: 'pointer',
       fontSize: 12,
+      fontWeight: 700,
+      whiteSpace: 'nowrap'
+    }
+  }, "Save Key"), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      try {
+        const res = await fetch(`https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=${fmpKey}`);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          alert('✓ Connection OK — key is working');
+        } else {
+          alert('✗ Connection failed — ' + (data?.['Error Message'] || 'unexpected response'));
+        }
+      } catch (e) {
+        alert('✗ Network error');
+      }
+    },
+    style: {
+      background: '#141720',
+      color: '#60a5fa',
+      border: '1px solid #1e3a5f',
+      padding: '6px 14px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: 12,
+      fontWeight: 600,
+      whiteSpace: 'nowrap'
+    }
+  }, "Test Connection"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (!window.confirm('Reset your API key? You will need to enter it again.')) return;
+      localStorage.removeItem('sl_fmp');
+      setFmpKey('');
+      setKeysSubmitted(false);
+      setShowCfg(false);
+    },
+    style: {
+      background: '#2a0d0d',
+      color: '#f87171',
+      border: '1px solid #7f1d1d',
+      padding: '6px 14px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: 12,
+      fontWeight: 600,
+      whiteSpace: 'nowrap'
+    }
+  }, "Reset Key")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 12,
+      alignItems: 'flex-end',
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 4,
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "Finnhub API Key ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#334155',
+      fontWeight: 400,
+      textTransform: 'none'
+    }
+  }, "(optional \u2014 adds earnings & insider data)")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: finnhubKey,
+    onChange: e => setFinnhubKey(e.target.value),
+    placeholder: "Get free key at finnhub.io",
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      color: '#e2e8f0',
+      padding: '6px 11px',
+      borderRadius: 6,
+      fontSize: 12,
+      width: 300,
+      outline: 'none'
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      localStorage.setItem('sl_finnhub', finnhubKey);
+    },
+    style: {
+      background: '#22c55e',
+      color: '#000',
+      border: 'none',
+      padding: '6px 14px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: 12,
       fontWeight: 700
     }
-  }, "Save")), /*#__PURE__*/React.createElement("div", {
+  }, "Save")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 12,
+      alignItems: 'flex-end',
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 4,
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "Anthropic API Key ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#334155',
+      fontWeight: 400,
+      textTransform: 'none'
+    }
+  }, "(optional \u2014 enables AI-powered verdict)")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: anthropicKey,
+    onChange: e => setAnthropicKey(e.target.value),
+    placeholder: "sk-ant-...",
+    type: "password",
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      color: '#e2e8f0',
+      padding: '6px 11px',
+      borderRadius: 6,
+      fontSize: 12,
+      width: 300,
+      outline: 'none'
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      localStorage.setItem('sl_anthropic', anthropicKey);
+    },
+    style: {
+      background: '#22c55e',
+      color: '#000',
+      border: 'none',
+      padding: '6px 14px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: 12,
+      fontWeight: 700
+    }
+  }, "Save")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#334155'
+    }
+  }, "Free plan: 250 calls/day. Keys stored in your browser only.")), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 1120,
       margin: '0 auto',
@@ -2165,7 +2898,7 @@ function App() {
       color: '#fff',
       marginBottom: 8
     }
-  }, "StockLens v2.0"), /*#__PURE__*/React.createElement("div", {
+  }, "StockLens"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: '#334155',
@@ -2173,7 +2906,7 @@ function App() {
       margin: '0 auto 32px',
       lineHeight: 1.7
     }
-  }, "Enter any US ticker for an InvestingPro-style deep analysis \u2014 4-dimensional scoring, analyst consensus, DCF value, technical signals, and investment verdict."), /*#__PURE__*/React.createElement("div", {
+  }, "Professional stock analysis \u2014 enter any ticker to get started. 4-dimensional scoring: valuation, financial health, momentum, and growth."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -2202,12 +2935,35 @@ function App() {
       background: '#2a0d0d',
       border: '1px solid #7f1d1d',
       borderRadius: 8,
-      padding: '14px 18px',
-      margin: '24px 0',
-      color: '#f87171',
-      fontSize: 13
+      padding: '16px 20px',
+      margin: '24px 0'
     }
-  }, "\u26A0 ", error), !loading && hasData && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#f87171',
+      fontSize: 13,
+      marginBottom: error.includes('Settings') || error.includes('limit') ? 12 : 0
+    }
+  }, "\u26A0 ", error), error.includes('Settings') && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowCfg(true),
+    style: {
+      background: '#3b82f6',
+      color: '#fff',
+      border: 'none',
+      padding: '6px 16px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: 12,
+      fontWeight: 600,
+      marginRight: 8
+    }
+  }, "Open Settings \u2699"), error.includes('limit') && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      marginTop: 8
+    }
+  }, "The 250 calls/day free limit resets at midnight UTC. You can use a different key or wait until tomorrow.")), !loading && hasData && /*#__PURE__*/React.createElement("div", {
     style: {
       paddingTop: 20,
       display: 'flex',
@@ -2335,7 +3091,7 @@ function App() {
       color: '#334155',
       marginTop: 3
     }
-  }, "Mkt Cap ", fmt.usd(quote?.marketCap), " \xB7 Avg Vol ", fmt.usd(quote?.avgVolume)), ok(dcfVal) && /*#__PURE__*/React.createElement("div", {
+  }, "Mkt Cap ", fmt.usd(quote?.marketCap), " \xB7 Avg Vol ", fmt.usd(quote?.averageVolume)), ok(dcfVal) && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 8,
       padding: '5px 10px',
@@ -2447,7 +3203,9 @@ function App() {
     value: scores.growth,
     max: 20,
     color: "#a78bfa"
-  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Key Metrics \u2014 TTM"), /*#__PURE__*/React.createElement("div", {
+  })), earnCalendar && /*#__PURE__*/React.createElement(EarningsCalendarBadge, {
+    earn: earnCalendar
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Key Metrics \u2014 TTM"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: 'repeat(3,1fr)',
@@ -2455,19 +3213,19 @@ function App() {
     }
   }, /*#__PURE__*/React.createElement(KPIBadge, {
     label: "P/E Ratio",
-    value: fmt.mult(met?.peRatioTTM),
+    value: fmt.mult(met?.priceToEarningsRatioTTM),
     sub: "trailing 12 months",
     bmVal: bm?.pe,
     bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "EV/EBITDA",
-    value: fmt.mult(met?.enterpriseValueOverEBITDATTM),
+    value: fmt.mult(met?.evToEBITDATTM),
     sub: "enterprise value mult.",
     bmVal: bm?.ev,
     bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "P/FCF",
-    value: fmt.mult(met?.pfcfRatioTTM),
+    value: fmt.mult(met?.priceToFreeCashFlowRatioTTM),
     sub: "price / free cash flow"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "Gross Margin",
@@ -2478,9 +3236,9 @@ function App() {
     bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "ROIC",
-    value: fmt.pct(met?.roicTTM),
+    value: fmt.pct(met?.returnOnInvestedCapitalTTM),
     sub: "return on inv. capital",
-    highlight: ok(met?.roicTTM) ? met.roicTTM >= 0.15 ? '#22c55e' : met.roicTTM >= 0.06 ? '#fbbf24' : '#f87171' : undefined,
+    highlight: ok(met?.returnOnInvestedCapitalTTM) ? met.returnOnInvestedCapitalTTM >= 0.15 ? '#22c55e' : met.returnOnInvestedCapitalTTM >= 0.06 ? '#fbbf24' : '#f87171' : undefined,
     bmVal: bm?.roic,
     bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
@@ -2494,13 +3252,13 @@ function App() {
     sub: "TTM"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "ROE",
-    value: fmt.pct(met?.roeTTM),
+    value: fmt.pct(met?.returnOnEquityTTM),
     sub: "return on equity"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "Interest Coverage",
-    value: fmt.mult(met?.interestCoverageTTM),
+    value: fmt.mult(met?.interestCoverageRatioTTM),
     sub: "EBIT / interest expense",
-    highlight: ok(met?.interestCoverageTTM) ? met.interestCoverageTTM >= 10 ? '#22c55e' : met.interestCoverageTTM >= 3 ? '#fbbf24' : '#f87171' : undefined
+    highlight: ok(met?.interestCoverageRatioTTM) ? met.interestCoverageRatioTTM >= 10 ? '#22c55e' : met.interestCoverageRatioTTM >= 3 ? '#fbbf24' : '#f87171' : undefined
   })))), (ptC || udC) && /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#141720',
@@ -2599,10 +3357,96 @@ function App() {
     scores: scores,
     profile: prof,
     metrics: met,
-    ratios: rat
+    ratios: rat,
+    aiVerdict: aiVerdict,
+    aiLoading: aiLoading
   }), news.length > 0 && /*#__PURE__*/React.createElement(NewsCard, {
     items: news
-  }))))), /*#__PURE__*/React.createElement("div", {
+  }), finnhubKey ? /*#__PURE__*/React.createElement(React.Fragment, null, earnSurprise.length > 0 && /*#__PURE__*/React.createElement(EarningsSurpriseChart, {
+    data: earnSurprise
+  }), insiderTxns.length > 0 && /*#__PURE__*/React.createElement(InsiderTable, {
+    data: insiderTxns
+  })) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 8,
+      padding: '16px 20px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#475569',
+      marginBottom: 8
+    }
+  }, "Add a free Finnhub key in Settings \u2699 to unlock earnings calendar, beat/miss history, and insider transactions."), /*#__PURE__*/React.createElement("a", {
+    href: "https://finnhub.io",
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      fontSize: 11,
+      color: '#60a5fa'
+    }
+  }, "Get free key at finnhub.io \u2197")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 8,
+      padding: '14px 18px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '1px',
+      marginBottom: 8
+    }
+  }, "SEC EDGAR Filings"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("a", {
+    href: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=4&dateb=&owner=include&count=20`,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      fontSize: 11,
+      color: '#60a5fa',
+      background: '#1e3a5f22',
+      border: '1px solid #1e3a5f',
+      padding: '5px 12px',
+      borderRadius: 5
+    }
+  }, "Form 4 \u2014 Insider Filings \u2197"), /*#__PURE__*/React.createElement("a", {
+    href: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=10-K&dateb=&owner=include&count=5`,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      fontSize: 11,
+      color: '#60a5fa',
+      background: '#1e3a5f22',
+      border: '1px solid #1e3a5f',
+      padding: '5px 12px',
+      borderRadius: 5
+    }
+  }, "10-K Annual Reports \u2197"), /*#__PURE__*/React.createElement("a", {
+    href: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=13F&dateb=&owner=include&count=5`,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      fontSize: 11,
+      color: '#60a5fa',
+      background: '#1e3a5f22',
+      border: '1px solid #1e3a5f',
+      padding: '5px 12px',
+      borderRadius: 5
+    }
+  }, "13F \u2014 Institutional Holdings \u2197"))))))), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       marginTop: 48,
@@ -2610,6 +3454,6 @@ function App() {
       color: '#1e2430',
       lineHeight: 1.8
     }
-  }, "StockLens v2.0 \xB7 Data: Financial Modeling Prep \xB7 Not financial advice \xB7 ", new Date().getFullYear(), ticker && quote && /*#__PURE__*/React.createElement("span", null, " \xB7 Last updated: ", new Date().toLocaleTimeString())));
+  }, "StockLens v3.0 \xB7 Data: Financial Modeling Prep \xB7 Not financial advice \xB7 ", new Date().getFullYear(), ticker && quote && /*#__PURE__*/React.createElement("span", null, " \xB7 Last updated: ", new Date().toLocaleTimeString())));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));

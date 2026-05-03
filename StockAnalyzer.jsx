@@ -1,11 +1,11 @@
 // ============================================================
-// StockLens v2.0 — Stock Analysis App
-// Stack: React 18 UMD · Financial Modeling Prep API
+// StockLens v3.0 — Stock Analysis App
+// Stack: React 18 UMD · Financial Modeling Prep API (stable)
 // No imports — global React from CDN, pre-compiled by Babel
 // ============================================================
 
 const { useState, useCallback, useMemo, useRef, useEffect } = React;
-const DEFAULT_FMP_KEY = 'wXLMidktyQfzS8ADy4HvUyR6yaWKtqS2';
+const DEFAULT_FMP_KEY = '';
 const ok = v => v != null && !isNaN(v) && isFinite(v);
 
 const fmt = {
@@ -56,10 +56,10 @@ function computeSMA(prices, period) {
 function calcScores(metrics, ratios, history, stmts) {
   let val=0, hlth=0, mom=0, growth=0;
   if (metrics && ratios) {
-    const pe=metrics.peRatioTTM, ev=metrics.enterpriseValueOverEBITDATTM;
-    const pfcf=metrics.pfcfRatioTTM, fvr=ratios.priceFairValueTTM;
-    const gm=ratios.grossProfitMarginTTM, roic=metrics.roicTTM;
-    const nd=metrics.netDebtToEBITDATTM, roe=metrics.roeTTM, ic=metrics.interestCoverageTTM;
+    const pe=metrics.priceToEarningsRatioTTM, ev=metrics.evToEBITDATTM;
+    const pfcf=metrics.priceToFreeCashFlowRatioTTM, fvr=ratios.priceToFairValueTTM;
+    const gm=ratios.grossProfitMarginTTM, roic=metrics.returnOnInvestedCapitalTTM;
+    const nd=metrics.netDebtToEBITDATTM, roe=metrics.returnOnEquityTTM, ic=metrics.interestCoverageRatioTTM;
     if(ok(pe)&&pe>0)    val+=pe<12?9:pe<18?8:pe<25?6:pe<35?4:pe<50?2:1;
     if(ok(ev)&&ev>0)    val+=ev<8?7:ev<12?5:ev<18?3:ev<25?2:ev<35?1:0;
     if(ok(pfcf)&&pfcf>0) val+=pfcf<12?6:pfcf<20?5:pfcf<28?3:pfcf<40?1:0;
@@ -335,7 +335,6 @@ function PriceChart({history, ticker, period}) {
   const pts=prices.map((p,i)=>`${px(i)},${py(p)}`).join(' ');
   const fillPts=`${pl},${priceBottom} ${pts} ${W-pr},${priceBottom}`;
 
-  // 50-day SMA
   const sma50pts = useMemo(()=>{
     if (prices.length < 50) return null;
     const points=[];
@@ -346,10 +345,8 @@ function PriceChart({history, ticker, period}) {
     return points.join(' ');
   },[prices,px,py]);
 
-  // 52W markers
   const hi52=Math.max(...prices), lo52=Math.min(...prices);
 
-  // Month ticks
   const ticks=[];
   let lastM=-1;
   filtered.forEach((d,i)=>{
@@ -388,16 +385,11 @@ function PriceChart({history, ticker, period}) {
         {[0.25,0.5,0.75].map(f=>(
           <line key={f} x1={pl} x2={W-pr} y1={pt+f*priceH} y2={pt+f*priceH} stroke="#161b26" strokeWidth="1"/>
         ))}
-        {/* 52W high/low dashed */}
         <line x1={pl} x2={W-pr} y1={py(hi52)} y2={py(hi52)} stroke="#334155" strokeWidth="0.8" strokeDasharray="4 4"/>
         <line x1={pl} x2={W-pr} y1={py(lo52)} y2={py(lo52)} stroke="#334155" strokeWidth="0.8" strokeDasharray="4 4"/>
-        {/* Fill */}
         <polygon points={fillPts} fill="url(#sg2)"/>
-        {/* Price line */}
         <polyline points={pts} fill="none" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round"/>
-        {/* 50 SMA */}
         {sma50pts && <polyline points={sma50pts} fill="none" stroke="#60a5fa" strokeWidth="1" strokeOpacity="0.7" strokeDasharray="3 2"/>}
-        {/* Volume bars */}
         {volumes.map((v,i)=>(
           <rect key={i}
             x={pl+i*(cw/filtered.length)}
@@ -407,7 +399,6 @@ function PriceChart({history, ticker, period}) {
             fill="#1e2430" opacity="0.8"
           />
         ))}
-        {/* X-axis labels */}
         {ticks.filter((_,i)=>i%2===0).map(({i,m})=>(
           <text key={m} x={px(i)} y={H-8} fontSize="8" fill="#334155" textAnchor="middle">{mLbls[m]}</text>
         ))}
@@ -415,14 +406,12 @@ function PriceChart({history, ticker, period}) {
         <text x={pl+2} y={priceBottom-4} fontSize="8" fill="#334155">${minP.toFixed(0)}</text>
         <text x={W-pr-2} y={py(hi52)-3} fontSize="7.5" fill="#475569" textAnchor="end">52W H</text>
         <text x={W-pr-2} y={py(lo52)+8} fontSize="7.5" fill="#475569" textAnchor="end">52W L</text>
-        {/* Crosshair */}
         {hx!=null&&(
           <g>
             <line x1={hx} x2={hx} y1={pt} y2={priceBottom} stroke="#475569" strokeWidth="0.8" strokeDasharray="3 2"/>
             <circle cx={hx} cy={py(prices[hoverIdx])} r="3.5" fill={stroke} stroke="#0c0e14" strokeWidth="1.5"/>
           </g>
         )}
-        {/* SMA legend */}
         {sma50pts&&(
           <g>
             <line x1={W-80} x2={W-68} y1={pt+10} y2={pt+10} stroke="#60a5fa" strokeWidth="1.2" strokeDasharray="3 2"/>
@@ -430,11 +419,9 @@ function PriceChart({history, ticker, period}) {
           </g>
         )}
       </svg>
-      {/* Hover tooltip */}
       {hd&&hx!=null&&(
         <div style={{
-          position:'absolute',
-          top:8,
+          position:'absolute',top:8,
           left:Math.min(hx/800*100, 72)+'%',
           background:'#141720',border:'1px solid #1e2430',
           borderRadius:6,padding:'8px 11px',fontSize:11,
@@ -606,7 +593,6 @@ function GrowthPanel({stmts}) {
   const gms=rows.map(q=>q.revenue>0?q.grossProfit/q.revenue:null);
   const eps=rows.map(q=>q.eps);
 
-  // 3Y CAGR approx
   const cagr=(first,last,yrs)=>(ok(first)&&ok(last)&&first>0&&last>0)?Math.pow(last/first,1/yrs)-1:null;
   const years=stmts.length/4;
   const revCagr=cagr(rows[0]?.revenue,rows[rows.length-1]?.revenue,years);
@@ -707,13 +693,95 @@ function NewsCard({items}) {
   );
 }
 
+// ─── FINNHUB COMPONENTS ─────────────────────────────────────
+function EarningsCalendarBadge({ earn }) {
+  if (!earn) return null;
+  const date = earn.date;
+  const est = earn.epsEstimate;
+  return (
+    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
+      <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}}>Next Earnings</div>
+      <div style={{fontSize:15,fontWeight:700,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace'}}>{date || '—'}</div>
+      {est != null && <div style={{fontSize:10,color:'#64748b',marginTop:3}}>Est. EPS: {est.toFixed(2)}</div>}
+    </div>
+  );
+}
+
+function EarningsSurpriseChart({ data }) {
+  if (!data || data.length === 0) return null;
+  return (
+    <div>
+      <SectionTitle>Earnings Beat / Miss — Last {data.length} Quarters</SectionTitle>
+      <div style={{display:'flex',gap:6,alignItems:'flex-end',height:80}}>
+        {[...data].reverse().map((q, i) => {
+          const surprise = q.surprisePercent || 0;
+          const isPos = surprise >= 0;
+          const h = Math.min(70, Math.abs(surprise) * 3 + 10);
+          return (
+            <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+              <div style={{fontSize:9,color:isPos?'#22c55e':'#f87171',fontWeight:700}}>
+                {isPos?'+':''}{surprise.toFixed(1)}%
+              </div>
+              <div style={{
+                width:'100%',height:h,
+                background:isPos?'#22c55e33':'#f8717133',
+                border:`1px solid ${isPos?'#22c55e':'#f87171'}`,
+                borderRadius:3
+              }}/>
+              <div style={{fontSize:8,color:'#334155'}}>{q.period}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function InsiderTable({ data }) {
+  if (!data || data.length === 0) return null;
+  const buys = data.filter(t => t.transactionType === 'P - Purchase' || t.change > 0);
+  const sells = data.filter(t => t.transactionType === 'S - Sale' || t.change < 0);
+  return (
+    <div>
+      <SectionTitle>Insider Transactions (Last 90 Days)</SectionTitle>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+        <div style={{background:'#0d2e1a',border:'1px solid #166534',borderRadius:6,padding:'10px 14px',textAlign:'center'}}>
+          <div style={{fontSize:20,fontWeight:800,color:'#22c55e'}}>{buys.length}</div>
+          <div style={{fontSize:10,color:'#4ade80'}}>Insider Buys</div>
+        </div>
+        <div style={{background:'#2a0d0d',border:'1px solid #7f1d1d',borderRadius:6,padding:'10px 14px',textAlign:'center'}}>
+          <div style={{fontSize:20,fontWeight:800,color:'#f87171'}}>{sells.length}</div>
+          <div style={{fontSize:10,color:'#fca5a5'}}>Insider Sells</div>
+        </div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:4}}>
+        {data.slice(0, 6).map((t, i) => {
+          const isBuy = t.change > 0;
+          return (
+            <div key={i} style={{
+              display:'flex',justifyContent:'space-between',alignItems:'center',
+              background:'#141720',borderRadius:5,padding:'7px 12px',fontSize:11
+            }}>
+              <span style={{color:'#64748b',flex:1}}>{t.name}</span>
+              <span style={{color:'#94a3b8',marginRight:12}}>{t.filingDate?.substring(0,10)}</span>
+              <span style={{fontWeight:700,color:isBuy?'#22c55e':'#f87171',fontFamily:'JetBrains Mono,monospace'}}>
+                {isBuy ? '▲ Buy' : '▼ Sell'} {Math.abs(t.change || 0).toLocaleString()} shares
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── VERDICT SECTION ────────────────────────────────────────
-function VerdictSection({scores, profile, metrics, ratios}) {
+function VerdictSection({scores, profile, metrics, ratios, aiVerdict, aiLoading}) {
   const r=getRating(scores.total);
   const moat=[], risks=[];
-  const gm=ratios?.grossProfitMarginTTM, roic=metrics?.roicTTM;
-  const nd=metrics?.netDebtToEBITDATTM, ic=metrics?.interestCoverageTTM;
-  const pfcf=metrics?.pfcfRatioTTM, pe=metrics?.peRatioTTM;
+  const gm=ratios?.grossProfitMarginTTM, roic=metrics?.returnOnInvestedCapitalTTM;
+  const nd=metrics?.netDebtToEBITDATTM, ic=metrics?.interestCoverageRatioTTM;
+  const pfcf=metrics?.priceToFreeCashFlowRatioTTM, pe=metrics?.priceToEarningsRatioTTM;
 
   if(ok(gm)&&gm>=0.50)   moat.push('Gross margin >50% — strong pricing power');
   if(ok(roic)&&roic>=0.20) moat.push('ROIC >20% — deep competitive moat (Escudero framework)');
@@ -742,14 +810,12 @@ function VerdictSection({scores, profile, metrics, ratios}) {
     <div>
       <SectionTitle>Investment Verdict</SectionTitle>
       <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:12,marginBottom:14,alignItems:'start'}}>
-        {/* Bull case */}
         <div style={{background:'#0d2e1a',border:'1px solid #166534',borderRadius:6,padding:'13px 15px'}}>
           <div style={{fontSize:10,fontWeight:700,color:'#22c55e',marginBottom:8,textTransform:'uppercase',letterSpacing:'1px'}}>🏰 Bull Case</div>
           {moat.length ? moat.map((m,i)=>(
             <div key={i} style={{fontSize:11,color:'#86efac',marginBottom:5,lineHeight:1.5}}>· {m}</div>
           )) : <div style={{fontSize:11,color:'#334155'}}>No strong moat signals at current levels</div>}
         </div>
-        {/* Center score */}
         <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,padding:'0 8px'}}>
           <ScoreGauge score={scores.total}/>
           <div style={{width:140}}>
@@ -759,7 +825,6 @@ function VerdictSection({scores, profile, metrics, ratios}) {
             <ScoreBar label="Growth"           value={scores.growth} max={20} color="#a78bfa"/>
           </div>
         </div>
-        {/* Bear case */}
         <div style={{background:'#2a0d0d',border:'1px solid #7f1d1d',borderRadius:6,padding:'13px 15px'}}>
           <div style={{fontSize:10,fontWeight:700,color:'#f87171',marginBottom:8,textTransform:'uppercase',letterSpacing:'1px'}}>⚠ Bear Case</div>
           {risks.length ? risks.map((rk,i)=>(
@@ -769,8 +834,18 @@ function VerdictSection({scores, profile, metrics, ratios}) {
       </div>
       <div style={{background:r.bg,border:`1px solid ${r.border}`,borderRadius:8,padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:16}}>
         <div style={{flex:1}}>
-          <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'1px',marginBottom:5}}>Bottom Line</div>
-          <div style={{fontSize:13,color:'#cbd5e1',lineHeight:1.65}}>{verdictText}</div>
+          <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'1px',marginBottom:5}}>
+            Bottom Line {aiVerdict && <span style={{color:'#a78bfa',fontWeight:400,textTransform:'none',letterSpacing:0}}>✨ AI</span>}
+          </div>
+          <div style={{fontSize:13,color:'#cbd5e1',lineHeight:1.65}}>
+            {aiLoading ? (
+              <span style={{color:'#475569',fontStyle:'italic'}}>✨ Generating AI analysis...</span>
+            ) : aiVerdict ? (
+              <span>{aiVerdict}</span>
+            ) : (
+              verdictText
+            )}
+          </div>
         </div>
         <div style={{padding:'10px 22px',borderRadius:6,background:r.bg,border:`2px solid ${r.color}`,flexShrink:0,fontSize:13,fontWeight:800,color:r.color,letterSpacing:'2px',whiteSpace:'nowrap'}}>{r.label}</div>
       </div>
@@ -780,7 +855,21 @@ function VerdictSection({scores, profile, metrics, ratios}) {
 
 // ─── MAIN APP ────────────────────────────────────────────────
 function App() {
+  const [keysSubmitted, setKeysSubmitted] = useState(() => {
+    try {
+      const stored = localStorage.getItem('sl_fmp');
+      return !!(stored && stored.trim().length > 10);
+    } catch { return false; }
+  });
+  const [setupKey,    setSetupKey]    = useState('');
+  const [setupStatus, setSetupStatus] = useState(null);
+
   const [fmpKey,       setFmpKey]       = useState(()=>localStorage.getItem('sl_fmp')||DEFAULT_FMP_KEY);
+  const [finnhubKey,   setFinnhubKey]   = useState(()=>localStorage.getItem('sl_finnhub')||'');
+  const [anthropicKey, setAnthropicKey] = useState(()=>localStorage.getItem('sl_anthropic')||localStorage.getItem('ic_api_keys.anthropic')||'');
+  const [aiVerdict,    setAiVerdict]    = useState(null);
+  const [aiLoading,    setAiLoading]    = useState(false);
+
   const [inputTicker,  setInputTicker]  = useState('');
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState(null);
@@ -804,6 +893,11 @@ function App() {
   const [udC,    setUdC]    = useState(null);
   const [dcf,    setDcf]    = useState(null);
 
+  // Finnhub data state
+  const [earnCalendar, setEarnCalendar] = useState(null);
+  const [earnSurprise, setEarnSurprise] = useState([]);
+  const [insiderTxns,  setInsiderTxns]  = useState([]);
+
   const scores = useMemo(()=>calcScores(met,rat,hist,stmts),[met,rat,hist,stmts]);
 
   useEffect(()=>{
@@ -812,17 +906,89 @@ function App() {
     return ()=>window.removeEventListener('scroll',fn);
   },[]);
 
-  // Bug fix: returns null on empty array instead of throwing
-  const fmpGet = useCallback(async (path) => {
-    const sep=path.includes('?')?'&':'?';
-    const url=`https://financialmodelingprep.com/api/v3${path}${sep}apikey=${fmpKey}`;
-    const res=await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data=await res.json();
-    if (data?.['Error Message']) throw new Error(data['Error Message']);
-    if (Array.isArray(data)&&data.length===0) return null;
+  const fmpGet = useCallback(async (endpoint, params = {}) => {
+    const base = 'https://financialmodelingprep.com/stable';
+    const qs = new URLSearchParams({ ...params, apikey: fmpKey }).toString();
+    const url = `${base}/${endpoint}?${qs}`;
+    let res;
+    try {
+      res = await fetch(url);
+    } catch (e) {
+      throw new Error('Network error — check your internet connection');
+    }
+    if (res.status === 401 || res.status === 403)
+      throw new Error('Invalid API key — go to Settings ⚙ to update it');
+    if (!res.ok) throw new Error(`API error (HTTP ${res.status})`);
+    const data = await res.json();
+    if (data?.['Error Message']) {
+      const msg = data['Error Message'];
+      if (msg.toLowerCase().includes('limit') || msg.toLowerCase().includes('upgrade'))
+        throw new Error('API daily limit reached (250 calls/day on free plan) — try again tomorrow');
+      if (msg.toLowerCase().includes('legacy'))
+        throw new Error('FMP Legacy endpoint error — please update your key in Settings ⚙');
+      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('apikey'))
+        throw new Error('Invalid API key — go to Settings ⚙ to update it');
+      throw new Error(msg);
+    }
+    if (Array.isArray(data) && data.length === 0) return null;
     return data;
-  },[fmpKey]);
+  }, [fmpKey]);
+
+  const finnhubGet = useCallback(async (endpoint, params = {}) => {
+    if (!finnhubKey) return null;
+    const base = 'https://finnhub.io/api/v1';
+    const qs = new URLSearchParams({ ...params, token: finnhubKey }).toString();
+    try {
+      const res = await fetch(`${base}/${endpoint}?${qs}`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch { return null; }
+  }, [finnhubKey]);
+
+  const fetchAiVerdict = useCallback(async (sym, scoreData, profileData, metricsData) => {
+    if (!anthropicKey || !sym) return;
+    setAiLoading(true);
+    setAiVerdict(null);
+    try {
+      const prompt = `You are a concise equity analyst. Provide a 2-3 sentence investment verdict for ${sym} (${profileData?.companyName || ''}).
+
+Key data:
+- Composite score: ${scoreData?.total}/100 (${getRating(scoreData?.total)?.label})
+- Valuation score: ${scoreData?.val}/25
+- Financial Health score: ${scoreData?.hlth}/30
+- Momentum score: ${scoreData?.mom}/25
+- Growth score: ${scoreData?.growth}/20
+- Sector: ${profileData?.sector || 'Unknown'}
+- Market Cap: ${profileData?.mktCap ? '$' + (profileData.mktCap / 1e9).toFixed(1) + 'B' : 'Unknown'}
+- P/E (TTM): ${metricsData?.priceToEarningsRatioTTM?.toFixed(1) || 'N/A'}
+- ROIC (TTM): ${metricsData?.returnOnInvestedCapitalTTM ? (metricsData.returnOnInvestedCapitalTTM * 100).toFixed(1) + '%' : 'N/A'}
+- Net Debt/EBITDA: ${metricsData?.netDebtToEBITDATTM?.toFixed(1) || 'N/A'}
+
+Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End with the rating word (STRONG BUY / BUY / HOLD / CAUTION / AVOID).`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 200,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      const data = await res.json();
+      const text = data?.content?.[0]?.text;
+      if (text) setAiVerdict(text);
+    } catch (e) {
+      // Silently fail — fall back to rule-based text
+    } finally {
+      setAiLoading(false);
+    }
+  }, [anthropicKey]);
 
   const analyze = useCallback(async (sym)=>{
     if (!sym) return;
@@ -830,32 +996,32 @@ function App() {
     setQuote(null); setProf(null); setMet(null); setRat(null);
     setHist([]); setStmts([]); setNews([]);
     setPtC(null); setAnalystEst(null); setUdC(null); setDcf(null);
+    setAiVerdict(null); setEarnCalendar(null); setEarnSurprise([]); setInsiderTxns([]);
     try {
       const results = await Promise.allSettled([
-        fmpGet(`/quote/${sym}`),                              // 0
-        fmpGet(`/profile/${sym}`),                            // 1
-        fmpGet(`/key-metrics-ttm/${sym}`),                    // 2
-        fmpGet(`/ratios-ttm/${sym}`),                         // 3
-        fmpGet(`/historical-price-full/${sym}?timeseries=365`), // 4
-        fmpGet(`/income-statement/${sym}?period=quarter&limit=8`), // 5
-        fmpGet(`/stock_news?tickers=${sym}&limit=8`),         // 6
-        fmpGet(`/price-target-consensus/${sym}`),             // 7
-        fmpGet(`/analyst-estimates/${sym}?limit=2`),          // 8
-        fmpGet(`/upgrades-downgrades-consensus/${sym}`),      // 9
-        fmpGet(`/discounted-cash-flow/${sym}`),               // 10
+        fmpGet('quote',                        { symbol: sym }),
+        fmpGet('profile',                      { symbol: sym }),
+        fmpGet('key-metrics-ttm',              { symbol: sym }),
+        fmpGet('ratios-ttm',                   { symbol: sym }),
+        fmpGet('historical-price-eod/full',    { symbol: sym }),
+        fmpGet('income-statement',             { symbol: sym, period: 'quarter', limit: '4' }),
+        fmpGet('news',                         { tickers: sym, limit: '8' }),
+        fmpGet('price-target-consensus',       { symbol: sym }),
+        fmpGet('analyst-estimates',            { symbol: sym, limit: '2' }),
+        fmpGet('upgrades-downgrades-consensus',{ symbol: sym }),
+        fmpGet('discounted-cash-flow',         { symbol: sym }),
       ]);
 
       const get=r=>r.status==='fulfilled'?r.value:null;
       const [qD,pD,mD,rD,hD,sD,nD,ptD,aeD,udD,dcfD]=results.map(get);
 
-      // Only fail if BOTH quote and profile are missing
       if (!qD && !pD) throw new Error(`Ticker "${sym}" not found — check the symbol and try again`);
 
       setQuote(Array.isArray(qD)?qD[0]:qD);
       setProf (Array.isArray(pD)?pD[0]:pD);
       setMet  (Array.isArray(mD)?mD[0]:mD);
       setRat  (Array.isArray(rD)?rD[0]:rD);
-      setHist (hD?.historical||[]);
+      setHist (Array.isArray(hD)?hD:[]);
       setStmts(Array.isArray(sD)?sD:[]);
       setNews (Array.isArray(nD)?nD:[]);
       setPtC  (ptD);
@@ -864,18 +1030,44 @@ function App() {
       setDcf  (Array.isArray(dcfD)?dcfD[0]:dcfD);
       setTicker(sym.toUpperCase());
 
-      // Save to history
       const hist5=[sym,...JSON.parse(localStorage.getItem('sl_history')||'[]')]
         .filter((t,i,a)=>a.indexOf(t)===i).slice(0,5);
       localStorage.setItem('sl_history',JSON.stringify(hist5));
       setRecentTickers(hist5);
+
+      // Finnhub data (optional)
+      if (finnhubKey) {
+        const today = new Date();
+        const from = today.toISOString().substring(0, 10);
+        const to = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+        const [earnCalRes, earnSurpRes, insiderRes] = await Promise.allSettled([
+          finnhubGet('calendar/earnings', { symbol: sym, from, to }),
+          finnhubGet('stock/earnings',    { symbol: sym, limit: '8' }),
+          finnhubGet('stock/insider-transactions', { symbol: sym }),
+        ]);
+        const fg = r => r.status === 'fulfilled' ? r.value : null;
+        const [ec, es, it] = [earnCalRes, earnSurpRes, insiderRes].map(fg);
+        setEarnCalendar(ec?.earningsCalendar?.[0] || null);
+        setEarnSurprise(Array.isArray(es) ? es.slice(0, 8) : []);
+        setInsiderTxns(Array.isArray(it?.data) ? it.data.slice(0, 10) : []);
+      }
+
+      // AI verdict (optional)
+      if (anthropicKey) {
+        const mFinal = Array.isArray(mD)?mD[0]:mD;
+        const pFinal = Array.isArray(pD)?pD[0]:pD;
+        const rFinal = Array.isArray(rD)?rD[0]:rD;
+        const hFinal = Array.isArray(hD)?hD:[];
+        const sFinal = Array.isArray(sD)?sD:[];
+        fetchAiVerdict(sym, calcScores(mFinal, rFinal, hFinal, sFinal), pFinal, mFinal);
+      }
 
     } catch(e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  },[fmpGet]);
+  },[fmpGet, finnhubGet, finnhubKey, anthropicKey, fetchAiVerdict]);
 
   const handleSearch=()=>{const s=inputTicker.trim().toUpperCase();if(s) analyze(s);};
 
@@ -884,26 +1076,23 @@ function App() {
   const priceNow  = quote?.price||sorted[sorted.length-1]?.close;
   const price12m  = sorted[0]?.close;
   const ret12m    = (ok(priceNow)&&ok(price12m)&&price12m>0)?(priceNow-price12m)/price12m:null;
-  const chg1d     = quote?.changesPercentage;
+  const chg1d     = quote?.changePercentage;
   const isUpDay   = (chg1d||0)>=0;
 
   const hasData = !!(quote||prof);
   const r = scores ? getRating(scores.total) : null;
 
-  // Sector benchmarks for KPI badges
   const bm = useMemo(()=>SECTOR_BM[prof?.sector]||null,[prof?.sector]);
 
-  // DCF display
   const dcfVal    = dcf?.dcf;
   const mosFrac   = (ok(dcfVal)&&ok(priceNow)&&dcfVal>0)?(dcfVal-priceNow)/dcfVal:null;
   const mosColor  = !ok(mosFrac)?'#475569':mosFrac>0.15?'#22c55e':mosFrac>-0.15?'#fbbf24':'#f87171';
 
-  // Health cards
   const healthCards = useMemo(()=>{
     if (!met||!rat) return [];
-    const pe=met.peRatioTTM, ev=met.enterpriseValueOverEBITDATTM;
-    const pfcf=met.pfcfRatioTTM, gm=rat.grossProfitMarginTTM;
-    const roic=met.roicTTM, nd=met.netDebtToEBITDATTM;
+    const pe=met.priceToEarningsRatioTTM, ev=met.evToEBITDATTM;
+    const pfcf=met.priceToFreeCashFlowRatioTTM, gm=rat.grossProfitMarginTTM;
+    const roic=met.returnOnInvestedCapitalTTM, nd=met.netDebtToEBITDATTM;
     return [
       {label:'P/E Ratio',      value:fmt.mult(pe),   note:'trailing 12 months',  status:ok(pe)&&pe>0?(pe<25?'green':pe<45?'amber':'red'):'neutral'},
       {label:'EV / EBITDA',    value:fmt.mult(ev),   note:'enterprise multiple',  status:ok(ev)&&ev>0?(ev<14?'green':ev<22?'amber':'red'):'neutral'},
@@ -915,6 +1104,155 @@ function App() {
   },[met,rat]);
 
   const tabs=['Overview','Fundamentals','Chart','Research'];
+
+  // ── Setup screen ──────────────────────────────────────────
+  if (!keysSubmitted) {
+    const testAndSave = async () => {
+      if (!setupKey.trim()) return;
+      setSetupStatus('testing');
+      try {
+        const res = await fetch(`https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=${setupKey.trim()}`);
+        const data = await res.json();
+        if (data?.['Error Message']) {
+          const msg = data['Error Message'].toLowerCase();
+          if (msg.includes('limit') || msg.includes('upgrade'))
+            return setSetupStatus({ error: 'This key has reached its daily limit (250 calls/day on free plan). Try again tomorrow or use a different key.' });
+          if (msg.includes('legacy'))
+            return setSetupStatus({ error: 'This key returned a legacy endpoint error. Try generating a new key at financialmodelingprep.com.' });
+          return setSetupStatus({ error: 'Invalid API key. Check it and try again.' });
+        }
+        if (!Array.isArray(data) || data.length === 0)
+          return setSetupStatus({ error: 'Could not validate key — unexpected response. Check the key and try again.' });
+        localStorage.setItem('sl_fmp', setupKey.trim());
+        setFmpKey(setupKey.trim());
+        const fhKey = document.getElementById('sl_setup_finnhub')?.value?.trim();
+        const antKey = document.getElementById('sl_setup_anthropic')?.value?.trim();
+        if (fhKey) { localStorage.setItem('sl_finnhub', fhKey); setFinnhubKey(fhKey); }
+        if (antKey) { localStorage.setItem('sl_anthropic', antKey); setAnthropicKey(antKey); }
+        setKeysSubmitted(true);
+      } catch (e) {
+        setSetupStatus({ error: 'Network error — check your internet connection.' });
+      }
+    };
+
+    return (
+      <div style={{
+        minHeight:'100vh', background:'#07080c', color:'#e2e8f0',
+        fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif",
+        display:'flex', alignItems:'center', justifyContent:'center', padding:24
+      }}>
+        <style>{`*{box-sizing:border-box} @keyframes spin{to{transform:rotate(360deg)}} input::placeholder{color:#334155}`}</style>
+        <div style={{
+          background:'#0c0e14', border:'1px solid #1e2430', borderRadius:14,
+          padding:'44px 40px', maxWidth:460, width:'100%', textAlign:'center'
+        }}>
+          <div style={{fontSize:44, marginBottom:12}}>⚡</div>
+          <div style={{fontSize:26, fontWeight:800, color:'#fff', marginBottom:6}}>StockLens</div>
+          <div style={{fontSize:13, color:'#475569', marginBottom:32, lineHeight:1.7}}>
+            Professional stock analysis — powered by Financial Modeling Prep.
+            <br/>Enter your free API key to get started.
+          </div>
+
+          <div style={{
+            background:'#141720', border:'1px solid #1e2430', borderRadius:8,
+            padding:'14px 16px', marginBottom:20, textAlign:'left'
+          }}>
+            <div style={{fontSize:10, fontWeight:700, color:'#3b82f6', textTransform:'uppercase', letterSpacing:'1px', marginBottom:8}}>
+              Step 1 — Get a free API key
+            </div>
+            <div style={{fontSize:12, color:'#64748b', lineHeight:1.7, marginBottom:8}}>
+              Create a free account at Financial Modeling Prep to get your API key:
+            </div>
+            <a
+              href="https://site.financialmodelingprep.com/register"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display:'inline-block', fontSize:12, color:'#60a5fa',
+                background:'#1e3a5f44', border:'1px solid #1e3a5f',
+                padding:'5px 12px', borderRadius:5, textDecoration:'none'
+              }}
+            >
+              financialmodelingprep.com/register ↗
+            </a>
+          </div>
+
+          <div style={{textAlign:'left', marginBottom:20}}>
+            <div style={{fontSize:10, fontWeight:700, color:'#3b82f6', textTransform:'uppercase', letterSpacing:'1px', marginBottom:8}}>
+              Step 2 — Paste your key below
+            </div>
+            <input
+              value={setupKey}
+              onChange={e => setSetupKey(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && testAndSave()}
+              placeholder="Enter your FMP API key..."
+              style={{
+                width:'100%', background:'#141720', border:'1px solid #1e2430',
+                color:'#e2e8f0', padding:'10px 14px', borderRadius:6,
+                fontSize:13, outline:'none', marginBottom:10
+              }}
+            />
+            <button
+              onClick={testAndSave}
+              disabled={setupStatus === 'testing' || !setupKey.trim()}
+              style={{
+                width:'100%', background: setupStatus === 'testing' ? '#1e2430' : '#3b82f6',
+                color:'#fff', border:'none', padding:'10px 0', borderRadius:6,
+                cursor: setupStatus === 'testing' ? 'not-allowed' : 'pointer',
+                fontSize:14, fontWeight:700
+              }}
+            >
+              {setupStatus === 'testing' ? (
+                <span style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8}}>
+                  <span style={{display:'inline-block', width:14, height:14, border:'2px solid #64748b', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite'}}/>
+                  Testing...
+                </span>
+              ) : 'Test & Save Key'}
+            </button>
+          </div>
+
+          {setupStatus && typeof setupStatus === 'object' && setupStatus.error && (
+            <div style={{
+              background:'#2a0d0d', border:'1px solid #7f1d1d', borderRadius:6,
+              padding:'10px 14px', fontSize:12, color:'#f87171', marginBottom:12, textAlign:'left'
+            }}>
+              ⚠ {setupStatus.error}
+            </div>
+          )}
+
+          <details style={{textAlign:'left',marginTop:20}}>
+            <summary style={{fontSize:11,color:'#475569',cursor:'pointer',marginBottom:12}}>
+              ✨ Optional: Add more data sources (Finnhub + Anthropic AI)
+            </summary>
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:12}}>
+              <div>
+                <div style={{fontSize:10,color:'#475569',marginBottom:4}}>Finnhub API Key — earnings calendar + insider transactions (free)</div>
+                <input
+                  placeholder="Get free key at finnhub.io"
+                  id="sl_setup_finnhub"
+                  style={{width:'100%',background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'8px 12px',borderRadius:6,fontSize:12,outline:'none'}}
+                />
+              </div>
+              <div>
+                <div style={{fontSize:10,color:'#475569',marginBottom:4}}>Anthropic API Key — AI-powered investment verdict</div>
+                <input
+                  placeholder="sk-ant-..."
+                  type="password"
+                  id="sl_setup_anthropic"
+                  style={{width:'100%',background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'8px 12px',borderRadius:6,fontSize:12,outline:'none'}}
+                />
+              </div>
+            </div>
+          </details>
+
+          <div style={{fontSize:10, color:'#1e2430', marginTop:16, lineHeight:1.6}}>
+            Free plan: 250 API calls/day — enough for ~25 tickers/day.<br/>
+            Your key is stored locally in your browser only.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -934,7 +1272,7 @@ function App() {
         button:hover{opacity:0.88}
       `}</style>
 
-      {/* ── Sticky compact sub-header (appears on scroll) ── */}
+      {/* ── Sticky compact sub-header ── */}
       {scrolled&&hasData&&ticker&&(
         <div style={{
           position:'fixed',top:52,left:0,right:0,zIndex:190,
@@ -960,7 +1298,6 @@ function App() {
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',height:52}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:18,fontWeight:800,color:'#fff',letterSpacing:'-0.5px'}}>⚡ StockLens</span>
-            <span style={{fontSize:10,color:'#334155',background:'#141720',border:'1px solid #1e2430',padding:'2px 7px',borderRadius:4}}>v2.0</span>
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
             <input
@@ -988,7 +1325,6 @@ function App() {
             }}>⚙</button>
           </div>
         </div>
-        {/* Recent tickers */}
         {recentTickers.length>0&&(
           <div style={{display:'flex',gap:6,paddingBottom:8,alignItems:'center'}}>
             <span style={{fontSize:9,color:'#334155',textTransform:'uppercase',letterSpacing:'0.5px',marginRight:2}}>Recent:</span>
@@ -1005,16 +1341,84 @@ function App() {
 
       {/* ── Config panel ── */}
       {showCfg&&(
-        <div style={{background:'#0a0b10',borderBottom:'1px solid #161b26',padding:'14px 24px',display:'flex',gap:14,alignItems:'flex-end'}}>
-          <div>
-            <div style={{fontSize:10,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.5px'}}>FMP API Key</div>
-            <input value={fmpKey} onChange={e=>setFmpKey(e.target.value)}
-              style={{background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'6px 11px',borderRadius:6,fontSize:12,width:280,outline:'none'}}/>
+        <div style={{background:'#0a0b10',borderBottom:'1px solid #161b26',padding:'16px 24px',display:'flex',flexDirection:'column',gap:12}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'1px'}}>API Settings</div>
+          <div style={{display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'}}>
+            <div>
+              <div style={{fontSize:10,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.5px'}}>FMP API Key</div>
+              <input
+                value={fmpKey}
+                onChange={e => setFmpKey(e.target.value)}
+                style={{background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'6px 11px',borderRadius:6,fontSize:12,width:300,outline:'none'}}
+              />
+            </div>
+            <button onClick={() => { localStorage.setItem('sl_fmp', fmpKey); localStorage.setItem('sl_finnhub', finnhubKey); setShowCfg(false); }} style={{
+              background:'#22c55e',color:'#000',border:'none',
+              padding:'6px 16px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'
+            }}>Save Key</button>
+            <button onClick={async () => {
+              try {
+                const res = await fetch(`https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=${fmpKey}`);
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                  alert('✓ Connection OK — key is working');
+                } else {
+                  alert('✗ Connection failed — ' + (data?.['Error Message'] || 'unexpected response'));
+                }
+              } catch(e) { alert('✗ Network error'); }
+            }} style={{
+              background:'#141720',color:'#60a5fa',border:'1px solid #1e3a5f',
+              padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,whiteSpace:'nowrap'
+            }}>Test Connection</button>
+            <button onClick={() => {
+              if (!window.confirm('Reset your API key? You will need to enter it again.')) return;
+              localStorage.removeItem('sl_fmp');
+              setFmpKey('');
+              setKeysSubmitted(false);
+              setShowCfg(false);
+            }} style={{
+              background:'#2a0d0d',color:'#f87171',border:'1px solid #7f1d1d',
+              padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,whiteSpace:'nowrap'
+            }}>Reset Key</button>
           </div>
-          <button onClick={()=>{localStorage.setItem('sl_fmp',fmpKey);setShowCfg(false);}} style={{
-            background:'#22c55e',color:'#000',border:'none',
-            padding:'6px 16px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700
-          }}>Save</button>
+          <div style={{display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'}}>
+            <div>
+              <div style={{fontSize:10,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.5px'}}>Finnhub API Key <span style={{color:'#334155',fontWeight:400,textTransform:'none'}}>(optional — adds earnings & insider data)</span></div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <input
+                  value={finnhubKey}
+                  onChange={e => setFinnhubKey(e.target.value)}
+                  placeholder="Get free key at finnhub.io"
+                  style={{background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'6px 11px',borderRadius:6,fontSize:12,width:300,outline:'none'}}
+                />
+                <button onClick={() => { localStorage.setItem('sl_finnhub', finnhubKey); }} style={{
+                  background:'#22c55e',color:'#000',border:'none',
+                  padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700
+                }}>Save</button>
+              </div>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'}}>
+            <div>
+              <div style={{fontSize:10,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.5px'}}>
+                Anthropic API Key <span style={{color:'#334155',fontWeight:400,textTransform:'none'}}>(optional — enables AI-powered verdict)</span>
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <input
+                  value={anthropicKey}
+                  onChange={e => setAnthropicKey(e.target.value)}
+                  placeholder="sk-ant-..."
+                  type="password"
+                  style={{background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'6px 11px',borderRadius:6,fontSize:12,width:300,outline:'none'}}
+                />
+                <button onClick={() => { localStorage.setItem('sl_anthropic', anthropicKey); }} style={{
+                  background:'#22c55e',color:'#000',border:'none',
+                  padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700
+                }}>Save</button>
+              </div>
+            </div>
+          </div>
+          <div style={{fontSize:10,color:'#334155'}}>Free plan: 250 calls/day. Keys stored in your browser only.</div>
         </div>
       )}
 
@@ -1025,9 +1429,9 @@ function App() {
         {!loading&&!hasData&&!error&&(
           <div style={{textAlign:'center',padding:'90px 20px'}}>
             <div style={{fontSize:52,marginBottom:14}}>⚡</div>
-            <div style={{fontSize:26,fontWeight:800,color:'#fff',marginBottom:8}}>StockLens v2.0</div>
+            <div style={{fontSize:26,fontWeight:800,color:'#fff',marginBottom:8}}>StockLens</div>
             <div style={{fontSize:13,color:'#334155',maxWidth:400,margin:'0 auto 32px',lineHeight:1.7}}>
-              Enter any US ticker for an InvestingPro-style deep analysis — 4-dimensional scoring, analyst consensus, DCF value, technical signals, and investment verdict.
+              Professional stock analysis — enter any ticker to get started. 4-dimensional scoring: valuation, financial health, momentum, and growth.
             </div>
             <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>
               {['AAPL','MSFT','NVDA','AMZN','META','COST','V','ASML'].map(t=>(
@@ -1046,8 +1450,21 @@ function App() {
 
         {/* Error */}
         {!loading&&error&&(
-          <div style={{background:'#2a0d0d',border:'1px solid #7f1d1d',borderRadius:8,padding:'14px 18px',margin:'24px 0',color:'#f87171',fontSize:13}}>
-            ⚠ {error}
+          <div style={{background:'#2a0d0d',border:'1px solid #7f1d1d',borderRadius:8,padding:'16px 20px',margin:'24px 0'}}>
+            <div style={{color:'#f87171',fontSize:13,marginBottom:(error.includes('Settings')||error.includes('limit'))?12:0}}>
+              ⚠ {error}
+            </div>
+            {error.includes('Settings')&&(
+              <button onClick={() => setShowCfg(true)} style={{
+                background:'#3b82f6',color:'#fff',border:'none',
+                padding:'6px 16px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,marginRight:8
+              }}>Open Settings ⚙</button>
+            )}
+            {error.includes('limit')&&(
+              <div style={{fontSize:11,color:'#64748b',marginTop:8}}>
+                The 250 calls/day free limit resets at midnight UTC. You can use a different key or wait until tomorrow.
+              </div>
+            )}
           </div>
         )}
 
@@ -1058,7 +1475,6 @@ function App() {
             {/* Company header */}
             <Panel style={{marginBottom:0,borderBottomLeftRadius:0,borderBottomRightRadius:0,borderBottom:'none'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
-                {/* Left: logo + name */}
                 <div style={{display:'flex',gap:14,alignItems:'flex-start'}}>
                   {prof?.image&&(
                     <img src={prof.image} alt={ticker} style={{width:44,height:44,objectFit:'contain',borderRadius:6,background:'#fff',padding:4,flexShrink:0}}/>
@@ -1086,7 +1502,6 @@ function App() {
                     </div>
                   </div>
                 </div>
-                {/* Right: price + DCF */}
                 <div style={{textAlign:'right'}}>
                   <div style={{fontSize:32,fontWeight:800,color:'#fff',fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>
                     {fmt.price(priceNow)}
@@ -1100,7 +1515,7 @@ function App() {
                     </div>
                   )}
                   <div style={{fontSize:11,color:'#334155',marginTop:3}}>
-                    Mkt Cap {fmt.usd(quote?.marketCap)} · Avg Vol {fmt.usd(quote?.avgVolume)}
+                    Mkt Cap {fmt.usd(quote?.marketCap)} · Avg Vol {fmt.usd(quote?.averageVolume)}
                   </div>
                   {ok(dcfVal)&&(
                     <div style={{marginTop:8,padding:'5px 10px',borderRadius:5,background:mosColor+'18',border:`1px solid ${mosColor}44`,display:'inline-block'}}>
@@ -1139,9 +1554,7 @@ function App() {
               {/* ── OVERVIEW TAB ── */}
               {activeTab==='Overview'&&(
                 <div style={{display:'flex',flexDirection:'column',gap:16}}>
-                  {/* Score + KPIs */}
                   <div style={{display:'grid',gridTemplateColumns:'220px 1fr',gap:14}}>
-                    {/* Score gauge */}
                     <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:18,padding:'4px 0'}}>
                       <ScoreGauge score={scores.total}/>
                       <div style={{width:'100%'}}>
@@ -1150,38 +1563,36 @@ function App() {
                         <ScoreBar label="Momentum"          value={scores.mom}    max={25} color="#fbbf24"/>
                         <ScoreBar label="Growth"            value={scores.growth} max={20} color="#a78bfa"/>
                       </div>
+                      {earnCalendar&&<EarningsCalendarBadge earn={earnCalendar}/>}
                     </div>
-                    {/* KPIs */}
                     <div>
                       <SectionTitle>Key Metrics — TTM</SectionTitle>
                       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:9}}>
-                        <KPIBadge label="P/E Ratio"      value={fmt.mult(met?.peRatioTTM)}                   sub="trailing 12 months"    bmVal={bm?.pe}   bmLabel="sector avg"/>
-                        <KPIBadge label="EV/EBITDA"       value={fmt.mult(met?.enterpriseValueOverEBITDATTM)} sub="enterprise value mult." bmVal={bm?.ev}   bmLabel="sector avg"/>
-                        <KPIBadge label="P/FCF"           value={fmt.mult(met?.pfcfRatioTTM)}                sub="price / free cash flow"/>
-                        <KPIBadge label="Gross Margin"    value={fmt.pct(rat?.grossProfitMarginTTM)}         sub="TTM"
+                        <KPIBadge label="P/E Ratio"      value={fmt.mult(met?.priceToEarningsRatioTTM)}         sub="trailing 12 months"    bmVal={bm?.pe}   bmLabel="sector avg"/>
+                        <KPIBadge label="EV/EBITDA"       value={fmt.mult(met?.evToEBITDATTM)}                   sub="enterprise value mult." bmVal={bm?.ev}   bmLabel="sector avg"/>
+                        <KPIBadge label="P/FCF"           value={fmt.mult(met?.priceToFreeCashFlowRatioTTM)}     sub="price / free cash flow"/>
+                        <KPIBadge label="Gross Margin"    value={fmt.pct(rat?.grossProfitMarginTTM)}             sub="TTM"
                           highlight={ok(rat?.grossProfitMarginTTM)?(rat.grossProfitMarginTTM>=0.4?'#22c55e':rat.grossProfitMarginTTM>=0.2?'#fbbf24':'#f87171'):undefined}
                           bmVal={bm?.gm} bmLabel="sector avg"/>
-                        <KPIBadge label="ROIC"            value={fmt.pct(met?.roicTTM)}                     sub="return on inv. capital"
-                          highlight={ok(met?.roicTTM)?(met.roicTTM>=0.15?'#22c55e':met.roicTTM>=0.06?'#fbbf24':'#f87171'):undefined}
+                        <KPIBadge label="ROIC"            value={fmt.pct(met?.returnOnInvestedCapitalTTM)}       sub="return on inv. capital"
+                          highlight={ok(met?.returnOnInvestedCapitalTTM)?(met.returnOnInvestedCapitalTTM>=0.15?'#22c55e':met.returnOnInvestedCapitalTTM>=0.06?'#fbbf24':'#f87171'):undefined}
                           bmVal={bm?.roic} bmLabel="sector avg"/>
-                        <KPIBadge label="Net Debt/EBITDA" value={fmt.ndx(met?.netDebtToEBITDATTM)}          sub={ok(met?.netDebtToEBITDATTM)&&met.netDebtToEBITDATTM<0?'net cash position':'leverage'}
+                        <KPIBadge label="Net Debt/EBITDA" value={fmt.ndx(met?.netDebtToEBITDATTM)}              sub={ok(met?.netDebtToEBITDATTM)&&met.netDebtToEBITDATTM<0?'net cash position':'leverage'}
                           highlight={ok(met?.netDebtToEBITDATTM)?(met.netDebtToEBITDATTM<0?'#22c55e':met.netDebtToEBITDATTM<2?'#fbbf24':'#f87171'):undefined}/>
-                        <KPIBadge label="FCF Yield"       value={fmt.pct(met?.freeCashFlowYieldTTM)}        sub="TTM"/>
-                        <KPIBadge label="ROE"             value={fmt.pct(met?.roeTTM)}                      sub="return on equity"/>
-                        <KPIBadge label="Interest Coverage" value={fmt.mult(met?.interestCoverageTTM)}      sub="EBIT / interest expense"
-                          highlight={ok(met?.interestCoverageTTM)?(met.interestCoverageTTM>=10?'#22c55e':met.interestCoverageTTM>=3?'#fbbf24':'#f87171'):undefined}/>
+                        <KPIBadge label="FCF Yield"       value={fmt.pct(met?.freeCashFlowYieldTTM)}            sub="TTM"/>
+                        <KPIBadge label="ROE"             value={fmt.pct(met?.returnOnEquityTTM)}               sub="return on equity"/>
+                        <KPIBadge label="Interest Coverage" value={fmt.mult(met?.interestCoverageRatioTTM)}     sub="EBIT / interest expense"
+                          highlight={ok(met?.interestCoverageRatioTTM)?(met.interestCoverageRatioTTM>=10?'#22c55e':met.interestCoverageRatioTTM>=3?'#fbbf24':'#f87171'):undefined}/>
                       </div>
                     </div>
                   </div>
 
-                  {/* Analyst consensus */}
                   {(ptC||udC)&&(
                     <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
                       <AnalystPanel ptC={ptC} udC={udC} analystEst={analystEst} currentPrice={priceNow}/>
                     </div>
                   )}
 
-                  {/* About */}
                   {prof?.description&&(
                     <div>
                       <SectionTitle>About {prof.companyName}</SectionTitle>
@@ -1210,7 +1621,6 @@ function App() {
               {/* ── CHART TAB ── */}
               {activeTab==='Chart'&&(
                 <div style={{display:'flex',flexDirection:'column',gap:16}}>
-                  {/* Period selector */}
                   <div>
                     <div style={{display:'flex',gap:6,marginBottom:10,alignItems:'center'}}>
                       <span style={{fontSize:10,color:'#475569',marginRight:4}}>PERIOD:</span>
@@ -1236,8 +1646,47 @@ function App() {
               {/* ── RESEARCH TAB ── */}
               {activeTab==='Research'&&(
                 <div style={{display:'flex',flexDirection:'column',gap:16}}>
-                  <VerdictSection scores={scores} profile={prof} metrics={met} ratios={rat}/>
+                  <VerdictSection scores={scores} profile={prof} metrics={met} ratios={rat} aiVerdict={aiVerdict} aiLoading={aiLoading}/>
                   {news.length>0&&<NewsCard items={news}/>}
+
+                  {finnhubKey ? (
+                    <>
+                      {earnSurprise.length>0&&<EarningsSurpriseChart data={earnSurprise}/>}
+                      {insiderTxns.length>0&&<InsiderTable data={insiderTxns}/>}
+                    </>
+                  ) : (
+                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px',textAlign:'center'}}>
+                      <div style={{fontSize:12,color:'#475569',marginBottom:8}}>Add a free Finnhub key in Settings ⚙ to unlock earnings calendar, beat/miss history, and insider transactions.</div>
+                      <a href="https://finnhub.io" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:'#60a5fa'}}>Get free key at finnhub.io ↗</a>
+                    </div>
+                  )}
+
+                  <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'14px 18px'}}>
+                    <div style={{fontSize:10,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}}>SEC EDGAR Filings</div>
+                    <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                      <a
+                        href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=4&dateb=&owner=include&count=20`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{fontSize:11,color:'#60a5fa',background:'#1e3a5f22',border:'1px solid #1e3a5f',padding:'5px 12px',borderRadius:5}}
+                      >
+                        Form 4 — Insider Filings ↗
+                      </a>
+                      <a
+                        href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=10-K&dateb=&owner=include&count=5`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{fontSize:11,color:'#60a5fa',background:'#1e3a5f22',border:'1px solid #1e3a5f',padding:'5px 12px',borderRadius:5}}
+                      >
+                        10-K Annual Reports ↗
+                      </a>
+                      <a
+                        href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=13F&dateb=&owner=include&count=5`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{fontSize:11,color:'#60a5fa',background:'#1e3a5f22',border:'1px solid #1e3a5f',padding:'5px 12px',borderRadius:5}}
+                      >
+                        13F — Institutional Holdings ↗
+                      </a>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1248,7 +1697,7 @@ function App() {
 
       {/* Footer */}
       <div style={{textAlign:'center',marginTop:48,fontSize:10,color:'#1e2430',lineHeight:1.8}}>
-        StockLens v2.0 · Data: Financial Modeling Prep · Not financial advice · {new Date().getFullYear()}
+        StockLens v3.0 · Data: Financial Modeling Prep · Not financial advice · {new Date().getFullYear()}
         {ticker&&quote&&<span> · Last updated: {new Date().toLocaleTimeString()}</span>}
       </div>
     </div>
