@@ -56,10 +56,15 @@ function computeSMA(prices, period) {
 function calcScores(metrics, ratios, history, stmts) {
   let val=0, hlth=0, mom=0, growth=0;
   if (metrics && ratios) {
-    const pe=metrics.priceToEarningsRatioTTM, ev=metrics.evToEBITDATTM;
-    const pfcf=metrics.priceToFreeCashFlowRatioTTM, fvr=ratios.priceToFairValueTTM;
-    const gm=ratios.grossProfitMarginTTM, roic=metrics.returnOnInvestedCapitalTTM;
-    const nd=metrics.netDebtToEBITDATTM, roe=metrics.returnOnEquityTTM, ic=metrics.interestCoverageRatioTTM;
+    const pe   = metrics.peRatioTTM ?? metrics.priceToEarningsRatioTTM;
+    const ev   = metrics.evToEBITDATTM ?? metrics.enterpriseValueOverEBITDATTM;
+    const pfcf = metrics.pfcfRatioTTM ?? metrics.priceToFreeCashFlowRatioTTM;
+    const fvr  = ratios.priceToFairValueTTM ?? ratios.priceFairValueTTM;
+    const gm   = ratios.grossProfitMarginTTM;
+    const roic = metrics.returnOnInvestedCapitalTTM ?? metrics.roicTTM;
+    const nd   = metrics.netDebtToEBITDATTM;
+    const roe  = metrics.returnOnEquityTTM ?? metrics.roeTTM;
+    const ic   = metrics.interestCoverageTTM ?? metrics.interestCoverageRatioTTM;
     if(ok(pe)&&pe>0)    val+=pe<12?9:pe<18?8:pe<25?6:pe<35?4:pe<50?2:1;
     if(ok(ev)&&ev>0)    val+=ev<8?7:ev<12?5:ev<18?3:ev<25?2:ev<35?1:0;
     if(ok(pfcf)&&pfcf>0) val+=pfcf<12?6:pfcf<20?5:pfcf<28?3:pfcf<40?1:0;
@@ -498,7 +503,7 @@ function TechnicalSignals({history}) {
 }
 
 // ─── ANALYST PANEL ──────────────────────────────────────────
-function AnalystPanel({ptC, udC, analystEst, currentPrice}) {
+function AnalystPanel({ptC, udC, analystEst, currentPrice, ptList}) {
   if (!ptC && !udC) return null;
 
   const pt=Array.isArray(ptC)?ptC[0]:ptC;
@@ -579,6 +584,27 @@ function AnalystPanel({ptC, udC, analystEst, currentPrice}) {
           </div>
         )}
       </div>
+      {ptList&&ptList.length>0&&(
+        <div style={{marginTop:14}}>
+          <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}}>Recent Analyst Price Targets</div>
+          <div style={{display:'flex',flexDirection:'column',gap:4,maxHeight:200,overflowY:'auto'}}>
+            {ptList.slice(0,8).map((pt,i)=>{
+              const upPt=(ok(pt.priceTarget)&&ok(currentPrice))?(pt.priceTarget-currentPrice)/currentPrice:null;
+              const ptColor=!ok(upPt)?'#475569':upPt>0.1?'#22c55e':upPt<-0.1?'#f87171':'#fbbf24';
+              return (
+                <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#141720',borderRadius:5,padding:'6px 12px',fontSize:11}}>
+                  <span style={{color:'#64748b',flex:1}}>{pt.analystCompany||pt.analystName}</span>
+                  <span style={{color:'#475569',marginRight:12}}>{pt.publishedDate?.substring(0,10)}</span>
+                  <span style={{fontWeight:700,color:ptColor,fontFamily:'JetBrains Mono,monospace'}}>
+                    {fmt.price(pt.priceTarget)}
+                    {ok(upPt)&&<span style={{fontSize:10,marginLeft:5}}>({upPt>0?'+':''}{(upPt*100).toFixed(1)}%)</span>}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -597,28 +623,47 @@ function GrowthPanel({stmts}) {
   const years=stmts.length/4;
   const revCagr=cagr(rows[0]?.revenue,rows[rows.length-1]?.revenue,years);
 
-  const Row=({label,data,type,color,cagrVal})=>(
-    <div style={{display:'flex',alignItems:'center',gap:12,padding:'9px 0',borderBottom:'1px solid #161b26'}}>
-      <div style={{width:130,fontSize:11,color:'#94a3b8',flexShrink:0}}>{label}</div>
-      <Sparkline data={data} type={type} color={color} h={44} w={140}/>
-      <div style={{marginLeft:'auto',textAlign:'right'}}>
-        {ok(cagrVal)&&(
-          <div style={{fontSize:10,color:cagrVal>0?'#22c55e':'#f87171',fontFamily:'JetBrains Mono,monospace',fontWeight:700}}>
-            CAGR {fmt.chg(cagrVal)}
+  const Row=({label,data,type,color,cagrVal,stmtsData})=>{
+    const validData=data.filter(v=>ok(v));
+    const latestVal=data[data.length-1];
+    const firstLabel=stmtsData?.[0]?`${stmtsData[0].period} ${stmtsData[0].calendarYear}`:'';
+    const lastLabel=stmtsData?.[stmtsData.length-1]?`${stmtsData[stmtsData.length-1].period} ${stmtsData[stmtsData.length-1].calendarYear}`:'';
+    return (
+      <div style={{padding:'10px 0',borderBottom:'1px solid #161b26'}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <div style={{width:130,fontSize:11,color:'#94a3b8',flexShrink:0}}>{label}</div>
+          <div style={{flex:1,position:'relative'}}>
+            <Sparkline data={data} type={type} color={color} h={44} w={180}/>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:2}}>
+              <span style={{fontSize:9,color:'#334155'}}>{firstLabel}</span>
+              <span style={{fontSize:9,color:'#334155'}}>{lastLabel}</span>
+            </div>
           </div>
-        )}
-        <div style={{fontSize:10,color:'#475569',marginTop:2}}>{stmts.length} qtrs</div>
+          <div style={{textAlign:'right',minWidth:90}}>
+            {ok(latestVal)&&(
+              <div style={{fontSize:11,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace',fontWeight:700}}>
+                {type==='line'?fmt.pct(latestVal):fmt.usd(latestVal)}
+              </div>
+            )}
+            {ok(cagrVal)&&(
+              <div style={{fontSize:10,color:cagrVal>0?'#22c55e':'#f87171',fontFamily:'JetBrains Mono,monospace',fontWeight:700}}>
+                CAGR {fmt.chg(cagrVal)}
+              </div>
+            )}
+            <div style={{fontSize:9,color:'#334155',marginTop:1}}>{data.length} qtrs</div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div>
       <SectionTitle>Growth Profile — {stmts.length} Quarters</SectionTitle>
-      <Row label="Revenue" data={revs} type="bar" color="#3b82f6" cagrVal={revCagr}/>
-      <Row label="Net Income" data={netI} type="bar" color="#22c55e" cagrVal={null}/>
-      <Row label="Gross Margin %" data={gms} type="line" color="#a78bfa" cagrVal={null}/>
-      <Row label="EPS" data={eps} type="line" color="#fbbf24" cagrVal={null}/>
+      <Row label="Revenue" data={revs} type="bar" color="#3b82f6" cagrVal={revCagr} stmtsData={rows}/>
+      <Row label="Net Income" data={netI} type="bar" color="#22c55e" cagrVal={null} stmtsData={rows}/>
+      <Row label="Gross Margin %" data={gms} type="line" color="#a78bfa" cagrVal={null} stmtsData={rows}/>
+      <Row label="EPS" data={eps} type="line" color="#fbbf24" cagrVal={null} stmtsData={rows}/>
     </div>
   );
 }
@@ -779,9 +824,9 @@ function InsiderTable({ data }) {
 function VerdictSection({scores, profile, metrics, ratios, aiVerdict, aiLoading}) {
   const r=getRating(scores.total);
   const moat=[], risks=[];
-  const gm=ratios?.grossProfitMarginTTM, roic=metrics?.returnOnInvestedCapitalTTM;
-  const nd=metrics?.netDebtToEBITDATTM, ic=metrics?.interestCoverageRatioTTM;
-  const pfcf=metrics?.priceToFreeCashFlowRatioTTM, pe=metrics?.priceToEarningsRatioTTM;
+  const gm=ratios?.grossProfitMarginTTM, roic=metrics?.returnOnInvestedCapitalTTM??metrics?.roicTTM;
+  const nd=metrics?.netDebtToEBITDATTM, ic=metrics?.interestCoverageTTM??metrics?.interestCoverageRatioTTM;
+  const pfcf=metrics?.pfcfRatioTTM??metrics?.priceToFreeCashFlowRatioTTM, pe=metrics?.peRatioTTM??metrics?.priceToEarningsRatioTTM;
 
   if(ok(gm)&&gm>=0.50)   moat.push('Gross margin >50% — strong pricing power');
   if(ok(roic)&&roic>=0.20) moat.push('ROIC >20% — deep competitive moat (Escudero framework)');
@@ -853,6 +898,241 @@ function VerdictSection({scores, profile, metrics, ratios, aiVerdict, aiLoading}
   );
 }
 
+// ─── DCF CALCULATOR ─────────────────────────────────────────
+function runDCF(inputs) {
+  const { revGrowth1to5, revGrowth6to10, ebitMargin, taxRate, capexPct, wcChange, discountRate, terminalGrowth, netDebt, shares, baseRevenue } = inputs;
+  if (!ok(baseRevenue) || !ok(shares) || shares <= 0) return null;
+  const g1=revGrowth1to5/100, g2=revGrowth6to10/100, ebit=ebitMargin/100, tax=taxRate/100;
+  const capex=capexPct/100, wc=wcChange/100, r=discountRate/100, tg=terminalGrowth/100;
+  if (r <= tg) return null;
+  let rev=baseRevenue, pv=0;
+  for (let yr=1; yr<=10; yr++) {
+    const g=yr<=5?g1:g2;
+    rev=rev*(1+g);
+    const fcf=rev*ebit*(1-tax)-rev*(capex+wc);
+    pv+=fcf/Math.pow(1+r,yr);
+  }
+  const lastFCF=rev*ebit*(1-tax)-rev*(capex+wc);
+  const tv=lastFCF*(1+tg)/(r-tg);
+  const pvTV=tv/Math.pow(1+r,10);
+  const enterpriseValue=pv+pvTV;
+  const equityValue=enterpriseValue-(netDebt||0);
+  const intrinsicValue=equityValue/shares;
+  return {intrinsicValue,pv,pvTV,enterpriseValue,equityValue};
+}
+
+function DCFCalculator({inputs,setInputs,currentPrice,profile}) {
+  if (!inputs) return null;
+  const result=runDCF(inputs);
+  const iv=result?.intrinsicValue;
+  const mos=(ok(iv)&&ok(currentPrice)&&currentPrice>0)?(iv-currentPrice)/iv:null;
+  const mosColor=!ok(mos)?'#475569':mos>0.15?'#22c55e':mos>-0.15?'#fbbf24':'#f87171';
+  const set=(key,val)=>setInputs(p=>({...p,[key]:val}));
+
+  const SliderInput=({label,stateKey,min,max,step=1,unit='%',note})=>(
+    <div style={{marginBottom:10}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+        <span style={{fontSize:10,color:'#64748b'}}>{label}</span>
+        <span style={{fontSize:11,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace',fontWeight:700}}>{inputs[stateKey]}{unit}</span>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={inputs[stateKey]}
+        onChange={e=>set(stateKey,parseFloat(e.target.value))}
+        style={{width:'100%',accentColor:'#3b82f6',cursor:'pointer'}}/>
+      {note&&<div style={{fontSize:9,color:'#334155'}}>{note}</div>}
+    </div>
+  );
+
+  const sensRows=[-2,-1,0,1,2].map(dr=>{
+    const rr=inputs.discountRate+dr;
+    return [-1,0,1].map(dg=>{
+      const tg=inputs.terminalGrowth+dg;
+      if(rr<=tg) return null;
+      const res=runDCF({...inputs,discountRate:rr,terminalGrowth:tg});
+      return res?.intrinsicValue;
+    });
+  });
+
+  return (
+    <div style={{background:'#0c0e14',border:'1px solid #161b26',borderRadius:10,overflow:'hidden'}}>
+      <div style={{background:'#141720',borderBottom:'1px solid #161b26',padding:'12px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{fontSize:11,fontWeight:700,color:'#e2e8f0',textTransform:'uppercase',letterSpacing:'1px'}}>📐 Interactive DCF Model</div>
+        <div style={{fontSize:10,color:'#475569'}}>{profile?.companyName} · All values auto-recalculate</div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 300px',gap:0}}>
+        <div style={{padding:'16px 20px',borderRight:'1px solid #161b26'}}>
+          <div style={{fontSize:10,fontWeight:700,color:'#3b82f6',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}}>Revenue Growth</div>
+          <SliderInput label="Years 1–5 Growth Rate" stateKey="revGrowth1to5" min={-10} max={50} note="Analyst estimates for near-term growth"/>
+          <SliderInput label="Years 6–10 Growth Rate" stateKey="revGrowth6to10" min={-5} max={30} note="Conservative long-run growth"/>
+          <SliderInput label="EBIT Margin" stateKey="ebitMargin" min={0} max={60} note="Operating income / revenue"/>
+          <SliderInput label="Tax Rate" stateKey="taxRate" min={10} max={40} note="Effective tax rate"/>
+        </div>
+        <div style={{padding:'16px 20px',borderRight:'1px solid #161b26'}}>
+          <div style={{fontSize:10,fontWeight:700,color:'#a78bfa',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}}>Discount & Capital</div>
+          <SliderInput label="Discount Rate (WACC)" stateKey="discountRate" min={4} max={20} step={0.5} note="Weighted average cost of capital"/>
+          <SliderInput label="Terminal Growth Rate" stateKey="terminalGrowth" min={0} max={6} step={0.5} note="Perpetuity growth (≤ GDP growth)"/>
+          <SliderInput label="CapEx % of Revenue" stateKey="capexPct" min={0} max={30} note="Maintenance + growth capex"/>
+          <SliderInput label="Beta" stateKey="beta" min={0.3} max={3} step={0.1} unit="" note="Used to contextualize risk"/>
+          <div style={{fontSize:9,color:'#334155',marginTop:4}}>Net Debt: {fmt.usd(inputs.netDebt)} · Shares: {ok(inputs.shares)?(inputs.shares/1e6).toFixed(0)+'M':'—'}</div>
+        </div>
+        <div style={{padding:'16px 20px',display:'flex',flexDirection:'column',gap:12}}>
+          <div style={{fontSize:10,fontWeight:700,color:'#fbbf24',textTransform:'uppercase',letterSpacing:'1px',marginBottom:4}}>Valuation Result</div>
+          <div style={{textAlign:'center',padding:'16px',background:'#0a0b10',borderRadius:8,border:'1px solid #1e2430'}}>
+            <div style={{fontSize:10,color:'#475569',marginBottom:4}}>Intrinsic Value / Share</div>
+            <div style={{fontSize:28,fontWeight:800,color:ok(iv)?mosColor:'#475569',fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>
+              {ok(iv)?fmt.price(iv):'—'}
+            </div>
+            {ok(mos)&&<div style={{marginTop:6,fontSize:12,fontWeight:700,color:mosColor}}>{mos>0?`+${(mos*100).toFixed(1)}% upside`:`${(mos*100).toFixed(1)}% overvalued`}</div>}
+            {ok(currentPrice)&&<div style={{fontSize:10,color:'#475569',marginTop:3}}>vs. current {fmt.price(currentPrice)}</div>}
+          </div>
+          <div>
+            <div style={{fontSize:9,color:'#334155',marginBottom:4}}>Sensitivity: Discount Rate (rows) × Terminal Growth (cols)</div>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:9}}>
+              <thead>
+                <tr>
+                  <th style={{color:'#334155',padding:'2px 4px',textAlign:'center'}}>WACC\TG</th>
+                  {[inputs.terminalGrowth-1,inputs.terminalGrowth,inputs.terminalGrowth+1].map(tg=>(
+                    <th key={tg} style={{color:'#475569',padding:'2px 4px',textAlign:'center'}}>{tg}%</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[-2,-1,0,1,2].map((dr,ri)=>(
+                  <tr key={dr}>
+                    <td style={{color:'#475569',padding:'2px 4px',textAlign:'center',fontFamily:'JetBrains Mono,monospace'}}>{inputs.discountRate+dr}%</td>
+                    {sensRows[ri].map((v,ci)=>{
+                      const mos2=(ok(v)&&ok(currentPrice)&&currentPrice>0)?(v-currentPrice)/v:null;
+                      const c=!ok(v)?'#334155':mos2>0.15?'#22c55e':mos2>-0.15?'#fbbf24':'#f87171';
+                      return (
+                        <td key={ci} style={{color:c,padding:'3px 4px',textAlign:'center',fontFamily:'JetBrains Mono,monospace',fontWeight:dr===0&&ci===1?800:400,background:dr===0&&ci===1?'#141720':'transparent',borderRadius:3}}>
+                          {ok(v)?`$${v.toFixed(0)}`:'—'}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MULTI-MODEL VALUATION ───────────────────────────────────
+function MultiModelValuation({met,rat,quote,prof,stmts,currentPrice}) {
+  if (!met||!rat||!currentPrice) return null;
+  const eps=stmts?.[0]?.eps;
+  const bvps=met?.bookValuePerShareTTM??null;
+  const graham=(ok(eps)&&eps>0&&ok(bvps)&&bvps>0)?Math.sqrt(22.5*eps*bvps):null;
+  const sector=prof?.sector;
+  const sectorPE=SECTOR_BM[sector]?.pe;
+  const relPE=(ok(sectorPE)&&ok(eps)&&eps>0)?sectorPE*eps*4:null;
+  const fcfYield=met?.freeCashFlowYieldTTM;
+  const fcfFair=(ok(fcfYield)&&fcfYield>0)?currentPrice/fcfYield*0.035:null;
+
+  const models=[
+    {name:'Graham Number',value:graham,note:'√(22.5 × EPS × BVPS)'},
+    {name:'Relative P/E',value:relPE,note:`Sector avg P/E (${sectorPE}x) × EPS`},
+    {name:'P/FCF Fair Value',value:fcfFair,note:'3.5% FCF yield target'},
+  ].filter(m=>ok(m.value)&&m.value>0);
+
+  if(!models.length) return null;
+  const avg=models.reduce((s,m)=>s+m.value,0)/models.length;
+  const avgMos=(avg-currentPrice)/avg;
+  const avgColor=avgMos>0.15?'#22c55e':avgMos>-0.15?'#fbbf24':'#f87171';
+
+  return (
+    <div>
+      <SectionTitle>Valuation Models Summary</SectionTitle>
+      <div style={{display:'grid',gridTemplateColumns:`repeat(${models.length},1fr) 1fr`,gap:10}}>
+        {models.map((m,i)=>{
+          const mos=(m.value-currentPrice)/m.value;
+          const c=mos>0.15?'#22c55e':mos>-0.15?'#fbbf24':'#f87171';
+          return (
+            <div key={i} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'14px 16px'}}>
+              <div style={{fontSize:10,color:'#475569',marginBottom:4}}>{m.name}</div>
+              <div style={{fontSize:20,fontWeight:800,color:c,fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>{fmt.price(m.value)}</div>
+              <div style={{fontSize:10,color:c,marginTop:3}}>{mos>0?`+${(mos*100).toFixed(1)}% upside`:`${(mos*100).toFixed(1)}% overvalued`}</div>
+              <div style={{fontSize:9,color:'#334155',marginTop:4}}>{m.note}</div>
+            </div>
+          );
+        })}
+        <div style={{background:'#0a0b10',border:`2px solid ${avgColor}44`,borderRadius:8,padding:'14px 16px'}}>
+          <div style={{fontSize:10,color:'#475569',marginBottom:4}}>Model Average ({models.length} models)</div>
+          <div style={{fontSize:20,fontWeight:800,color:avgColor,fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>{fmt.price(avg)}</div>
+          <div style={{fontSize:10,color:avgColor,marginTop:3}}>{avgMos>0?`+${(avgMos*100).toFixed(1)}% upside`:`${(avgMos*100).toFixed(1)}% overvalued`}</div>
+          <div style={{fontSize:9,color:'#334155',marginTop:4}}>avg of {models.length} methods</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── HEALTH SCORE PANEL ──────────────────────────────────────
+function HealthScorePanel({met,rat,hist,stmts,scores}) {
+  if (!met&&!rat) return null;
+  const pe=met?.peRatioTTM??met?.priceToEarningsRatioTTM;
+  const gm=rat?.grossProfitMarginTTM;
+  const roic=met?.returnOnInvestedCapitalTTM??met?.roicTTM;
+  const fcfY=met?.freeCashFlowYieldTTM;
+  const fvr=rat?.priceToFairValueTTM??rat?.priceFairValueTTM;
+
+  const dims=[
+    {name:'Growth',icon:'📈',score:(()=>{const s=scores.growth;return s>=16?5:s>=12?4:s>=8?3:s>=4?2:1;})(),note:'Revenue & EPS growth trend'},
+    {name:'Profitability',icon:'💰',score:(()=>{let pts=0;if(ok(gm))pts+=gm>=0.50?2:gm>=0.25?1:0;if(ok(roic))pts+=roic>=0.20?3:roic>=0.12?2:roic>=0.05?1:0;return Math.min(5,pts);})(),note:'Gross margin & ROIC quality'},
+    {name:'Momentum',icon:'⚡',score:(()=>{const s=scores.mom;return s>=20?5:s>=15?4:s>=10?3:s>=5?2:1;})(),note:'Price performance vs history'},
+    {name:'Rel. Value',icon:'⚖️',score:(()=>{let pts=0;if(ok(pe)&&pe>0)pts+=pe<15?2:pe<25?1:0;if(ok(fvr))pts+=fvr<0.9?2:fvr<1.1?1:0;if(ok(fcfY))pts+=fcfY>0.05?1:0;return Math.min(5,Math.max(1,pts+1));})(),note:'P/E, fair value, FCF yield'},
+    {name:'Fin. Health',icon:'🏦',score:(()=>{const s=scores.hlth;return s>=24?5:s>=18?4:s>=12?3:s>=6?2:1;})(),note:'Leverage, coverage, balance sheet'},
+  ];
+  const overall=dims.reduce((a,d)=>a+d.score,0)/dims.length;
+  const overallColor=overall>=4?'#22c55e':overall>=3?'#fbbf24':'#f87171';
+
+  return (
+    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{fontSize:10,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'1px'}}>Financial Health Score</div>
+        <div style={{fontSize:22,fontWeight:800,color:overallColor,fontFamily:'JetBrains Mono,monospace'}}>{overall.toFixed(1)}<span style={{fontSize:12,color:'#475569'}}>/5</span></div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>
+        {dims.map((d,i)=>{
+          const c=d.score>=4?'#22c55e':d.score>=3?'#fbbf24':'#f87171';
+          return (
+            <div key={i} style={{textAlign:'center'}}>
+              <div style={{fontSize:18,marginBottom:4}}>{d.icon}</div>
+              <div style={{fontSize:10,color:'#64748b',marginBottom:6}}>{d.name}</div>
+              <div style={{display:'flex',gap:2,justifyContent:'center',marginBottom:4}}>
+                {[1,2,3,4,5].map(n=>(
+                  <div key={n} style={{width:8,height:8,borderRadius:2,background:n<=d.score?c:'#1e2430',transition:'background 0.3s'}}/>
+                ))}
+              </div>
+              <div style={{fontSize:12,fontWeight:700,color:c}}>{d.score}/5</div>
+              <div style={{fontSize:9,color:'#334155',marginTop:2,lineHeight:1.3}}>{d.note}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── ABOUT TEXT (collapsible) ────────────────────────────────
+function AboutText({text}) {
+  const [expanded,setExpanded]=React.useState(false);
+  const long=text&&text.length>400;
+  const display=expanded||!long?text:text.substring(0,400)+'...';
+  return (
+    <div>
+      <div style={{fontSize:12,color:'#94a3b8',lineHeight:1.75}}>{display}</div>
+      {long&&(
+        <button onClick={()=>setExpanded(e=>!e)} style={{marginTop:6,background:'none',border:'none',color:'#3b82f6',fontSize:11,cursor:'pointer',padding:0}}>
+          {expanded?'▲ Show less':'▼ Read more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN APP ────────────────────────────────────────────────
 function App() {
   const [keysSubmitted, setKeysSubmitted] = useState(() => {
@@ -891,7 +1171,9 @@ function App() {
   const [ptC,    setPtC]    = useState(null);
   const [analystEst,setAnalystEst] = useState(null);
   const [udC,    setUdC]    = useState(null);
-  const [dcf,    setDcf]    = useState(null);
+  const [dcf,       setDcf]       = useState(null);
+  const [dcfInputs, setDcfInputs] = useState(null);
+  const [ptList,    setPtList]    = useState(null);
 
   // Finnhub data state
   const [earnCalendar, setEarnCalendar] = useState(null);
@@ -996,6 +1278,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setQuote(null); setProf(null); setMet(null); setRat(null);
     setHist([]); setStmts([]); setNews([]);
     setPtC(null); setAnalystEst(null); setUdC(null); setDcf(null);
+    setDcfInputs(null); setPtList(null);
     setAiVerdict(null); setEarnCalendar(null); setEarnSurprise([]); setInsiderTxns([]);
     try {
       const results = await Promise.allSettled([
@@ -1004,31 +1287,63 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         fmpGet('key-metrics-ttm',              { symbol: sym }),
         fmpGet('ratios-ttm',                   { symbol: sym }),
         fmpGet('historical-price-eod/full',    { symbol: sym }),
-        fmpGet('income-statement',             { symbol: sym, period: 'quarter', limit: '4' }),
+        fmpGet('income-statement',             { symbol: sym, period: 'quarter', limit: '12' }),
         fmpGet('news',                         { tickers: sym, limit: '8' }),
         fmpGet('price-target-consensus',       { symbol: sym }),
         fmpGet('analyst-estimates',            { symbol: sym, limit: '2' }),
         fmpGet('upgrades-downgrades-consensus',{ symbol: sym }),
         fmpGet('discounted-cash-flow',         { symbol: sym }),
+        fmpGet('balance-sheet-statement',      { symbol: sym, period: 'annual', limit: '1' }),
+        fmpGet('price-target',                 { symbol: sym, limit: '10' }),
       ]);
 
       const get=r=>r.status==='fulfilled'?r.value:null;
-      const [qD,pD,mD,rD,hD,sD,nD,ptD,aeD,udD,dcfD]=results.map(get);
+      const [qD,pD,mD,rD,hD,sD,nD,ptD,aeD,udD,dcfD,bsD,ptListD]=results.map(get);
 
       if (!qD && !pD) throw new Error(`Ticker "${sym}" not found — check the symbol and try again`);
 
-      setQuote(Array.isArray(qD)?qD[0]:qD);
-      setProf (Array.isArray(pD)?pD[0]:pD);
-      setMet  (Array.isArray(mD)?mD[0]:mD);
-      setRat  (Array.isArray(rD)?rD[0]:rD);
-      setHist (Array.isArray(hD)?hD:[]);
-      setStmts(Array.isArray(sD)?sD:[]);
+      const quote_ = Array.isArray(qD)?qD[0]:qD;
+      const pD_    = Array.isArray(pD)?pD[0]:pD;
+      const met_   = Array.isArray(mD)?mD[0]:mD;
+      const rat_   = Array.isArray(rD)?rD[0]:rD;
+      const hD_    = Array.isArray(hD)?hD:[];
+      const sD_    = Array.isArray(sD)?sD:[];
+
+      setQuote(quote_);
+      setProf (pD_);
+      setMet  (met_);
+      setRat  (rat_);
+      setHist (hD_);
+      setStmts(sD_);
       setNews (Array.isArray(nD)?nD:[]);
       setPtC  (ptD);
       setAnalystEst(aeD);
       setUdC  (udD);
       setDcf  (Array.isArray(dcfD)?dcfD[0]:dcfD);
+      setPtList(Array.isArray(ptListD)?ptListD:null);
       setTicker(sym.toUpperCase());
+
+      // Populate DCF defaults from real data
+      const bs0 = Array.isArray(bsD)?bsD[0]:(bsD||null);
+      const q0  = sD_[0];
+      const baseRevenue = q0?.revenue ? q0.revenue * 4 : null;
+      const netDebt = bs0?.netDebt ?? (bs0 ? (bs0.totalDebt||0) - (bs0.cashAndCashEquivalents||0) : null);
+      const shares = quote_?.sharesOutstanding ?? pD_?.sharesOutstanding ?? null;
+      const beta_  = quote_?.beta ?? pD_?.beta ?? 1.2;
+      setDcfInputs({
+        revGrowth1to5:  12,
+        revGrowth6to10: 6,
+        ebitMargin: ok(rat_?.operatingProfitMarginTTM) ? Math.round(rat_.operatingProfitMarginTTM*100) : 20,
+        taxRate:    21,
+        capexPct:   5,
+        wcChange:   1,
+        discountRate:   9,
+        terminalGrowth: 3,
+        beta:       ok(beta_) ? +beta_.toFixed(2) : 1.2,
+        netDebt:    ok(netDebt) ? netDebt : 0,
+        shares:     ok(shares) ? shares : null,
+        baseRevenue: ok(baseRevenue) ? baseRevenue : null,
+      });
 
       const hist5=[sym,...JSON.parse(localStorage.getItem('sl_history')||'[]')]
         .filter((t,i,a)=>a.indexOf(t)===i).slice(0,5);
@@ -1054,12 +1369,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
       // AI verdict (optional)
       if (anthropicKey) {
-        const mFinal = Array.isArray(mD)?mD[0]:mD;
-        const pFinal = Array.isArray(pD)?pD[0]:pD;
-        const rFinal = Array.isArray(rD)?rD[0]:rD;
-        const hFinal = Array.isArray(hD)?hD:[];
-        const sFinal = Array.isArray(sD)?sD:[];
-        fetchAiVerdict(sym, calcScores(mFinal, rFinal, hFinal, sFinal), pFinal, mFinal);
+        fetchAiVerdict(sym, calcScores(met_, rat_, hD_, sD_), pD_, met_);
       }
 
     } catch(e) {
@@ -1090,9 +1400,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
   const healthCards = useMemo(()=>{
     if (!met||!rat) return [];
-    const pe=met.priceToEarningsRatioTTM, ev=met.evToEBITDATTM;
-    const pfcf=met.priceToFreeCashFlowRatioTTM, gm=rat.grossProfitMarginTTM;
-    const roic=met.returnOnInvestedCapitalTTM, nd=met.netDebtToEBITDATTM;
+    const pe=met.peRatioTTM??met.priceToEarningsRatioTTM, ev=met.evToEBITDATTM??met.enterpriseValueOverEBITDATTM;
+    const pfcf=met.pfcfRatioTTM??met.priceToFreeCashFlowRatioTTM, gm=rat.grossProfitMarginTTM;
+    const roic=met.returnOnInvestedCapitalTTM??met.roicTTM, nd=met.netDebtToEBITDATTM;
     return [
       {label:'P/E Ratio',      value:fmt.mult(pe),   note:'trailing 12 months',  status:ok(pe)&&pe>0?(pe<25?'green':pe<45?'amber':'red'):'neutral'},
       {label:'EV / EBITDA',    value:fmt.mult(ev),   note:'enterprise multiple',  status:ok(ev)&&ev>0?(ev<14?'green':ev<22?'amber':'red'):'neutral'},
@@ -1103,7 +1413,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     ];
   },[met,rat]);
 
-  const tabs=['Overview','Fundamentals','Chart','Research'];
+  const tabs=['Overview','Fundamentals','Valuation','Chart','Research'];
 
   // ── Setup screen ──────────────────────────────────────────
   if (!keysSubmitted) {
@@ -1517,13 +1827,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   <div style={{fontSize:11,color:'#334155',marginTop:3}}>
                     Mkt Cap {fmt.usd(quote?.marketCap)} · Avg Vol {fmt.usd(quote?.averageVolume)}
                   </div>
-                  {ok(dcfVal)&&(
-                    <div style={{marginTop:8,padding:'5px 10px',borderRadius:5,background:mosColor+'18',border:`1px solid ${mosColor}44`,display:'inline-block'}}>
-                      <span style={{fontSize:10,color:'#475569'}}>DCF Intrinsic Value: </span>
-                      <span style={{fontSize:12,fontWeight:700,color:mosColor,fontFamily:'JetBrains Mono,monospace'}}>{fmt.price(dcfVal)}</span>
-                      {ok(mosFrac)&&<span style={{fontSize:10,color:mosColor,marginLeft:5}}>({mosFrac>0?'+':''}{(mosFrac*100).toFixed(1)}% {mosFrac>0?'upside':'overvalued'})</span>}
-                    </div>
-                  )}
+                  <button
+                    onClick={()=>setActiveTab('Valuation')}
+                    style={{marginTop:8,background:'#141720',border:'1px solid #1e2430',borderRadius:5,padding:'5px 12px',color:'#3b82f6',fontSize:11,cursor:'pointer'}}
+                  >→ See Valuation</button>
                 </div>
               </div>
             </Panel>
@@ -1567,38 +1874,65 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     </div>
                     <div>
                       <SectionTitle>Key Metrics — TTM</SectionTitle>
-                      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:9}}>
-                        <KPIBadge label="P/E Ratio"      value={fmt.mult(met?.priceToEarningsRatioTTM)}         sub="trailing 12 months"    bmVal={bm?.pe}   bmLabel="sector avg"/>
-                        <KPIBadge label="EV/EBITDA"       value={fmt.mult(met?.evToEBITDATTM)}                   sub="enterprise value mult." bmVal={bm?.ev}   bmLabel="sector avg"/>
-                        <KPIBadge label="P/FCF"           value={fmt.mult(met?.priceToFreeCashFlowRatioTTM)}     sub="price / free cash flow"/>
+                      {ok(quote?.yearHigh) && ok(quote?.yearLow) && ok(priceNow) && (
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:10,color:'#475569',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.5px'}}>52-Week Range</div>
+                          <div style={{position:'relative',height:6,background:'#1e2430',borderRadius:3}}>
+                            <div style={{
+                              position:'absolute',left:0,
+                              width:`${Math.min(100,Math.max(0,((priceNow-quote.yearLow)/(quote.yearHigh-quote.yearLow))*100))}%`,
+                              height:'100%',background:'#3b82f6',borderRadius:3,transition:'width 0.8s ease'
+                            }}/>
+                            <div style={{
+                              position:'absolute',
+                              left:`${Math.min(100,Math.max(0,((priceNow-quote.yearLow)/(quote.yearHigh-quote.yearLow))*100))}%`,
+                              top:-3,transform:'translateX(-50%)',
+                              width:12,height:12,background:'#fff',borderRadius:'50%',border:'2px solid #3b82f6'
+                            }}/>
+                          </div>
+                          <div style={{display:'flex',justifyContent:'space-between',marginTop:4,fontSize:10,color:'#475569',fontFamily:'JetBrains Mono,monospace'}}>
+                            <span>{fmt.price(quote.yearLow)} <span style={{color:'#334155'}}>52W Low</span></span>
+                            <span style={{color:'#e2e8f0',fontWeight:700}}>{fmt.price(priceNow)}</span>
+                            <span><span style={{color:'#334155'}}>52W High</span> {fmt.price(quote.yearHigh)}</span>
+                          </div>
+                        </div>
+                      )}
+                      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:9}}>
+                        <KPIBadge label="P/E Ratio"      value={fmt.mult(met?.peRatioTTM??met?.priceToEarningsRatioTTM)}         sub="trailing 12 months"    bmVal={bm?.pe}   bmLabel="sector avg"/>
+                        <KPIBadge label="EV/EBITDA"       value={fmt.mult(met?.evToEBITDATTM??met?.enterpriseValueOverEBITDATTM)}   sub="enterprise value mult." bmVal={bm?.ev}   bmLabel="sector avg"/>
+                        <KPIBadge label="P/FCF"           value={fmt.mult(met?.pfcfRatioTTM??met?.priceToFreeCashFlowRatioTTM)}     sub="price / free cash flow"/>
                         <KPIBadge label="Gross Margin"    value={fmt.pct(rat?.grossProfitMarginTTM)}             sub="TTM"
                           highlight={ok(rat?.grossProfitMarginTTM)?(rat.grossProfitMarginTTM>=0.4?'#22c55e':rat.grossProfitMarginTTM>=0.2?'#fbbf24':'#f87171'):undefined}
                           bmVal={bm?.gm} bmLabel="sector avg"/>
-                        <KPIBadge label="ROIC"            value={fmt.pct(met?.returnOnInvestedCapitalTTM)}       sub="return on inv. capital"
-                          highlight={ok(met?.returnOnInvestedCapitalTTM)?(met.returnOnInvestedCapitalTTM>=0.15?'#22c55e':met.returnOnInvestedCapitalTTM>=0.06?'#fbbf24':'#f87171'):undefined}
+                        <KPIBadge label="ROIC"            value={fmt.pct(met?.returnOnInvestedCapitalTTM??met?.roicTTM)}       sub="return on inv. capital"
+                          highlight={ok(met?.returnOnInvestedCapitalTTM??met?.roicTTM)?((met?.returnOnInvestedCapitalTTM??met?.roicTTM)>=0.15?'#22c55e':(met?.returnOnInvestedCapitalTTM??met?.roicTTM)>=0.06?'#fbbf24':'#f87171'):undefined}
                           bmVal={bm?.roic} bmLabel="sector avg"/>
                         <KPIBadge label="Net Debt/EBITDA" value={fmt.ndx(met?.netDebtToEBITDATTM)}              sub={ok(met?.netDebtToEBITDATTM)&&met.netDebtToEBITDATTM<0?'net cash position':'leverage'}
                           highlight={ok(met?.netDebtToEBITDATTM)?(met.netDebtToEBITDATTM<0?'#22c55e':met.netDebtToEBITDATTM<2?'#fbbf24':'#f87171'):undefined}/>
                         <KPIBadge label="FCF Yield"       value={fmt.pct(met?.freeCashFlowYieldTTM)}            sub="TTM"/>
-                        <KPIBadge label="ROE"             value={fmt.pct(met?.returnOnEquityTTM)}               sub="return on equity"/>
-                        <KPIBadge label="Interest Coverage" value={fmt.mult(met?.interestCoverageRatioTTM)}     sub="EBIT / interest expense"
-                          highlight={ok(met?.interestCoverageRatioTTM)?(met.interestCoverageRatioTTM>=10?'#22c55e':met.interestCoverageRatioTTM>=3?'#fbbf24':'#f87171'):undefined}/>
+                        <KPIBadge label="ROE"             value={fmt.pct(met?.returnOnEquityTTM??met?.roeTTM)}               sub="return on equity"/>
+                        <KPIBadge label="Interest Coverage" value={fmt.mult(met?.interestCoverageTTM??met?.interestCoverageRatioTTM)}     sub="EBIT / interest expense"
+                          highlight={ok(met?.interestCoverageTTM??met?.interestCoverageRatioTTM)?((met?.interestCoverageTTM??met?.interestCoverageRatioTTM)>=10?'#22c55e':(met?.interestCoverageTTM??met?.interestCoverageRatioTTM)>=3?'#fbbf24':'#f87171'):undefined}/>
+                        <KPIBadge label="P/Book"      value={fmt.mult(rat?.priceToBookRatioTTM??met?.pbRatioTTM)}     sub="price / book value"/>
+                        <KPIBadge label="P/Sales"     value={fmt.mult(rat?.priceToSalesRatioTTM)}   sub="price / revenue TTM"/>
+                        <KPIBadge label="Div. Yield"  value={fmt.pct(met?.dividendYieldTTM)}         sub="annual dividend yield"/>
+                        <KPIBadge label="Beta"        value={ok(quote?.beta) ? quote.beta.toFixed(2) : (ok(prof?.beta) ? parseFloat(prof.beta).toFixed(2) : '—')} sub="market sensitivity"/>
                       </div>
                     </div>
                   </div>
 
+                  <HealthScorePanel met={met} rat={rat} hist={hist} stmts={stmts} scores={scores}/>
+
                   {(ptC||udC)&&(
                     <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
-                      <AnalystPanel ptC={ptC} udC={udC} analystEst={analystEst} currentPrice={priceNow}/>
+                      <AnalystPanel ptC={ptC} udC={udC} analystEst={analystEst} currentPrice={priceNow} ptList={ptList}/>
                     </div>
                   )}
 
                   {prof?.description&&(
                     <div>
                       <SectionTitle>About {prof.companyName}</SectionTitle>
-                      <div style={{fontSize:12,color:'#94a3b8',lineHeight:1.75,display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden'}}>
-                        {prof.description}
-                      </div>
+                      <AboutText text={prof.description}/>
                     </div>
                   )}
                 </div>
@@ -1615,6 +1949,14 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   </div>
                   {stmts.length>=2&&<GrowthPanel stmts={stmts}/>}
                   {stmts.length>0&&<QuarterlyTable stmts={stmts}/>}
+                </div>
+              )}
+
+              {/* ── VALUATION TAB ── */}
+              {activeTab==='Valuation'&&(
+                <div style={{display:'flex',flexDirection:'column',gap:16}}>
+                  <DCFCalculator inputs={dcfInputs} setInputs={setDcfInputs} currentPrice={priceNow} profile={prof}/>
+                  <MultiModelValuation met={met} rat={rat} quote={quote} prof={prof} stmts={stmts} currentPrice={priceNow}/>
                 </div>
               )}
 
@@ -1640,6 +1982,28 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     }
                   </div>
                   <TechnicalSignals history={hist}/>
+                  {stmts.length>=1&&hist.length>0&&(()=>{
+                    const annualEps=(stmts[0]?.eps||0)*4;
+                    if(!ok(annualEps)||annualEps<=0) return null;
+                    const sorted2=[...hist].sort((a,b)=>new Date(a.date)-new Date(b.date));
+                    const peHistory=sorted2.slice(-252).map(d=>({date:d.date,pe:d.close/annualEps}));
+                    const peValues=peHistory.map(d=>d.pe).filter(ok);
+                    if(!peValues.length) return null;
+                    const peMin=Math.min(...peValues).toFixed(1);
+                    const peMax=Math.max(...peValues).toFixed(1);
+                    const peCurrent=(priceNow/annualEps).toFixed(1);
+                    return (
+                      <div>
+                        <SectionTitle>Historical P/E — 1 Year</SectionTitle>
+                        <div style={{fontSize:11,color:'#64748b',marginBottom:8}}>
+                          Current P/E: <span style={{color:'#e2e8f0',fontWeight:700,fontFamily:'JetBrains Mono,monospace'}}>{peCurrent}x</span>
+                          &nbsp;·&nbsp; Range: <span style={{fontFamily:'JetBrains Mono,monospace'}}>{peMin}x – {peMax}x</span>
+                        </div>
+                        <Sparkline data={peHistory.map(d=>d.pe)} type="line" color="#a78bfa" h={60} w={760}/>
+                        <div style={{fontSize:9,color:'#334155',marginTop:4}}>Based on trailing quarterly EPS × 4 (annualized)</div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -1697,7 +2061,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
       {/* Footer */}
       <div style={{textAlign:'center',marginTop:48,fontSize:10,color:'#1e2430',lineHeight:1.8}}>
-        StockLens v3.0 · Data: Financial Modeling Prep · Not financial advice · {new Date().getFullYear()}
+        StockLens v4.0 · Data: Financial Modeling Prep · Not financial advice · {new Date().getFullYear()}
         {ticker&&quote&&<span> · Last updated: {new Date().toLocaleTimeString()}</span>}
       </div>
     </div>
