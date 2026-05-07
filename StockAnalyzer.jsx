@@ -302,7 +302,7 @@ function Sparkline({data, type='bar', color='#3b82f6', h=48, w=120}) {
 }
 
 // ─── PRICE CHART (enhanced) ─────────────────────────────────
-const PERIODS = {'1M':21,'3M':63,'6M':126,'1Y':365};
+const PERIODS = {'1M':21,'3M':63,'6M':126,'1Y':365,'5Y':1825};
 
 function PriceChart({history, ticker, period}) {
   const [hoverIdx, setHoverIdx] = useState(null);
@@ -1117,6 +1117,346 @@ function HealthScorePanel({met,rat,hist,stmts,scores}) {
 }
 
 // ─── ABOUT TEXT (collapsible) ────────────────────────────────
+// ─── PEER COMPARISON ────────────────────────────────────────
+function PeerComparison({peers, peerMetrics, currentMet, currentRat, currentProf, onAnalyze}) {
+  if (!peers || peers.length === 0) return null;
+  const allSymbols = [currentProf?.symbol, ...peers].filter(Boolean);
+  const mName = s => s === currentProf?.symbol ? (currentProf?.companyName||s) : (peerMetrics[s]?.name || s);
+  const getM  = s => s === currentProf?.symbol ? currentMet  : peerMetrics[s]?.met;
+  const getR  = s => s === currentProf?.symbol ? currentRat  : peerMetrics[s]?.rat;
+
+  const cols = [
+    { label:'Ticker',       fn:(s)=>s },
+    { label:'P/E',          fn:(s)=>{ const v=getM(s)?.priceToEarningsRatioTTM??getM(s)?.peRatioTTM; return ok(v)&&v>0?v.toFixed(1)+'x':'—'; }},
+    { label:'EV/EBITDA',    fn:(s)=>{ const v=getM(s)?.evToEBITDATTM; return ok(v)&&v>0?v.toFixed(1)+'x':'—'; }},
+    { label:'Gross Margin', fn:(s)=>{ const v=getR(s)?.grossProfitMarginTTM; return ok(v)?fmt.pct(v):'—'; }},
+    { label:'ROIC',         fn:(s)=>{ const v=getM(s)?.returnOnInvestedCapitalTTM??getM(s)?.roicTTM; return ok(v)?fmt.pct(v):'—'; }},
+    { label:'Net Debt/EBITDA', fn:(s)=>{ const v=getM(s)?.netDebtToEBITDATTM; return ok(v)?fmt.ndx(v):'—'; }},
+    { label:'Mkt Cap',      fn:(s)=>{ const v=getM(s)?.marketCapTTM??getR(s)?.marketCapTTM; return ok(v)?fmt.usd(v):'—'; }},
+  ];
+
+  const colorVal = (col, s) => {
+    if (col.label === 'Ticker') return s === currentProf?.symbol ? '#60a5fa' : '#e2e8f0';
+    const raw = col.label==='P/E'?(getM(s)?.priceToEarningsRatioTTM??getM(s)?.peRatioTTM)
+              : col.label==='EV/EBITDA'?getM(s)?.evToEBITDATTM
+              : col.label==='Gross Margin'?getR(s)?.grossProfitMarginTTM
+              : col.label==='ROIC'?(getM(s)?.returnOnInvestedCapitalTTM??getM(s)?.roicTTM)
+              : col.label==='Net Debt/EBITDA'?getM(s)?.netDebtToEBITDATTM
+              : null;
+    if (!ok(raw)) return '#475569';
+    if (col.label==='Gross Margin') return raw>=0.4?'#22c55e':raw>=0.2?'#fbbf24':'#f87171';
+    if (col.label==='ROIC')         return raw>=0.15?'#22c55e':raw>=0.06?'#fbbf24':'#f87171';
+    if (col.label==='Net Debt/EBITDA') return raw<0.5?'#22c55e':raw<2.5?'#fbbf24':'#f87171';
+    return '#e2e8f0';
+  };
+
+  return (
+    <div>
+      <SectionTitle>Peer Comparison</SectionTitle>
+      <div style={{overflowX:'auto'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+          <thead>
+            <tr>
+              {cols.map(c=>(
+                <th key={c.label} style={{padding:'6px 10px',textAlign:c.label==='Ticker'?'left':'right',
+                  color:'#334155',fontSize:9,fontWeight:700,textTransform:'uppercase',
+                  letterSpacing:'0.8px',borderBottom:'1px solid #1e2430',whiteSpace:'nowrap'
+                }}>{c.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {allSymbols.map((s,ri)=>{
+              const isMain = s === currentProf?.symbol;
+              return (
+                <tr key={s} style={{
+                  borderBottom:'1px solid #141720',
+                  background: isMain ? '#1e2430' : (ri%2===0?'transparent':'#0f1117')
+                }}>
+                  {cols.map(col=>(
+                    <td key={col.label} style={{
+                      padding:'8px 10px',
+                      textAlign:col.label==='Ticker'?'left':'right',
+                      fontFamily:'JetBrains Mono,monospace',
+                      color: colorVal(col, s),
+                      fontWeight: isMain ? 700 : 400,
+                      cursor: col.label==='Ticker'&&!isMain ? 'pointer' : 'default',
+                      fontSize: col.label==='Ticker' ? 11 : 10,
+                    }}
+                    onClick={col.label==='Ticker'&&!isMain ? ()=>onAnalyze(s) : undefined}
+                    title={col.label==='Ticker'&&!isMain ? `Analyze ${s}` : mName(s)}
+                    >
+                      {col.label==='Ticker' ? (
+                        <span>
+                          {s}
+                          {isMain && <span style={{fontSize:8,color:'#3b82f6',marginLeft:4,fontWeight:700}}>(current)</span>}
+                        </span>
+                      ) : col.fn(s)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {peers.some(s=>!peerMetrics[s]) && (
+        <div style={{fontSize:9,color:'#334155',marginTop:6}}>Loading peer metrics…</div>
+      )}
+    </div>
+  );
+}
+
+// ─── BALANCE SHEET SNAPSHOT ──────────────────────────────────
+function BalanceSheetPanel({bsData}) {
+  if (!bsData || bsData.length === 0) return null;
+  const sorted = [...bsData].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const bs = sorted[0];
+  if (!bs) return null;
+
+  const cash    = bs.cashAndCashEquivalents ?? bs.cashAndShortTermInvestments;
+  const totalDebt = bs.totalDebt;
+  const equity  = bs.totalStockholdersEquity;
+  const totalA  = bs.totalAssets;
+  const intangibles = bs.goodwillAndIntangibleAssets ?? ((bs.goodwill||0)+(bs.intangibleAssets||0));
+  const netDebt = ok(totalDebt)&&ok(cash) ? totalDebt-cash : null;
+  const currentA = bs.totalCurrentAssets;
+  const currentL = bs.totalCurrentLiabilities;
+  const currentR = (ok(currentA)&&ok(currentL)&&currentL>0) ? currentA/currentL : null;
+
+  const rows = [
+    {label:'Cash & Equivalents', value:fmt.usd(cash),   note:'liquidity cushion', color:ok(cash)&&cash>0?'#22c55e':'#f87171'},
+    {label:'Total Debt',         value:fmt.usd(totalDebt), note:'short + long term', color:ok(totalDebt)&&totalDebt<cash?'#22c55e':'#fbbf24'},
+    {label:'Net Debt',           value:ok(netDebt)?(netDebt<0?`${fmt.usd(-netDebt)} net cash`:fmt.usd(netDebt)):'—', note:ok(netDebt)&&netDebt<0?'net cash position':'debt in excess of cash', color:ok(netDebt)?(netDebt<0?'#22c55e':netDebt<1e9?'#fbbf24':'#f87171'):'#475569'},
+    {label:"Shareholders' Equity", value:fmt.usd(equity), note:'book value', color:'#94a3b8'},
+    {label:'Total Assets',       value:fmt.usd(totalA),  note:'as of last period', color:'#94a3b8'},
+    {label:'Current Ratio',      value:ok(currentR)?currentR.toFixed(2)+'x':'—', note:'current assets / liabilities', color:ok(currentR)?(currentR>=2?'#22c55e':currentR>=1?'#fbbf24':'#f87171'):'#475569'},
+    {label:'Intangibles / Assets', value:(ok(intangibles)&&ok(totalA)&&totalA>0)?fmt.pct(intangibles/totalA):'—', note:'goodwill + intangibles share', color:'#94a3b8'},
+  ];
+
+  // Debt trend over 4 periods
+  const debtTrend = sorted.slice(0,4).map(q=>({
+    label:`${q.period||''} ${q.calendarYear||q.date?.substring(0,4)||''}`.trim(),
+    totalDebt: q.totalDebt,
+    cash: q.cashAndCashEquivalents ?? q.cashAndShortTermInvestments,
+  }));
+
+  return (
+    <div>
+      <SectionTitle>Balance Sheet Snapshot</SectionTitle>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
+        {rows.map(r=>(
+          <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
+            <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+            <div style={{fontSize:14,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color||'#e2e8f0'}}>{r.value}</div>
+            <div style={{fontSize:9,color:'#334155',marginTop:2}}>{r.note}</div>
+          </div>
+        ))}
+      </div>
+      {debtTrend.length >= 2 && (
+        <div>
+          <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Debt vs Cash — last {debtTrend.length} periods</div>
+          <div style={{display:'flex',gap:6}}>
+            {debtTrend.map((p,i)=>{
+              const maxVal = Math.max(...debtTrend.map(x=>Math.max(x.totalDebt||0,x.cash||0)),1);
+              const dPct  = ok(p.totalDebt) ? Math.round(p.totalDebt/maxVal*100) : 0;
+              const cPct  = ok(p.cash)      ? Math.round(p.cash/maxVal*100)      : 0;
+              return (
+                <div key={i} style={{flex:1,textAlign:'center'}}>
+                  <div style={{display:'flex',gap:2,height:48,alignItems:'flex-end',justifyContent:'center',marginBottom:4}}>
+                    <div style={{width:12,background:'#f87171',borderRadius:'2px 2px 0 0',height:`${dPct}%`,minHeight:2,title:'Debt'}}/>
+                    <div style={{width:12,background:'#22c55e',borderRadius:'2px 2px 0 0',height:`${cPct}%`,minHeight:2,title:'Cash'}}/>
+                  </div>
+                  <div style={{fontSize:8,color:'#475569',lineHeight:1.3}}>{p.label}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{display:'flex',gap:12,marginTop:6}}>
+            <span style={{fontSize:8,color:'#f87171'}}>■ Total Debt</span>
+            <span style={{fontSize:8,color:'#22c55e'}}>■ Cash</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── FREE CASH FLOW DETAIL ───────────────────────────────────
+function FCFPanel({cfData, incomeData}) {
+  if (!cfData || cfData.length === 0) return null;
+  const sorted = [...cfData].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
+  if (sorted.length < 2) return null;
+
+  const enriched = sorted.map((q,i)=>{
+    const ocf   = q.operatingCashFlow;
+    const capex = q.capitalExpenditure ?? q.capitalExpenditures;
+    const fcf   = (ok(ocf)&&ok(capex)) ? ocf - Math.abs(capex) : (ok(ocf)?ocf:null);
+    const rev   = incomeData?.find(s=>s.period===q.period&&s.calendarYear===q.calendarYear)?.revenue;
+    const ni    = incomeData?.find(s=>s.period===q.period&&s.calendarYear===q.calendarYear)?.netIncome;
+    const fcfM  = (ok(fcf)&&ok(rev)&&rev>0) ? fcf/rev : null;
+    const fcfConv = (ok(fcf)&&ok(ni)&&ni>0) ? fcf/ni : null;
+    return { label:`${q.period} ${q.calendarYear}`, ocf, capex: ok(capex)?Math.abs(capex):null, fcf, fcfM, fcfConv };
+  }).reverse();
+
+  const recent4 = enriched.slice(-4);
+  const ttmFCF  = recent4.reduce((s,q)=>ok(q.fcf)?s+q.fcf:s, 0);
+  const ttmRev  = (() => {
+    const last4Rev = incomeData?.slice(0,4)?.reduce((s,q)=>ok(q.revenue)?s+q.revenue:s, 0);
+    return last4Rev || 0;
+  })();
+  const ttmFCFM = (ttmFCF && ttmRev>0) ? ttmFCF/ttmRev : null;
+
+  const maxFCF  = Math.max(...enriched.map(q=>Math.abs(q.fcf||0)),1);
+
+  return (
+    <div>
+      <SectionTitle>Free Cash Flow — Quarterly</SectionTitle>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+        {[
+          {label:'TTM FCF',       value:fmt.usd(ttmFCF),       color:ttmFCF>0?'#22c55e':'#f87171'},
+          {label:'TTM FCF Margin',value:fmt.pct(ttmFCFM),      color:ok(ttmFCFM)?(ttmFCFM>=0.15?'#22c55e':ttmFCFM>=0.05?'#fbbf24':'#f87171'):'#475569'},
+          {label:'FCF Conversion', value:ok(recent4[recent4.length-1]?.fcfConv)?recent4[recent4.length-1].fcfConv.toFixed(2)+'x':'—', color:'#94a3b8'},
+        ].map(r=>(
+          <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
+            <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+            <div style={{fontSize:16,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color}}>{r.value}</div>
+          </div>
+        ))}
+      </div>
+      {/* Bar chart */}
+      <div style={{display:'flex',gap:4,alignItems:'flex-end',height:70,marginBottom:4}}>
+        {enriched.map((q,i)=>{
+          const h = ok(q.fcf) ? Math.round((Math.abs(q.fcf)/maxFCF)*60) : 0;
+          const isPos = (q.fcf||0) >= 0;
+          return (
+            <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+              <div style={{fontSize:8,color:'#475569',fontFamily:'JetBrains Mono,monospace'}}>{fmt.usd(q.fcf)}</div>
+              <div style={{
+                width:'100%',height:h+4,minHeight:4,
+                background: isPos ? '#22c55e' : '#f87171',
+                borderRadius:'2px 2px 0 0',opacity:0.85
+              }}/>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{display:'flex',gap:0}}>
+        {enriched.map((q,i)=>(
+          <div key={i} style={{flex:1,textAlign:'center',fontSize:8,color:'#334155'}}>{q.label.split(' ')[0]}<br/>{q.label.split(' ')[1]}</div>
+        ))}
+      </div>
+      <table style={{width:'100%',borderCollapse:'collapse',fontSize:10,marginTop:12}}>
+        <thead>
+          <tr>
+            {['Period','Op. Cash Flow','CapEx','FCF','FCF Margin','FCF Conv.'].map(h=>(
+              <th key={h} style={{padding:'5px 8px',textAlign:h==='Period'?'left':'right',color:'#334155',fontSize:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.7px',borderBottom:'1px solid #1e2430'}}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {enriched.slice().reverse().slice(0,6).map((q,i)=>(
+            <tr key={i} style={{borderBottom:'1px solid #0f1117'}}>
+              <td style={{padding:'6px 8px',color:'#64748b',fontFamily:'JetBrains Mono,monospace',fontSize:9}}>{q.label}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:'#94a3b8'}}>{fmt.usd(q.ocf)}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:'#f87171'}}>{ok(q.capex)?`(${fmt.usd(q.capex)})`:'—'}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:ok(q.fcf)?(q.fcf>=0?'#22c55e':'#f87171'):'#475569',fontWeight:700}}>{fmt.usd(q.fcf)}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:'#94a3b8'}}>{fmt.pct(q.fcfM)}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:'#94a3b8'}}>{ok(q.fcfConv)?q.fcfConv.toFixed(2)+'x':'—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── DIVIDENDS SECTION ───────────────────────────────────────
+function DividendsPanel({divData, met, currentPrice}) {
+  if (!divData || divData.length === 0) return null;
+  const sorted = [...divData].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  // Only show section if company actually pays a dividend
+  const recentDiv = sorted[0]?.dividend || sorted[0]?.adjDividend;
+  if (!ok(recentDiv) || recentDiv <= 0) return null;
+
+  const divYield = met?.dividendYieldTTM;
+  const payoutR  = met?.payoutRatioTTM ?? met?.dividendPayoutRatioTTM;
+
+  // Annual dividend totals
+  const byYear = {};
+  sorted.forEach(d=>{
+    const yr = (d.date||'').substring(0,4);
+    if (!yr) return;
+    byYear[yr] = (byYear[yr]||0) + (d.dividend||d.adjDividend||0);
+  });
+  const years = Object.keys(byYear).sort().slice(-6);
+  const annualVals = years.map(y=>byYear[y]);
+  const maxAnnual = Math.max(...annualVals, 0.01);
+
+  // Consecutive years of payment
+  const distinctYears = Object.keys(byYear).filter(y=>byYear[y]>0).sort();
+  let consec = 0;
+  for (let i=distinctYears.length-1;i>0;i--) {
+    if (parseInt(distinctYears[i])-parseInt(distinctYears[i-1])===1) consec++;
+    else break;
+  }
+  consec += 1;
+
+  // Dividend CAGR
+  const divCAGR = years.length>=2 && annualVals[0]>0 && annualVals[annualVals.length-1]>0
+    ? Math.pow(annualVals[annualVals.length-1]/annualVals[0], 1/(years.length-1)) - 1
+    : null;
+
+  return (
+    <div>
+      <SectionTitle>Dividends</SectionTitle>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
+        {[
+          {label:'Dividend Yield',     value:fmt.pct(divYield),   color:ok(divYield)&&divYield>0?'#22c55e':'#475569'},
+          {label:'Payout Ratio',       value:fmt.pct(payoutR),    color:ok(payoutR)?(payoutR<0.6?'#22c55e':payoutR<0.9?'#fbbf24':'#f87171'):'#475569'},
+          {label:'Consec. Years Paid', value:consec>0?`${consec} yrs`:'—', color:consec>=10?'#22c55e':consec>=5?'#fbbf24':'#94a3b8'},
+          {label:'Div. CAGR',          value:fmt.pct(divCAGR),    color:ok(divCAGR)&&divCAGR>0?'#22c55e':'#f87171'},
+        ].map(r=>(
+          <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
+            <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color}}>{r.value}</div>
+          </div>
+        ))}
+      </div>
+      {/* Annual dividends bar chart */}
+      {years.length >= 2 && (
+        <>
+          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Annual Dividends per Share</div>
+          <div style={{display:'flex',gap:6,alignItems:'flex-end',height:60}}>
+            {years.map((yr,i)=>{
+              const h = Math.round((annualVals[i]/maxAnnual)*48);
+              return (
+                <div key={yr} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                  <div style={{fontSize:8,color:'#94a3b8',fontFamily:'JetBrains Mono,monospace'}}>${annualVals[i].toFixed(2)}</div>
+                  <div style={{width:'70%',height:h+4,minHeight:4,background:'#3b82f6',borderRadius:'2px 2px 0 0',opacity:0.8}}/>
+                  <div style={{fontSize:8,color:'#475569'}}>{yr}</div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {/* Recent dividend history */}
+      <div style={{marginTop:12}}>
+        <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Recent Payments</div>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+          {sorted.slice(0,8).map((d,i)=>(
+            <div key={i} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:4,padding:'5px 10px',textAlign:'center'}}>
+              <div style={{fontSize:9,color:'#64748b'}}>{d.date?.substring(0,10)}</div>
+              <div style={{fontSize:12,fontWeight:700,color:'#22c55e',fontFamily:'JetBrains Mono,monospace'}}>${(d.dividend||d.adjDividend||0).toFixed(3)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AboutText({text}) {
   const [expanded,setExpanded]=React.useState(false);
   const long=text&&text.length>400;
@@ -1179,6 +1519,13 @@ function App() {
   const [earnCalendar, setEarnCalendar] = useState(null);
   const [earnSurprise, setEarnSurprise] = useState([]);
   const [insiderTxns,  setInsiderTxns]  = useState([]);
+
+  // v5.0 new state
+  const [peers,         setPeers]        = useState([]);
+  const [peerMetrics,   setPeerMetrics]  = useState({});
+  const [cfStmts,       setCfStmts]      = useState([]);
+  const [balanceSheets, setBalanceSheets]= useState([]);
+  const [historicalDivs,setHistoricalDivs]=useState([]);
 
   const scores = useMemo(()=>calcScores(met,rat,hist,stmts),[met,rat,hist,stmts]);
 
@@ -1280,6 +1627,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setPtC(null); setAnalystEst(null); setUdC(null); setDcf(null);
     setDcfInputs(null); setPtList(null);
     setAiVerdict(null); setEarnCalendar(null); setEarnSurprise([]); setInsiderTxns([]);
+    setPeers([]); setPeerMetrics({}); setCfStmts([]); setBalanceSheets([]); setHistoricalDivs([]);
     try {
       const results = await Promise.allSettled([
         fmpGet('quote',                        { symbol: sym }),
@@ -1293,12 +1641,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         fmpGet('analyst-estimates',            { symbol: sym, limit: '2' }),
         fmpGet('upgrades-downgrades-consensus',{ symbol: sym }),
         fmpGet('discounted-cash-flow',         { symbol: sym }),
-        fmpGet('balance-sheet-statement',      { symbol: sym, period: 'annual', limit: '1' }),
+        fmpGet('balance-sheet-statement',      { symbol: sym, period: 'quarter', limit: '4' }),
         fmpGet('price-target',                 { symbol: sym, limit: '10' }),
+        fmpGet('cash-flow-statement',          { symbol: sym, period: 'quarter', limit: '8' }),
+        fmpGet('peers',                        { symbol: sym }),
+        fmpGet('historical-dividends',         { symbol: sym, limit: '30' }),
       ]);
 
       const get=r=>r.status==='fulfilled'?r.value:null;
-      const [qD,pD,mD,rD,hD,sD,nD,ptD,aeD,udD,dcfD,bsD,ptListD]=results.map(get);
+      const [qD,pD,mD,rD,hD,sD,nD,ptD,aeD,udD,dcfD,bsD,ptListD,cfD,peersD,divD]=results.map(get);
 
       if (!qD && !pD) throw new Error(`Ticker "${sym}" not found — check the symbol and try again`);
 
@@ -1323,8 +1674,51 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       setPtList(Array.isArray(ptListD)?ptListD:null);
       setTicker(sym.toUpperCase());
 
+      // v5.0 data
+      const cfArr   = Array.isArray(cfD) ? cfD : [];
+      const bsArr   = Array.isArray(bsD) ? bsD : [];
+      const divArr  = Array.isArray(divD) ? divD : (divD?.historical||[]);
+      setCfStmts(cfArr);
+      setBalanceSheets(bsArr);
+      setHistoricalDivs(divArr);
+
+      // Peers — fetch their metrics in background
+      const peersRaw = Array.isArray(peersD) ? peersD : (peersD?.peersList || []);
+      const peerList = (Array.isArray(peersRaw[0]) ? peersRaw[0] : peersRaw)
+        .filter(s => typeof s === 'string' && s !== sym.toUpperCase())
+        .slice(0,5);
+      setPeers(peerList);
+
+      // Fetch peer metrics in background (non-blocking)
+      if (peerList.length > 0) {
+        (async () => {
+          try {
+            const peerResults = await Promise.allSettled(
+              peerList.map(ps => Promise.all([
+                fmpGet('key-metrics-ttm', { symbol: ps }),
+                fmpGet('ratios-ttm',      { symbol: ps }),
+                fmpGet('profile',         { symbol: ps }),
+              ]))
+            );
+            const peerMap = {};
+            peerList.forEach((ps, i) => {
+              const r = peerResults[i];
+              if (r.status === 'fulfilled') {
+                const [mRes, rRes, prRes] = r.value;
+                peerMap[ps] = {
+                  met:  Array.isArray(mRes)  ? mRes[0]  : mRes,
+                  rat:  Array.isArray(rRes)  ? rRes[0]  : rRes,
+                  name: (Array.isArray(prRes) ? prRes[0] : prRes)?.companyName || ps,
+                };
+              }
+            });
+            setPeerMetrics(peerMap);
+          } catch(e) { /* silent fail */ }
+        })();
+      }
+
       // Populate DCF defaults from real data
-      const bs0 = Array.isArray(bsD)?bsD[0]:(bsD||null);
+      const bs0 = bsArr[0] || null;
       const q0  = sD_[0];
       const baseRevenue = q0?.revenue ? q0.revenue * 4 : null;
       const netDebt = bs0?.netDebt ?? (bs0 ? (bs0.totalDebt||0) - (bs0.cashAndCashEquivalents||0) : null);
@@ -1949,6 +2343,33 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   </div>
                   {stmts.length>=2&&<GrowthPanel stmts={stmts}/>}
                   {stmts.length>0&&<QuarterlyTable stmts={stmts}/>}
+                  {peers.length>0&&(
+                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                      <PeerComparison
+                        peers={peers}
+                        peerMetrics={peerMetrics}
+                        currentMet={met}
+                        currentRat={rat}
+                        currentProf={prof}
+                        onAnalyze={s=>{ setInputTicker(s); analyze(s); }}
+                      />
+                    </div>
+                  )}
+                  {balanceSheets.length>0&&(
+                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                      <BalanceSheetPanel bsData={balanceSheets}/>
+                    </div>
+                  )}
+                  {cfStmts.length>0&&(
+                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                      <FCFPanel cfData={cfStmts} incomeData={stmts}/>
+                    </div>
+                  )}
+                  {historicalDivs.length>0&&(
+                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                      <DividendsPanel divData={historicalDivs} met={met} currentPrice={priceNow}/>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1966,7 +2387,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   <div>
                     <div style={{display:'flex',gap:6,marginBottom:10,alignItems:'center'}}>
                       <span style={{fontSize:10,color:'#475569',marginRight:4}}>PERIOD:</span>
-                      {['1M','3M','6M','1Y'].map(p=>(
+                      {['1M','3M','6M','1Y','5Y'].map(p=>(
                         <button key={p} onClick={()=>setChartPeriod(p)} style={{
                           background:chartPeriod===p?'#1e3a5f':'#141720',
                           color:chartPeriod===p?'#60a5fa':'#475569',
@@ -2061,7 +2482,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
       {/* Footer */}
       <div style={{textAlign:'center',marginTop:48,fontSize:10,color:'#1e2430',lineHeight:1.8}}>
-        StockLens v4.0 · Data: Financial Modeling Prep · Not financial advice · {new Date().getFullYear()}
+        StockLens v5.0 · Data: Financial Modeling Prep · Not financial advice · {new Date().getFullYear()}
         {ticker&&quote&&<span> · Last updated: {new Date().toLocaleTimeString()}</span>}
       </div>
     </div>
