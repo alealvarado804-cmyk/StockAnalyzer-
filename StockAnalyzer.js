@@ -106,6 +106,52 @@ function computeSMA(prices, period) {
   if (!prices || prices.length < period) return null;
   return prices.slice(-period).reduce((a, b) => a + b, 0) / period;
 }
+function computeMACD(prices, fast = 12, slow = 26, signal = 9) {
+  if (!prices || prices.length < slow + signal) return null;
+  const ema = (arr, period) => {
+    const k = 2 / (period + 1);
+    let val = arr.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    const result = [val];
+    for (let i = period; i < arr.length; i++) {
+      val = arr[i] * k + val * (1 - k);
+      result.push(val);
+    }
+    return result;
+  };
+  const fastEMA = ema(prices, fast);
+  const slowEMA = ema(prices, slow);
+  const offset = slow - fast;
+  const macdLine = fastEMA.slice(offset).map((v, i) => v - slowEMA[i]);
+  const signalLine = ema(macdLine, signal);
+  const histOffset = signal - 1;
+  const histogram = macdLine.slice(histOffset).map((v, i) => v - signalLine[i]);
+  const last = macdLine[macdLine.length - 1];
+  const sig = signalLine[signalLine.length - 1];
+  const hist = histogram[histogram.length - 1];
+  const prevH = histogram[histogram.length - 2] ?? 0;
+  const crossover = hist > 0 && prevH <= 0 ? 'bullish_cross' : hist < 0 && prevH >= 0 ? 'bearish_cross' : hist > 0 ? 'bullish' : hist < 0 ? 'bearish' : 'neutral';
+  return {
+    macd: last,
+    signal: sig,
+    histogram: hist,
+    crossover
+  };
+}
+function computeRelativeStrength(stockHistory, spyHistory, days = 126) {
+  if (!stockHistory || !spyHistory || stockHistory.length < days || spyHistory.length < days) return null;
+  const stockPrices = [...stockHistory].sort((a, b) => new Date(a.date) - new Date(b.date)).map(d => d.close).filter(Boolean);
+  const spyPrices = [...spyHistory].sort((a, b) => new Date(a.date) - new Date(b.date)).map(d => d.close).filter(Boolean);
+  if (stockPrices.length < days || spyPrices.length < days) return null;
+  const stockRet = (stockPrices[stockPrices.length - 1] - stockPrices[stockPrices.length - days]) / stockPrices[stockPrices.length - days];
+  const spyRet = (spyPrices[spyPrices.length - 1] - spyPrices[spyPrices.length - days]) / spyPrices[spyPrices.length - days];
+  const alpha = stockRet - spyRet;
+  return {
+    stockRet,
+    spyRet,
+    alpha,
+    outperforming: alpha > 0
+  };
+}
 
 // ─── QUALITY MOAT SCORECARD (Pedro Escudero Framework) ──────
 function computeMoatScore(metrics, ratios, stmts, profile) {
@@ -1218,7 +1264,8 @@ function PriceChart({
 
 // ─── TECHNICAL SIGNALS ──────────────────────────────────────
 function TechnicalSignals({
-  history
+  history,
+  spyHistory
 }) {
   const data = useMemo(() => {
     if (!history || history.length < 20) return null;
@@ -1238,9 +1285,12 @@ function TechnicalSignals({
       sma200,
       hi52,
       lo52,
-      rangePct
+      rangePct,
+      closes
     };
   }, [history]);
+  const macdData = useMemo(() => data ? computeMACD(data.closes) : null, [data]);
+  const rsData = useMemo(() => computeRelativeStrength(history, spyHistory), [history, spyHistory]);
   if (!data) return null;
   const {
     cur,
@@ -1356,7 +1406,76 @@ function TechnicalSignals({
       color: '#475569',
       marginTop: 3
     }
-  }, (rangePct * 100).toFixed(0), "% of range \xB7 Current $", ok(cur) ? cur.toFixed(2) : '—'))));
+  }, (rangePct * 100).toFixed(0), "% of range \xB7 Current $", ok(cur) ? cur.toFixed(2) : '—'))), (macdData || rsData) && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 6,
+      overflow: 'hidden'
+    }
+  }, macdData && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '10px 13px',
+      borderBottom: rsData ? '1px solid #1e2430' : 'none'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "MACD"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'right'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: macdData.crossover === 'bullish_cross' ? '#10b981' : macdData.crossover === 'bearish_cross' ? '#ef4444' : macdData.crossover === 'bullish' ? '#34d399' : macdData.crossover === 'bearish' ? '#f87171' : '#475569',
+      fontSize: 13,
+      fontWeight: 700
+    }
+  }, macdData.crossover === 'bullish_cross' ? '⬆ Bullish Crossover' : macdData.crossover === 'bearish_cross' ? '⬇ Bearish Crossover' : macdData.crossover === 'bullish' ? '▲ Trending Up' : macdData.crossover === 'bearish' ? '▼ Trending Down' : '→ Neutral'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#334155',
+      fontSize: 10,
+      marginTop: 2
+    }
+  }, "MACD ", macdData.macd.toFixed(3), " \xB7 Signal ", macdData.signal.toFixed(3)))), rsData && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '10px 13px'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "vs SPY (6M)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'right'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: rsData.outperforming ? '#10b981' : '#ef4444',
+      fontSize: 13,
+      fontWeight: 700
+    }
+  }, rsData.outperforming ? '▲ Outperforming' : '▼ Underperforming', ' ', rsData.alpha >= 0 ? '+' : '', (rsData.alpha * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#334155',
+      fontSize: 10,
+      marginTop: 2
+    }
+  }, "Stock ", rsData.stockRet >= 0 ? '+' : '', (rsData.stockRet * 100).toFixed(1), "% \xB7 SPY ", rsData.spyRet >= 0 ? '+' : '', (rsData.spyRet * 100).toFixed(1), "%")))));
 }
 
 // ─── ANALYST PANEL ──────────────────────────────────────────
@@ -3961,6 +4080,7 @@ function App() {
   const [cfStmts, setCfStmts] = useState([]);
   const [balanceSheets, setBalanceSheets] = useState([]);
   const [historicalDivs, setHistoricalDivs] = useState([]);
+  const [spyHistory, setSpyHistory] = useState([]);
   const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 180);
@@ -4083,6 +4203,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setCfStmts([]);
     setBalanceSheets([]);
     setHistoricalDivs([]);
+    setSpyHistory([]);
     try {
       const results = await Promise.allSettled([fmpGet('quote', {
         symbol: sym
@@ -4157,6 +4278,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       setCfStmts(cfArr);
       setBalanceSheets(bsArr);
       setHistoricalDivs(divArr);
+
+      // Fetch SPY history for relative strength (non-blocking)
+      if (fmpKey) {
+        fmpGet('historical-price-eod/full', {
+          symbol: 'SPY'
+        }).then(d => {
+          if (Array.isArray(d)) setSpyHistory(d);
+        }).catch(() => {});
+      }
 
       // Peers — fetch their metrics in background
       const peersRaw = Array.isArray(peersD) ? peersD : peersD?.peersList || [];
@@ -5585,7 +5715,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontSize: 12
     }
   }, "No price data")), /*#__PURE__*/React.createElement(TechnicalSignals, {
-    history: hist
+    history: hist,
+    spyHistory: spyHistory
   }), stmts.length >= 1 && hist.length > 0 && (() => {
     const annualEps = (stmts[0]?.eps || 0) * 4;
     if (!ok(annualEps) || annualEps <= 0) return null;
