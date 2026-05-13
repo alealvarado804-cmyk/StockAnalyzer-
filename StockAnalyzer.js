@@ -107,6 +107,69 @@ function computeSMA(prices, period) {
   return prices.slice(-period).reduce((a, b) => a + b, 0) / period;
 }
 
+// ─── OVERVALUATION BUBBLE ALERT ─────────────────────────────
+function detectOvervaluation(metrics, ratios, profile, sectorBM) {
+  const ok = v => v != null && !isNaN(v) && isFinite(v);
+  const sector = profile?.sector ?? '';
+  const bm = sectorBM?.[sector] ?? {
+    pe: 20,
+    ev: 14
+  };
+  const pe = metrics?.peRatioTTM ?? metrics?.priceToEarningsRatioTTM;
+  const evEb = metrics?.evToEBITDATTM ?? metrics?.enterpriseValueOverEBITDATTM;
+  const epsG = metrics?.epsgrowthTTM ?? ratios?.epsgrowthTTM;
+  const peg = ok(pe) && ok(epsG) && epsG > 0 ? pe / (epsG * 100) : null;
+  const reasons = [];
+  let score = 0;
+  if (ok(pe) && ok(bm.pe)) {
+    const ratio = pe / bm.pe;
+    if (ratio > 3) {
+      reasons.push(`P/E ${pe.toFixed(1)}× is 3×+ sector benchmark (${bm.pe}×)`);
+      score += 3;
+    } else if (ratio > 2) {
+      reasons.push(`P/E ${pe.toFixed(1)}× is 2×+ sector benchmark (${bm.pe}×)`);
+      score += 2;
+    } else if (ratio > 1.5) {
+      reasons.push(`P/E ${pe.toFixed(1)}× exceeds 1.5× sector benchmark (${bm.pe}×)`);
+      score += 1;
+    }
+  }
+  if (ok(evEb) && ok(bm.ev)) {
+    const ratio = evEb / bm.ev;
+    if (ratio > 3) {
+      reasons.push(`EV/EBITDA ${evEb.toFixed(1)}× is 3×+ sector benchmark (${bm.ev}×)`);
+      score += 3;
+    } else if (ratio > 2) {
+      reasons.push(`EV/EBITDA ${evEb.toFixed(1)}× is 2×+ sector benchmark (${bm.ev}×)`);
+      score += 2;
+    } else if (ratio > 1.5) {
+      reasons.push(`EV/EBITDA ${evEb.toFixed(1)}× exceeds 1.5× sector benchmark (${bm.ev}×)`);
+      score += 1;
+    }
+  }
+  if (ok(peg)) {
+    if (peg > 4) {
+      reasons.push(`PEG ratio ${peg.toFixed(2)} is extreme (>4) — pricing in unrealistic growth`);
+      score += 3;
+    } else if (peg > 3) {
+      reasons.push(`PEG ratio ${peg.toFixed(2)} is very elevated (>3)`);
+      score += 2;
+    } else if (peg > 2) {
+      reasons.push(`PEG ratio ${peg.toFixed(2)} signals potential overvaluation`);
+      score += 1;
+    }
+  }
+  let level = 'none';
+  if (score >= 7) level = 'bubble';else if (score >= 3) level = 'risk';else if (score >= 1) level = 'caution';
+  return {
+    level,
+    reasons,
+    peg,
+    pe,
+    evEb
+  };
+}
+
 // ─── FACTOR TILT ENGINE ─────────────────────────────────────
 function computeFactorTilts(metrics, ratios, history, stmts, profile) {
   const ok = v => v != null && !isNaN(v) && isFinite(v);
@@ -1880,6 +1943,96 @@ function InsiderTable({
       }
     }, isBuy ? '▲ Buy' : '▼ Sell', " ", Math.abs(t.change || 0).toLocaleString(), " shares"));
   })));
+}
+
+// ─── OVERVALUATION BANNER ───────────────────────────────────
+function OvervaluationBanner({
+  metrics,
+  ratios,
+  profile
+}) {
+  const result = useMemo(() => detectOvervaluation(metrics, ratios, profile, SECTOR_BM), [metrics, ratios, profile]);
+  if (!metrics || result.level === 'none') return null;
+  const config = {
+    caution: {
+      bg: '#422006',
+      border: '#92400e',
+      icon: '⚠️',
+      title: 'Valuation Caution',
+      color: '#fbbf24'
+    },
+    risk: {
+      bg: '#450a0a',
+      border: '#991b1b',
+      icon: '🔴',
+      title: 'Overvaluation Risk Detected',
+      color: '#f87171'
+    },
+    bubble: {
+      bg: '#1c1917',
+      border: '#57534e',
+      icon: '⚫',
+      title: 'BUBBLE TERRITORY — Extreme Overvaluation',
+      color: '#d1d5db'
+    }
+  };
+  const c = config[result.level];
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: c.bg,
+      border: `1px solid ${c.border}`,
+      borderRadius: 12,
+      padding: '16px 20px',
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16
+    }
+  }, c.icon), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: c.color,
+      fontWeight: 700,
+      fontSize: 14
+    }
+  }, c.title), result.peg && /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginLeft: 'auto',
+      background: '#1f2937',
+      borderRadius: 6,
+      padding: '2px 8px',
+      color: c.color,
+      fontSize: 11,
+      fontWeight: 600
+    }
+  }, "PEG ", result.peg.toFixed(2))), /*#__PURE__*/React.createElement("ul", {
+    style: {
+      margin: 0,
+      padding: '0 0 0 20px',
+      listStyle: 'disc'
+    }
+  }, result.reasons.map((r, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    style: {
+      color: '#9ca3af',
+      fontSize: 12,
+      marginBottom: 2
+    }
+  }, r))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      color: '#6b7280',
+      fontSize: 11,
+      fontStyle: 'italic'
+    }
+  }, "Priced-for-perfection stocks face asymmetric downside. Any earnings miss can destroy 20\u201340% of value instantly."));
 }
 
 // ─── FACTOR TILT CARD ───────────────────────────────────────
@@ -5267,7 +5420,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       flexDirection: 'column',
       gap: 16
     }
-  }, /*#__PURE__*/React.createElement(FactorTiltCard, {
+  }, /*#__PURE__*/React.createElement(OvervaluationBanner, {
+    metrics: met,
+    ratios: rat,
+    profile: prof
+  }), /*#__PURE__*/React.createElement(FactorTiltCard, {
     metrics: met,
     ratios: rat,
     history: hist,
