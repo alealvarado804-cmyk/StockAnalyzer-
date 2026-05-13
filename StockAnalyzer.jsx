@@ -52,6 +52,76 @@ function computeSMA(prices, period) {
   return prices.slice(-period).reduce((a,b)=>a+b,0)/period;
 }
 
+// ─── FACTOR TILT ENGINE ─────────────────────────────────────
+function computeFactorTilts(metrics, ratios, history, stmts, profile) {
+  const ok = v => v != null && !isNaN(v) && isFinite(v);
+  // --- VALUE (0-20) ---
+  let value = 10;
+  const pe   = metrics?.peRatioTTM ?? metrics?.priceToEarningsRatioTTM;
+  const evEb = metrics?.evToEBITDATTM ?? metrics?.enterpriseValueOverEBITDATTM;
+  const pb   = metrics?.priceToBookRatioTTM;
+  const pfcf = metrics?.priceToFreeCashFlowRatioTTM;
+  if (ok(pe))   value += pe < 15 ? 4 : pe < 22 ? 2 : pe < 30 ? 0 : -3;
+  if (ok(evEb)) value += evEb < 8 ? 3 : evEb < 14 ? 1 : evEb < 20 ? 0 : -2;
+  if (ok(pb))   value += pb < 2 ? 2 : pb < 4 ? 1 : pb > 8 ? -1 : 0;
+  if (ok(pfcf)) value += pfcf < 15 ? 3 : pfcf < 25 ? 1 : pfcf > 40 ? -2 : 0;
+  value = Math.max(0, Math.min(20, Math.round(value)));
+  // --- GROWTH (0-20) ---
+  let growth = 10;
+  const revG = metrics?.revenueGrowthTTM ?? ratios?.revenueGrowthTTM;
+  const epsG = metrics?.epsgrowthTTM ?? ratios?.epsgrowthTTM;
+  const fwdPe = metrics?.forwardPERatioTTM;
+  if (ok(revG))  growth += revG > 0.20 ? 4 : revG > 0.10 ? 2 : revG > 0.05 ? 1 : revG < 0 ? -3 : 0;
+  if (ok(epsG))  growth += epsG > 0.20 ? 4 : epsG > 0.10 ? 2 : epsG > 0.05 ? 1 : epsG < 0 ? -3 : 0;
+  if (ok(fwdPe) && ok(pe)) growth += fwdPe < pe * 0.85 ? 3 : fwdPe < pe ? 1 : -1;
+  growth = Math.max(0, Math.min(20, Math.round(growth)));
+  // --- MOMENTUM (0-20) ---
+  let momentum = 10;
+  if (history && history.length > 5) {
+    const prices = [...history].sort((a,b)=>new Date(a.date)-new Date(b.date)).map(d => d.close).filter(Boolean);
+    const cur    = prices[prices.length - 1];
+    const sma50  = prices.length >= 50  ? prices.slice(-50).reduce((a,b)=>a+b,0)/50  : null;
+    const sma200 = prices.length >= 200 ? prices.slice(-200).reduce((a,b)=>a+b,0)/200 : null;
+    const ret12m = prices.length >= 252 ? (cur - prices[prices.length-252]) / prices[prices.length-252] : null;
+    const rsi    = computeRSI(prices);
+    if (ok(sma50))  momentum += cur > sma50  ? 3 : cur < sma50 * 0.95 ? -2 : 0;
+    if (ok(sma200)) momentum += cur > sma200 ? 3 : cur < sma200 * 0.95 ? -2 : 0;
+    if (ok(ret12m)) momentum += ret12m > 0.30 ? 3 : ret12m > 0.10 ? 2 : ret12m > 0 ? 1 : ret12m < -0.20 ? -3 : -1;
+    if (ok(rsi))    momentum += rsi > 70 ? -1 : rsi > 50 ? 1 : rsi < 30 ? -2 : 0;
+  }
+  momentum = Math.max(0, Math.min(20, Math.round(momentum)));
+  // --- QUALITY (0-20) ---
+  let quality = 10;
+  const roic = metrics?.returnOnInvestedCapitalTTM ?? metrics?.roicTTM;
+  const roe  = metrics?.returnOnEquityTTM ?? metrics?.roeTTM;
+  const gm   = metrics?.grossProfitMarginTTM ?? ratios?.grossProfitMarginTTM;
+  const cov  = metrics?.interestCoverageRatioTTM ?? metrics?.interestCoverageTTM;
+  const fcfM = metrics?.freeCashFlowMarginTTM;
+  if (ok(roic)) quality += roic > 0.20 ? 4 : roic > 0.12 ? 2 : roic > 0.07 ? 0 : -2;
+  if (ok(roe))  quality += roe  > 0.20 ? 2 : roe  > 0.12 ? 1 : roe  < 0.05 ? -2 : 0;
+  if (ok(gm))   quality += gm   > 0.50 ? 3 : gm   > 0.30 ? 1 : gm   < 0.15 ? -2 : 0;
+  if (ok(cov))  quality += cov  > 10   ? 2 : cov  > 5    ? 1 : cov  < 3    ? -2 : 0;
+  if (ok(fcfM)) quality += fcfM > 0.15 ? 2 : fcfM > 0.08 ? 1 : fcfM < 0   ? -3 : 0;
+  quality = Math.max(0, Math.min(20, Math.round(quality)));
+  // --- SIZE (0-20) ---
+  let size = 10;
+  const mktCap = profile?.mktCap ?? metrics?.marketCapTTM;
+  if (ok(mktCap)) {
+    if      (mktCap < 2e9)   size = 18;
+    else if (mktCap < 10e9)  size = 15;
+    else if (mktCap < 50e9)  size = 12;
+    else if (mktCap < 200e9) size = 9;
+    else                      size = 6;
+  }
+  const scores = { value, growth, momentum, quality, size };
+  const dominant = Object.entries(scores).sort((a,b)=>b[1]-a[1])[0][0];
+  const labels = {
+    value: 'Value Tilt', growth: 'Growth Tilt', momentum: 'Momentum Tilt',
+    quality: 'Quality Compounder', size: 'Small-Cap Alpha'
+  };
+  return { value, growth, momentum, quality, size, dominant, tilt_label: labels[dominant] };
+}
+
 // ─── SCORING ────────────────────────────────────────────────
 function calcScores(metrics, ratios, history, stmts) {
   let val=0, hlth=0, mom=0, growth=0;
@@ -815,6 +885,70 @@ function InsiderTable({ data }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ─── FACTOR TILT CARD ───────────────────────────────────────
+function FactorTiltCard({ metrics, ratios, history, stmts, profile }) {
+  const tilts = useMemo(
+    () => computeFactorTilts(metrics, ratios, history, stmts, profile),
+    [metrics, ratios, history, stmts, profile]
+  );
+  if (!metrics) return null;
+  const factors = [
+    { key: 'value',    label: 'Value',    color: '#10b981', icon: '💰' },
+    { key: 'growth',   label: 'Growth',   color: '#6366f1', icon: '📈' },
+    { key: 'momentum', label: 'Momentum', color: '#f59e0b', icon: '⚡' },
+    { key: 'quality',  label: 'Quality',  color: '#3b82f6', icon: '🏆' },
+    { key: 'size',     label: 'Size',     color: '#8b5cf6', icon: '📊' },
+  ];
+  return (
+    <div style={{background:'#111827',border:'1px solid #1f2937',borderRadius:12,padding:'20px 24px',marginBottom:16}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div>
+          <div style={{color:'#f9fafb',fontWeight:700,fontSize:15}}>Factor Tilt Analysis</div>
+          <div style={{color:'#6b7280',fontSize:12,marginTop:2}}>Quant factor exposure across 5 dimensions (0–20 each)</div>
+        </div>
+        <div style={{background:'#1f2937',borderRadius:8,padding:'4px 12px',color:'#a78bfa',fontSize:12,fontWeight:600}}>
+          {tilts.tilt_label}
+        </div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {factors.map(f => {
+          const score = tilts[f.key];
+          const pct   = (score / 20) * 100;
+          const neutral = pct > 45 && pct < 55;
+          return (
+            <div key={f.key} style={{display:'flex',alignItems:'center',gap:10}}>
+              <div style={{width:80,color:'#9ca3af',fontSize:12,textAlign:'right'}}>{f.icon} {f.label}</div>
+              <div style={{flex:1,background:'#1f2937',borderRadius:4,height:8,overflow:'hidden',position:'relative'}}>
+                <div style={{
+                  position:'absolute',left:0,top:0,height:'100%',
+                  width:`${pct}%`,
+                  background: neutral ? '#374151' : f.color,
+                  borderRadius:4,
+                  transition:'width 0.4s ease'
+                }}/>
+                <div style={{position:'absolute',left:'50%',top:-2,bottom:-2,width:1,background:'#374151'}}/>
+              </div>
+              <div style={{
+                width:28,textAlign:'right',
+                color: score >= 14 ? f.color : score <= 6 ? '#ef4444' : '#6b7280',
+                fontSize:13,fontWeight:700
+              }}>{score}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{marginTop:12,display:'flex',gap:16,justifyContent:'flex-end'}}>
+        {['Weak (0-7)','Neutral (8-12)','Strong (13-20)'].map((l,i)=>(
+          <div key={l} style={{display:'flex',alignItems:'center',gap:4}}>
+            <div style={{width:8,height:8,borderRadius:2,background:i===0?'#ef4444':i===1?'#374151':'#10b981'}}/>
+            <span style={{color:'#6b7280',fontSize:10}}>{l}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -2431,6 +2565,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               {/* ── RESEARCH TAB ── */}
               {activeTab==='Research'&&(
                 <div style={{display:'flex',flexDirection:'column',gap:16}}>
+                  <FactorTiltCard metrics={met} ratios={rat} history={hist} stmts={stmts} profile={prof}/>
                   <VerdictSection scores={scores} profile={prof} metrics={met} ratios={rat} aiVerdict={aiVerdict} aiLoading={aiLoading}/>
                   {news.length>0&&<NewsCard items={news}/>}
 
