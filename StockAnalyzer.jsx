@@ -52,6 +52,70 @@ function computeSMA(prices, period) {
   return prices.slice(-period).reduce((a,b)=>a+b,0)/period;
 }
 
+// ─── QUALITY MOAT SCORECARD (Pedro Escudero Framework) ──────
+function computeMoatScore(metrics, ratios, stmts, profile) {
+  const ok = v => v != null && !isNaN(v) && isFinite(v);
+  // 1. DEMAND INELASTICITY (0-25)
+  let demand = 12;
+  const gm   = metrics?.grossProfitMarginTTM ?? ratios?.grossProfitMarginTTM;
+  const opM  = metrics?.operatingProfitMarginTTM ?? ratios?.operatingProfitMarginTTM;
+  if (ok(gm))  demand += gm  > 0.70 ? 8 : gm  > 0.50 ? 5 : gm  > 0.35 ? 2 : gm  > 0.20 ? 0 : -4;
+  if (ok(opM)) demand += opM > 0.30 ? 4 : opM > 0.20 ? 2 : opM > 0.10 ? 0 : -3;
+  if (stmts && stmts.length >= 3) {
+    const revs = stmts.slice(0,4).map(s => s.revenue).filter(Boolean);
+    if (revs.length >= 2) {
+      const growths = revs.slice(0,-1).map((r,i) => (r - revs[i+1]) / Math.abs(revs[i+1]));
+      const allPos  = growths.every(g => g > 0);
+      demand += allPos ? 3 : growths.filter(g=>g>0).length >= 2 ? 1 : -2;
+    }
+  }
+  demand = Math.max(0, Math.min(25, Math.round(demand)));
+  // 2. SUPPLY BARRIERS (0-25)
+  let supply = 12;
+  const roic = metrics?.returnOnInvestedCapitalTTM ?? metrics?.roicTTM;
+  const roe  = metrics?.returnOnEquityTTM ?? metrics?.roeTTM;
+  const assetT = metrics?.assetTurnoverTTM;
+  if (ok(roic))  supply += roic > 0.30 ? 8 : roic > 0.20 ? 5 : roic > 0.12 ? 2 : roic > 0.07 ? 0 : -4;
+  if (ok(roe))   supply += roe  > 0.30 ? 3 : roe  > 0.15 ? 1 : roe  < 0.05 ? -2 : 0;
+  if (ok(assetT)) supply += assetT > 1.5 ? 2 : assetT > 0.8 ? 1 : assetT < 0.3 ? -2 : 0;
+  supply = Math.max(0, Math.min(25, Math.round(supply)));
+  // 3. PRICING POWER (0-25)
+  let pricing = 12;
+  const fcfM = metrics?.freeCashFlowMarginTTM;
+  const netM  = metrics?.netProfitMarginTTM ?? ratios?.netProfitMarginTTM;
+  if (ok(fcfM)) pricing += fcfM > 0.25 ? 8 : fcfM > 0.15 ? 5 : fcfM > 0.08 ? 2 : fcfM > 0 ? 0 : -5;
+  if (ok(netM)) pricing += netM > 0.20 ? 4 : netM > 0.10 ? 2 : netM > 0.05 ? 0 : -3;
+  if (stmts && stmts.length >= 5) {
+    const gms = stmts.slice(0,5).map(s =>
+      s.grossProfit && s.revenue ? s.grossProfit / s.revenue : null
+    ).filter(Boolean);
+    if (gms.length >= 2) {
+      const improving = gms[0] > gms[gms.length-1];
+      pricing += improving ? 3 : gms[0] < gms[gms.length-1] * 0.95 ? -2 : 0;
+    }
+  }
+  pricing = Math.max(0, Math.min(25, Math.round(pricing)));
+  // 4. CAPITAL EFFICIENCY (0-25)
+  let capEff = 12;
+  const capexM  = metrics?.capitalExpenditureCoverageRatioTTM;
+  const debtEb  = metrics?.netDebtToEBITDATTM ?? metrics?.debtToEbitdaTTM;
+  const currRat = metrics?.currentRatioTTM;
+  if (ok(capexM))  capEff += capexM > 10 ? 6 : capexM > 5 ? 3 : capexM > 2 ? 1 : -2;
+  if (ok(debtEb))  capEff += debtEb < 0 ? 5 : debtEb < 1 ? 3 : debtEb < 2 ? 1 : debtEb < 3 ? 0 : debtEb > 5 ? -4 : -2;
+  if (ok(currRat)) capEff += currRat > 2 ? 2 : currRat > 1.5 ? 1 : currRat < 1 ? -3 : 0;
+  capEff = Math.max(0, Math.min(25, Math.round(capEff)));
+  const total = demand + supply + pricing + capEff;
+  const moatRating =
+    total >= 85 ? 'Ultra-Wide Moat' :
+    total >= 70 ? 'Wide Moat' :
+    total >= 55 ? 'Moderate Moat' :
+    total >= 40 ? 'Narrow Moat' : 'No Moat';
+  const moatColor =
+    total >= 85 ? '#10b981' : total >= 70 ? '#3b82f6' :
+    total >= 55 ? '#8b5cf6' : total >= 40 ? '#f59e0b' : '#6b7280';
+  return { demand, supply, pricing, capEff, total, moatRating, moatColor };
+}
+
 // ─── OVERVALUATION BUBBLE ALERT ─────────────────────────────
 function detectOvervaluation(metrics, ratios, profile, sectorBM) {
   const ok = v => v != null && !isNaN(v) && isFinite(v);
@@ -920,6 +984,76 @@ function InsiderTable({ data }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ─── QUALITY MOAT CARD ──────────────────────────────────────
+function QualityMoatCard({ metrics, ratios, stmts, profile }) {
+  const moat = useMemo(
+    () => computeMoatScore(metrics, ratios, stmts, profile),
+    [metrics, ratios, stmts, profile]
+  );
+  if (!metrics) return null;
+  const dimensions = [
+    { key:'demand',  label:'Demand Inelasticity', desc:'Price-insensitive customers',    score: moat.demand,  max:25, color:'#10b981' },
+    { key:'supply',  label:'Supply Barriers',      desc:'Difficult to replicate',          score: moat.supply,  max:25, color:'#3b82f6' },
+    { key:'pricing', label:'Pricing Power',         desc:'Margin expansion capacity',       score: moat.pricing, max:25, color:'#8b5cf6' },
+    { key:'capEff',  label:'Capital Efficiency',    desc:'High returns on reinvestment',    score: moat.capEff,  max:25, color:'#f59e0b' },
+  ];
+  return (
+    <div style={{background:'#111827',border:'1px solid #1f2937',borderRadius:12,padding:'20px 24px',marginBottom:16}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div>
+          <div style={{color:'#f9fafb',fontWeight:700,fontSize:15}}>Quality Moat Scorecard</div>
+          <div style={{color:'#6b7280',fontSize:12,marginTop:2}}>Durable competitive advantage across 4 pillars</div>
+        </div>
+        <div style={{textAlign:'right'}}>
+          <div style={{color:moat.moatColor,fontWeight:700,fontSize:14}}>{moat.moatRating}</div>
+          <div style={{color:'#6b7280',fontSize:12}}>{moat.total}/100</div>
+        </div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        {dimensions.map(d => {
+          const pct = (d.score / d.max) * 100;
+          return (
+            <div key={d.key}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                <div>
+                  <span style={{color:'#e5e7eb',fontSize:13,fontWeight:600}}>{d.label}</span>
+                  <span style={{color:'#6b7280',fontSize:11,marginLeft:8}}>{d.desc}</span>
+                </div>
+                <span style={{
+                  color: d.score >= 18 ? d.color : d.score <= 8 ? '#ef4444' : '#9ca3af',
+                  fontSize:13,fontWeight:700
+                }}>{d.score}/{d.max}</span>
+              </div>
+              <div style={{background:'#1f2937',borderRadius:4,height:6,overflow:'hidden'}}>
+                <div style={{
+                  height:'100%',width:`${pct}%`,borderRadius:4,
+                  background: d.score >= 18 ? d.color : d.score <= 8 ? '#ef4444' : '#4b5563',
+                  transition:'width 0.4s ease'
+                }}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{marginTop:16,padding:'10px 14px',background:'#0d1117',borderRadius:8,borderLeft:`3px solid ${moat.moatColor}`}}>
+        <div style={{color:'#9ca3af',fontSize:11}}>
+          <strong style={{color:moat.moatColor}}>Moat insight: </strong>
+          {moat.total >= 85
+            ? 'Exceptional competitive position. The business can compound capital at high rates for a decade+.'
+            : moat.total >= 70
+            ? 'Strong structural advantages. Durable earnings power with limited competitive threats.'
+            : moat.total >= 55
+            ? 'Moderate defensibility. Watch for margin compression or competitive encroachment.'
+            : moat.total >= 40
+            ? 'Thin competitive barriers. Valuation must compensate for earnings vulnerability.'
+            : 'No identifiable moat. Commodity economics — any premium valuation is speculative.'
+          }
+        </div>
       </div>
     </div>
   );
@@ -2638,6 +2772,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                 <div style={{display:'flex',flexDirection:'column',gap:16}}>
                   <OvervaluationBanner metrics={met} ratios={rat} profile={prof}/>
                   <FactorTiltCard metrics={met} ratios={rat} history={hist} stmts={stmts} profile={prof}/>
+                  <QualityMoatCard metrics={met} ratios={rat} stmts={stmts} profile={prof}/>
                   <VerdictSection scores={scores} profile={prof} metrics={met} ratios={rat} aiVerdict={aiVerdict} aiLoading={aiLoading}/>
                   {news.length>0&&<NewsCard items={news}/>}
 
