@@ -25,6 +25,16 @@
 - AI Verdict con Claude Haiku (opcional, clave Anthropic)
 - Fix branding: eliminado "v2.0" y referencias a InvestingPro
 
+### v5.0
+- **Peer Comparison** — tabla automática P/E · EV/EBITDA · Gross Margin · ROIC · Mkt Cap vs sector (FMP `/stable/peers`)
+- **Balance Sheet Snapshot** — caja, deuda, net debt, current ratio, intangibles; mini chart Debt vs Cash
+- **Free Cash Flow Detail** — histórico trimestral FCF = Op CF − CapEx; TTM FCF, FCF margin, FCF conversion; tabla + bar chart
+- **Dividends Section** (condicional) — yield, payout ratio, años consecutivos, CAGR del dividendo; barras anuales + pagos recientes
+- **Chart 5Y** — período de 5 años añadido al selector 1M/3M/6M/1Y
+- Peers se cargan en background (key-metrics-ttm + ratios-ttm para hasta 5 peers)
+- Nuevos endpoints FMP: `cash-flow-statement`, `peers`, `historical-dividends`
+- Balance sheet: annual limit=1 → quarterly limit=4
+
 ### v4.0
 - **Fix P/E, P/FCF, Interest Coverage** — mostraban "—" por renombrado incorrecto de campos
 - **Tab "Valuation"** (5.º tab):
