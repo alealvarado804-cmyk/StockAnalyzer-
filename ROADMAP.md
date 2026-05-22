@@ -1,12 +1,17 @@
 # StockLens — Roadmap
 
-**Live:** https://stock-analyzer-blue-beta.vercel.app  
+**Live:** https://stock-lens-app.vercel.app  (el viejo stock-analyzer-blue-beta.vercel.app redirige aquí)  
 **Repo:** alealvarado804-cmyk/StockAnalyzer-  
-**Stack:** React 18 UMD · FMP stable API · Finnhub (optional) · Anthropic (optional)
+**Stack:** React 18 UMD · ic-proxy (Vercel Edge) para FMP/Finnhub/Anthropic · Supabase Auth (magic link) · sin claves en el cliente
 
 ---
 
 ## ✅ Completado
+
+### v6.0 — Seguridad (Fase 0)
+- **Migración a ic-proxy**: todas las llamadas (FMP, Finnhub, Anthropic) pasan por el proxy Vercel Edge con JWT de Supabase. Claves 100% server-side, fuera del navegador.
+- **Login Supabase magic link** reemplaza la pantalla Setup/Settings y las claves en localStorage (sl_fmp/sl_finnhub/sl_anthropic eliminadas).
+- Rate limiting (Upstash) + validación/allow-list en el proxy. Ver carpeta `../ic-proxy`.
 
 ### v1.0
 - App base con scoring 0-100, perfil de empresa, gráfico de precio, veredicto
@@ -162,10 +167,12 @@
 
 ## 🔑 APIs activas
 
-| API | Key storage | Plan | Límite |
+| API | Acceso | Plan | Límite proxy |
 |-----|------------|------|--------|
-| FMP `/stable/` | `sl_fmp` | Free | 250 calls/day |
-| Finnhub | `sl_finnhub` | Free | 60 calls/min |
-| Anthropic | `sl_anthropic` | Pay-per-use | Por tokens |
-| SEC EDGAR | Sin clave | Público | Sin límite |
-| FRED | Sin clave | Público | Sin límite |
+| FMP `/stable/` | vía ic-proxy (`FMP_KEY` server-side) | Free | 40/min/usuario (FMP: 250/día) |
+| Finnhub | vía ic-proxy (`FINNHUB_KEY` server-side) | Free | 30/min/usuario |
+| Anthropic | vía ic-proxy (`ANTHROPIC_KEY` server-side) | Pay-per-use | 5/min/usuario |
+| SEC EDGAR | Sin clave (directo) | Público | Sin límite |
+| FRED | vía ic-proxy (`FRED_KEY`, para IC DataLayer) | Público | 10/min/usuario |
+
+> Nota: las claves ya NO viven en `localStorage`. Están como env vars server-side en Vercel (proyecto `ic-proxy`). El cliente solo manda el JWT de Supabase.
