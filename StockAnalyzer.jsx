@@ -2127,11 +2127,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       setHistoricalDivs(divArr);
 
       // Fetch SPY history for relative strength (non-blocking)
-      if (fmpKey) {
-        fmpGet('historical-price-eod/full', { symbol: 'SPY' })
-          .then(d => { if (Array.isArray(d)) setSpyHistory(d); })
-          .catch(() => {});
-      }
+      fmpGet('historical-price-eod/full', { symbol: 'SPY' })
+        .then(d => { if (Array.isArray(d)) setSpyHistory(d); })
+        .catch(() => {});
 
       // Peers — fetch their metrics in background
       const peersRaw = Array.isArray(peersD) ? peersD : (peersD?.peersList || []);
