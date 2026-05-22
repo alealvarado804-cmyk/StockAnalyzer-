@@ -6,6 +6,24 @@
 
 const { useState, useCallback, useMemo, useRef, useEffect } = React;
 const DEFAULT_FMP_KEY = '';
+
+const PROXY_URL = 'https://ic-proxy-psi.vercel.app';
+const SUPABASE_URL = 'https://acxaosesbsprrusdvgop.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjeGFvc2VzYnNwcnJ1c2R2Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTg2MjIsImV4cCI6MjA4OTA3NDYyMn0.EsRMK92iKgLVZhK2xy692JXKrMUZsuMEq6MG4UKbBk8';
+
+const sb = (typeof window !== 'undefined' && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+async function authedFetch(path, opts = {}) {
+  if (!sb) throw new Error('Supabase not loaded');
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) throw new Error('NOT_AUTHENTICATED');
+  return fetch(`${PROXY_URL}${path}`, {
+    ...opts,
+    headers: { ...(opts.headers || {}), 'Authorization': `Bearer ${session.access_token}` },
+  });
+}
 const ok = v => v != null && !isNaN(v) && isFinite(v);
 
 const fmt = {
@@ -1898,27 +1916,42 @@ function AboutText({text}) {
   );
 }
 
+// ─── LOGIN ───────────────────────────────────────────────────
+function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState(null);
+  const sendMagicLink = async () => {
+    setErr(null);
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    if (error) setErr(error.message); else setSent(true);
+  };
+  if (sent) return <div style={{padding:40,textAlign:'center',color:'#e2e8f0'}}><h2>Check your email</h2><p>We sent a magic link to {email}.</p></div>;
+  return (
+    <div style={{maxWidth:380,margin:'80px auto',padding:32,background:'#0c0e14',borderRadius:12,border:'1px solid #1e2430'}}>
+      <h2 style={{color:'#e2e8f0',marginBottom:8}}>StockLens — Login</h2>
+      <p style={{color:'#64748b',fontSize:13,marginBottom:20}}>Sign in with email magic link. No password.</p>
+      <input type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)}
+        style={{width:'100%',padding:'10px 12px',background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',borderRadius:6,fontSize:14,marginBottom:12}}/>
+      <button onClick={sendMagicLink}
+        style={{width:'100%',padding:'10px',background:'#3b82f6',border:'none',color:'#fff',borderRadius:6,cursor:'pointer',fontWeight:600}}>
+        Send magic link
+      </button>
+      {err && <div style={{color:'#f87171',fontSize:12,marginTop:10}}>{err}</div>}
+    </div>
+  );
+}
+
 // ─── MAIN APP ────────────────────────────────────────────────
 function App() {
-  const [keysSubmitted, setKeysSubmitted] = useState(() => {
-    try {
-      const stored = localStorage.getItem('sl_fmp');
-      return !!(stored && stored.trim().length > 10);
-    } catch { return false; }
-  });
-  const [setupKey,    setSetupKey]    = useState('');
-  const [setupStatus, setSetupStatus] = useState(null);
-
-  const [fmpKey,       setFmpKey]       = useState(()=>localStorage.getItem('sl_fmp')||DEFAULT_FMP_KEY);
-  const [finnhubKey,   setFinnhubKey]   = useState(()=>localStorage.getItem('sl_finnhub')||'');
-  const [anthropicKey, setAnthropicKey] = useState(()=>localStorage.getItem('sl_anthropic')||localStorage.getItem('ic_api_keys.anthropic')||'');
+  const [session,      setSession]      = useState(null);
+  const [authChecked,  setAuthChecked]  = useState(false);
   const [aiVerdict,    setAiVerdict]    = useState(null);
   const [aiLoading,    setAiLoading]    = useState(false);
 
   const [inputTicker,  setInputTicker]  = useState('');
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState(null);
-  const [showCfg,      setShowCfg]      = useState(false);
   const [ticker,       setTicker]       = useState(null);
   const [activeTab,    setActiveTab]    = useState('Overview');
   const [chartPeriod,  setChartPeriod]  = useState('1Y');
@@ -1961,47 +1994,36 @@ function App() {
     return ()=>window.removeEventListener('scroll',fn);
   },[]);
 
+  useEffect(() => {
+    if (!sb) { setAuthChecked(true); return; }
+    sb.auth.getSession().then(({ data }) => { setSession(data.session); setAuthChecked(true); });
+    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
   const fmpGet = useCallback(async (endpoint, params = {}) => {
-    const base = 'https://financialmodelingprep.com/stable';
-    const qs = new URLSearchParams({ ...params, apikey: fmpKey }).toString();
-    const url = `${base}/${endpoint}?${qs}`;
-    let res;
-    try {
-      res = await fetch(url);
-    } catch (e) {
-      throw new Error('Network error — check your internet connection');
-    }
-    if (res.status === 401 || res.status === 403)
-      throw new Error('Invalid API key — go to Settings ⚙ to update it');
+    const qs = new URLSearchParams(params).toString();
+    const res = await authedFetch(`/api/fmp/${endpoint}?${qs}`);
+    if (res.status === 401) throw new Error('Session expired — please log in again');
+    if (res.status === 429) throw new Error('Rate limit — wait 1 minute');
+    if (res.status === 403) throw new Error('Endpoint not allowed');
     if (!res.ok) throw new Error(`API error (HTTP ${res.status})`);
     const data = await res.json();
-    if (data?.['Error Message']) {
-      const msg = data['Error Message'];
-      if (msg.toLowerCase().includes('limit') || msg.toLowerCase().includes('upgrade'))
-        throw new Error('API daily limit reached (250 calls/day on free plan) — try again tomorrow');
-      if (msg.toLowerCase().includes('legacy'))
-        throw new Error('FMP Legacy endpoint error — please update your key in Settings ⚙');
-      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('apikey'))
-        throw new Error('Invalid API key — go to Settings ⚙ to update it');
-      throw new Error(msg);
-    }
     if (Array.isArray(data) && data.length === 0) return null;
     return data;
-  }, [fmpKey]);
+  }, []);
 
   const finnhubGet = useCallback(async (endpoint, params = {}) => {
-    if (!finnhubKey) return null;
-    const base = 'https://finnhub.io/api/v1';
-    const qs = new URLSearchParams({ ...params, token: finnhubKey }).toString();
     try {
-      const res = await fetch(`${base}/${endpoint}?${qs}`);
+      const qs = new URLSearchParams(params).toString();
+      const res = await authedFetch(`/api/finnhub/${endpoint}?${qs}`);
       if (!res.ok) return null;
       return await res.json();
     } catch { return null; }
-  }, [finnhubKey]);
+  }, []);
 
   const fetchAiVerdict = useCallback(async (sym, scoreData, profileData, metricsData) => {
-    if (!anthropicKey || !sym) return;
+    if (!sym) return;
     setAiLoading(true);
     setAiVerdict(null);
     try {
@@ -2021,14 +2043,9 @@ Key data:
 
 Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End with the rating word (STRONG BUY / BUY / HOLD / CAUTION / AVOID).`;
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await authedFetch('/api/anthropic/messages', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': anthropicKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 200,
@@ -2043,7 +2060,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     } finally {
       setAiLoading(false);
     }
-  }, [anthropicKey]);
+  }, []);
 
   const analyze = useCallback(async (sym)=>{
     if (!sym) return;
@@ -2178,8 +2195,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       localStorage.setItem('sl_history',JSON.stringify(hist5));
       setRecentTickers(hist5);
 
-      // Finnhub data (optional)
-      if (finnhubKey) {
+      // Finnhub data
+      {
         const today = new Date();
         const from = today.toISOString().substring(0, 10);
         const to = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
@@ -2195,17 +2212,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         setInsiderTxns(Array.isArray(it?.data) ? it.data.slice(0, 10) : []);
       }
 
-      // AI verdict (optional)
-      if (anthropicKey) {
-        fetchAiVerdict(sym, calcScores(met_, rat_, hD_, sD_), pD_, met_);
-      }
+      // AI verdict
+      fetchAiVerdict(sym, calcScores(met_, rat_, hD_, sD_), pD_, met_);
 
     } catch(e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  },[fmpGet, finnhubGet, finnhubKey, anthropicKey, fetchAiVerdict]);
+  },[fmpGet, finnhubGet, fetchAiVerdict]);
 
   const handleSearch=()=>{const s=inputTicker.trim().toUpperCase();if(s) analyze(s);};
 
@@ -2243,154 +2258,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
   const tabs=['Overview','Fundamentals','Valuation','Chart','Research'];
 
-  // ── Setup screen ──────────────────────────────────────────
-  if (!keysSubmitted) {
-    const testAndSave = async () => {
-      if (!setupKey.trim()) return;
-      setSetupStatus('testing');
-      try {
-        const res = await fetch(`https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=${setupKey.trim()}`);
-        const data = await res.json();
-        if (data?.['Error Message']) {
-          const msg = data['Error Message'].toLowerCase();
-          if (msg.includes('limit') || msg.includes('upgrade'))
-            return setSetupStatus({ error: 'This key has reached its daily limit (250 calls/day on free plan). Try again tomorrow or use a different key.' });
-          if (msg.includes('legacy'))
-            return setSetupStatus({ error: 'This key returned a legacy endpoint error. Try generating a new key at financialmodelingprep.com.' });
-          return setSetupStatus({ error: 'Invalid API key. Check it and try again.' });
-        }
-        if (!Array.isArray(data) || data.length === 0)
-          return setSetupStatus({ error: 'Could not validate key — unexpected response. Check the key and try again.' });
-        localStorage.setItem('sl_fmp', setupKey.trim());
-        setFmpKey(setupKey.trim());
-        const fhKey = document.getElementById('sl_setup_finnhub')?.value?.trim();
-        const antKey = document.getElementById('sl_setup_anthropic')?.value?.trim();
-        if (fhKey) { localStorage.setItem('sl_finnhub', fhKey); setFinnhubKey(fhKey); }
-        if (antKey) { localStorage.setItem('sl_anthropic', antKey); setAnthropicKey(antKey); }
-        setKeysSubmitted(true);
-      } catch (e) {
-        setSetupStatus({ error: 'Network error — check your internet connection.' });
-      }
-    };
-
-    return (
-      <div style={{
-        minHeight:'100vh', background:'#07080c', color:'#e2e8f0',
-        fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif",
-        display:'flex', alignItems:'center', justifyContent:'center', padding:24
-      }}>
-        <style>{`*{box-sizing:border-box} @keyframes spin{to{transform:rotate(360deg)}} input::placeholder{color:#334155}`}</style>
-        <div style={{
-          background:'#0c0e14', border:'1px solid #1e2430', borderRadius:14,
-          padding:'44px 40px', maxWidth:460, width:'100%', textAlign:'center'
-        }}>
-          <div style={{fontSize:44, marginBottom:12}}>⚡</div>
-          <div style={{fontSize:26, fontWeight:800, color:'#fff', marginBottom:6}}>StockLens</div>
-          <div style={{fontSize:13, color:'#475569', marginBottom:32, lineHeight:1.7}}>
-            Professional stock analysis — powered by Financial Modeling Prep.
-            <br/>Enter your free API key to get started.
-          </div>
-
-          <div style={{
-            background:'#141720', border:'1px solid #1e2430', borderRadius:8,
-            padding:'14px 16px', marginBottom:20, textAlign:'left'
-          }}>
-            <div style={{fontSize:10, fontWeight:700, color:'#3b82f6', textTransform:'uppercase', letterSpacing:'1px', marginBottom:8}}>
-              Step 1 — Get a free API key
-            </div>
-            <div style={{fontSize:12, color:'#64748b', lineHeight:1.7, marginBottom:8}}>
-              Create a free account at Financial Modeling Prep to get your API key:
-            </div>
-            <a
-              href="https://site.financialmodelingprep.com/register"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display:'inline-block', fontSize:12, color:'#60a5fa',
-                background:'#1e3a5f44', border:'1px solid #1e3a5f',
-                padding:'5px 12px', borderRadius:5, textDecoration:'none'
-              }}
-            >
-              financialmodelingprep.com/register ↗
-            </a>
-          </div>
-
-          <div style={{textAlign:'left', marginBottom:20}}>
-            <div style={{fontSize:10, fontWeight:700, color:'#3b82f6', textTransform:'uppercase', letterSpacing:'1px', marginBottom:8}}>
-              Step 2 — Paste your key below
-            </div>
-            <input
-              value={setupKey}
-              onChange={e => setSetupKey(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && testAndSave()}
-              placeholder="Enter your FMP API key..."
-              style={{
-                width:'100%', background:'#141720', border:'1px solid #1e2430',
-                color:'#e2e8f0', padding:'10px 14px', borderRadius:6,
-                fontSize:13, outline:'none', marginBottom:10
-              }}
-            />
-            <button
-              onClick={testAndSave}
-              disabled={setupStatus === 'testing' || !setupKey.trim()}
-              style={{
-                width:'100%', background: setupStatus === 'testing' ? '#1e2430' : '#3b82f6',
-                color:'#fff', border:'none', padding:'10px 0', borderRadius:6,
-                cursor: setupStatus === 'testing' ? 'not-allowed' : 'pointer',
-                fontSize:14, fontWeight:700
-              }}
-            >
-              {setupStatus === 'testing' ? (
-                <span style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8}}>
-                  <span style={{display:'inline-block', width:14, height:14, border:'2px solid #64748b', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite'}}/>
-                  Testing...
-                </span>
-              ) : 'Test & Save Key'}
-            </button>
-          </div>
-
-          {setupStatus && typeof setupStatus === 'object' && setupStatus.error && (
-            <div style={{
-              background:'#2a0d0d', border:'1px solid #7f1d1d', borderRadius:6,
-              padding:'10px 14px', fontSize:12, color:'#f87171', marginBottom:12, textAlign:'left'
-            }}>
-              ⚠ {setupStatus.error}
-            </div>
-          )}
-
-          <details style={{textAlign:'left',marginTop:20}}>
-            <summary style={{fontSize:11,color:'#475569',cursor:'pointer',marginBottom:12}}>
-              ✨ Optional: Add more data sources (Finnhub + Anthropic AI)
-            </summary>
-            <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:12}}>
-              <div>
-                <div style={{fontSize:10,color:'#475569',marginBottom:4}}>Finnhub API Key — earnings calendar + insider transactions (free)</div>
-                <input
-                  placeholder="Get free key at finnhub.io"
-                  id="sl_setup_finnhub"
-                  style={{width:'100%',background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'8px 12px',borderRadius:6,fontSize:12,outline:'none'}}
-                />
-              </div>
-              <div>
-                <div style={{fontSize:10,color:'#475569',marginBottom:4}}>Anthropic API Key — AI-powered investment verdict</div>
-                <input
-                  placeholder="sk-ant-..."
-                  type="password"
-                  id="sl_setup_anthropic"
-                  style={{width:'100%',background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'8px 12px',borderRadius:6,fontSize:12,outline:'none'}}
-                />
-              </div>
-            </div>
-          </details>
-
-          <div style={{fontSize:10, color:'#1e2430', marginTop:16, lineHeight:1.6}}>
-            Free plan: 250 API calls/day — enough for ~25 tickers/day.<br/>
-            Your key is stored locally in your browser only.
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!authChecked) return null;
+  if (!session) return <LoginScreen/>;
 
   return (
     <div style={{
@@ -2456,11 +2325,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               padding:'7px 18px',borderRadius:6,cursor:loading?'not-allowed':'pointer',
               fontSize:13,fontWeight:600,whiteSpace:'nowrap'
             }}>{loading?'…':'Analyze'}</button>
-            <button onClick={()=>setShowCfg(p=>!p)} title="Settings" style={{
-              background:'#141720',color:showCfg?'#60a5fa':'#475569',
+            <button onClick={() => sb && sb.auth.signOut()} title="Sign out" style={{
+              background:'#141720',color:'#475569',
               border:'1px solid #1e2430',padding:'7px 11px',borderRadius:6,
               cursor:'pointer',fontSize:13
-            }}>⚙</button>
+            }}>⏻</button>
           </div>
         </div>
         {recentTickers.length>0&&(
@@ -2477,88 +2346,6 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         )}
       </div>
 
-      {/* ── Config panel ── */}
-      {showCfg&&(
-        <div style={{background:'#0a0b10',borderBottom:'1px solid #161b26',padding:'16px 24px',display:'flex',flexDirection:'column',gap:12}}>
-          <div style={{fontSize:11,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'1px'}}>API Settings</div>
-          <div style={{display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'}}>
-            <div>
-              <div style={{fontSize:10,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.5px'}}>FMP API Key</div>
-              <input
-                value={fmpKey}
-                onChange={e => setFmpKey(e.target.value)}
-                style={{background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'6px 11px',borderRadius:6,fontSize:12,width:300,outline:'none'}}
-              />
-            </div>
-            <button onClick={() => { localStorage.setItem('sl_fmp', fmpKey); localStorage.setItem('sl_finnhub', finnhubKey); setShowCfg(false); }} style={{
-              background:'#22c55e',color:'#000',border:'none',
-              padding:'6px 16px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'
-            }}>Save Key</button>
-            <button onClick={async () => {
-              try {
-                const res = await fetch(`https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=${fmpKey}`);
-                const data = await res.json();
-                if (Array.isArray(data) && data.length > 0) {
-                  alert('✓ Connection OK — key is working');
-                } else {
-                  alert('✗ Connection failed — ' + (data?.['Error Message'] || 'unexpected response'));
-                }
-              } catch(e) { alert('✗ Network error'); }
-            }} style={{
-              background:'#141720',color:'#60a5fa',border:'1px solid #1e3a5f',
-              padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,whiteSpace:'nowrap'
-            }}>Test Connection</button>
-            <button onClick={() => {
-              if (!window.confirm('Reset your API key? You will need to enter it again.')) return;
-              localStorage.removeItem('sl_fmp');
-              setFmpKey('');
-              setKeysSubmitted(false);
-              setShowCfg(false);
-            }} style={{
-              background:'#2a0d0d',color:'#f87171',border:'1px solid #7f1d1d',
-              padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,whiteSpace:'nowrap'
-            }}>Reset Key</button>
-          </div>
-          <div style={{display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'}}>
-            <div>
-              <div style={{fontSize:10,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.5px'}}>Finnhub API Key <span style={{color:'#334155',fontWeight:400,textTransform:'none'}}>(optional — adds earnings & insider data)</span></div>
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <input
-                  value={finnhubKey}
-                  onChange={e => setFinnhubKey(e.target.value)}
-                  placeholder="Get free key at finnhub.io"
-                  style={{background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'6px 11px',borderRadius:6,fontSize:12,width:300,outline:'none'}}
-                />
-                <button onClick={() => { localStorage.setItem('sl_finnhub', finnhubKey); }} style={{
-                  background:'#22c55e',color:'#000',border:'none',
-                  padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700
-                }}>Save</button>
-              </div>
-            </div>
-          </div>
-          <div style={{display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'}}>
-            <div>
-              <div style={{fontSize:10,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.5px'}}>
-                Anthropic API Key <span style={{color:'#334155',fontWeight:400,textTransform:'none'}}>(optional — enables AI-powered verdict)</span>
-              </div>
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <input
-                  value={anthropicKey}
-                  onChange={e => setAnthropicKey(e.target.value)}
-                  placeholder="sk-ant-..."
-                  type="password"
-                  style={{background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',padding:'6px 11px',borderRadius:6,fontSize:12,width:300,outline:'none'}}
-                />
-                <button onClick={() => { localStorage.setItem('sl_anthropic', anthropicKey); }} style={{
-                  background:'#22c55e',color:'#000',border:'none',
-                  padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700
-                }}>Save</button>
-              </div>
-            </div>
-          </div>
-          <div style={{fontSize:10,color:'#334155'}}>Free plan: 250 calls/day. Keys stored in your browser only.</div>
-        </div>
-      )}
 
       {/* ── Content ── */}
       <div style={{maxWidth:1120,margin:'0 auto',padding:'0 24px'}}>
@@ -2589,18 +2376,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         {/* Error */}
         {!loading&&error&&(
           <div style={{background:'#2a0d0d',border:'1px solid #7f1d1d',borderRadius:8,padding:'16px 20px',margin:'24px 0'}}>
-            <div style={{color:'#f87171',fontSize:13,marginBottom:(error.includes('Settings')||error.includes('limit'))?12:0}}>
+            <div style={{color:'#f87171',fontSize:13,marginBottom:error.includes('limit')?12:0}}>
               ⚠ {error}
             </div>
-            {error.includes('Settings')&&(
-              <button onClick={() => setShowCfg(true)} style={{
-                background:'#3b82f6',color:'#fff',border:'none',
-                padding:'6px 16px',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,marginRight:8
-              }}>Open Settings ⚙</button>
-            )}
             {error.includes('limit')&&(
               <div style={{fontSize:11,color:'#64748b',marginTop:8}}>
-                The 250 calls/day free limit resets at midnight UTC. You can use a different key or wait until tomorrow.
+                Try again in about a minute.
               </div>
             )}
           </div>
@@ -2871,17 +2652,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   <VerdictSection scores={scores} profile={prof} metrics={met} ratios={rat} aiVerdict={aiVerdict} aiLoading={aiLoading}/>
                   {news.length>0&&<NewsCard items={news}/>}
 
-                  {finnhubKey ? (
-                    <>
-                      {earnSurprise.length>0&&<EarningsSurpriseChart data={earnSurprise}/>}
-                      {insiderTxns.length>0&&<InsiderTable data={insiderTxns}/>}
-                    </>
-                  ) : (
-                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px',textAlign:'center'}}>
-                      <div style={{fontSize:12,color:'#475569',marginBottom:8}}>Add a free Finnhub key in Settings ⚙ to unlock earnings calendar, beat/miss history, and insider transactions.</div>
-                      <a href="https://finnhub.io" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:'#60a5fa'}}>Get free key at finnhub.io ↗</a>
-                    </div>
-                  )}
+                  <>
+                    {earnSurprise.length>0&&<EarningsSurpriseChart data={earnSurprise}/>}
+                    {insiderTxns.length>0&&<InsiderTable data={insiderTxns}/>}
+                  </>
 
                   <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'14px 18px'}}>
                     <div style={{fontSize:10,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}}>SEC EDGAR Filings</div>
