@@ -487,6 +487,78 @@ function getRating(s) {
     border: '#7f1d1d'
   };
 }
+async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
+  if (!supabase) return {
+    tilt: 0,
+    reasons: ["Sin Supabase"],
+    quadrant: null,
+    regime: null
+  };
+  let m = null;
+  try {
+    const {
+      data
+    } = await supabase.from("macro_state").select("*").eq("id", 1).maybeSingle();
+    m = data;
+  } catch (e) {}
+  if (!m) return {
+    tilt: 0,
+    reasons: ["Macro no disponible aún"],
+    quadrant: null,
+    regime: null
+  };
+  let tilt = 0;
+  const reasons = [];
+  const nd = Number(netDebtEbitda) || 0,
+    pe = Number(peRatio) || 0;
+  if (m.credit_stress > 70 && nd > 3) {
+    tilt -= 10;
+    reasons.push(`Credit stress ${Math.round(m.credit_stress)} + deuda ${nd.toFixed(1)}x`);
+  }
+  if (m.liquidity_cycle < 35 && pe > 40) {
+    tilt -= 5;
+    reasons.push(`Liquidez baja ${Math.round(m.liquidity_cycle)} + P/E ${pe.toFixed(0)}`);
+  }
+  if (m.recession_prob > 60 && ["Energy", "Industrials", "Consumer Cyclical"].includes(sector)) {
+    tilt -= 8;
+    reasons.push(`Recesión ${Math.round(m.recession_prob)} + ${sector} cíclico`);
+  }
+  if (m.geopolitical_risk > 65 && ["Utilities", "Healthcare", "Basic Materials", "Consumer Defensive"].includes(sector)) {
+    tilt += 5;
+    reasons.push(`Geopolítica ${Math.round(m.geopolitical_risk)} + ${sector} defensivo`);
+  }
+  const bonus = {
+    estanflacion: {
+      Energy: 5,
+      "Basic Materials": 5,
+      Technology: -5
+    },
+    inflacion: {
+      Energy: 5,
+      "Real Estate": 5
+    },
+    defensivo: {
+      Healthcare: 5,
+      Utilities: 5,
+      "Consumer Defensive": 5
+    },
+    crecimiento: {
+      Technology: 5
+    }
+  };
+  const b = bonus[m.cartera_quadrant] && bonus[m.cartera_quadrant][sector] || 0;
+  if (b) {
+    tilt += b;
+    reasons.push(`Cuadrante ${m.cartera_quadrant} → ${sector} ${b > 0 ? "+" : ""}${b}`);
+  }
+  tilt = Math.max(-15, Math.min(15, tilt));
+  return {
+    tilt,
+    reasons: reasons.length ? reasons : ["Sin ajustes para este perfil"],
+    quadrant: m.cartera_quadrant,
+    regime: m.regime_label
+  };
+}
 
 // ─── SKELETON ───────────────────────────────────────────────
 function Sk({
@@ -4476,6 +4548,7 @@ function App() {
   const [balanceSheets, setBalanceSheets] = useState([]);
   const [historicalDivs, setHistoricalDivs] = useState([]);
   const [spyHistory, setSpyHistory] = useState([]);
+  const [macroTilt, setMacroTilt] = useState(null);
   const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 180);
@@ -4592,6 +4665,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setBalanceSheets([]);
     setHistoricalDivs([]);
     setSpyHistory([]);
+    setMacroTilt(null);
     try {
       const results = await Promise.allSettled([fmpGet('quote', {
         symbol: sym
@@ -4758,6 +4832,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       const scores_ = calcScores(met_, rat_, hD_, sD_);
       fetchAiVerdict(sym, scores_, pD_, met_);
 
+      // Compute macro tilt from IC DataLayer macro_state
+      const _mt = await computeMacroTilt(sb, pD_?.sector, met_?.netDebtToEBITDATTM, met_?.peRatioTTM ?? met_?.priceToEarningsRatioTTM);
+      setMacroTilt(_mt);
+
       // Persist analysis to Supabase
       if (sb) {
         try {
@@ -4777,7 +4855,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               score_mom: scores_.mom,
               score_growth: scores_.growth,
               rating: getRating(scores_.total)?.label,
-              macro_tilt: 0,
+              macro_tilt: _mt?.tilt || 0,
               sector: pD_?.sector || null
             });
           }
@@ -4931,7 +5009,22 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       color: r.color,
       letterSpacing: '1px'
     }
-  }, r.label)), /*#__PURE__*/React.createElement("div", {
+  }, r.label), macroTilt && macroTilt.tilt !== 0 && /*#__PURE__*/React.createElement("span", {
+    title: (macroTilt?.reasons || []).join(" · "),
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 4,
+      padding: "3px 8px",
+      marginLeft: 8,
+      borderRadius: 4,
+      background: macroTilt.tilt > 0 ? "#22c55e22" : "#ef444422",
+      border: `1px solid ${macroTilt.tilt > 0 ? "#22c55e" : "#ef4444"}`,
+      fontSize: 11,
+      fontFamily: "JetBrains Mono,monospace",
+      cursor: "help"
+    }
+  }, "Macro Tilt: ", macroTilt.tilt > 0 ? "+" : "", macroTilt.tilt)), /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#0a0b10',
       borderBottom: '1px solid #161b26',
@@ -5511,7 +5604,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       marginTop: 16
     }
   }, /*#__PURE__*/React.createElement(CarteraKMatrix, {
-    activeQuadrant: null
+    activeQuadrant: macroTilt?.quadrant || null
   }))), activeTab === 'Fundamentals' && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
