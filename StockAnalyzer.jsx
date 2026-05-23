@@ -1916,6 +1916,103 @@ function AboutText({text}) {
   );
 }
 
+// ─── CARTERA K MATRIX ────────────────────────────────────────
+function CarteraKMatrix({ activeQuadrant, onSelect }) {
+  const quads = [
+    { id:'estanflacion', label:'Estanflación', sectors:['Oro','Energía'], x:80, y:50, color:'#D89B26', fill:'#F0E0B8' },
+    { id:'inflacion', label:'Inflación', sectors:['Energía','Real estate'], x:240, y:50, color:'#B85A1E', fill:'#E8C3A7' },
+    { id:'defensivo', label:'Defensivo', sectors:['Salud','Utilities','C. básico','Renta fija'], x:80, y:200, color:'#5C9156', fill:'#CFDDC8' },
+    { id:'crecimiento', label:'Crecimiento', sectors:['Tecnología'], x:240, y:200, color:'#C0392B', fill:'#F0C4BD' },
+  ];
+  const QW=140, QH=140, W=460, H=370;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',maxWidth:W,height:'auto'}}>
+      <text x={W/2} y={25} textAnchor="middle" fontSize={14} fontWeight="bold" fill="#e2e8f0">Cartera K — Macro Playbook</text>
+      <text x={32} y={110} textAnchor="middle" fontSize={10} fill="#64748b">Infl. alta</text>
+      <text x={32} y={270} textAnchor="middle" fontSize={10} fill="#64748b">Infl. baja</text>
+      <text x={150} y={H-12} textAnchor="middle" fontSize={10} fill="#64748b">Crec. bajo</text>
+      <text x={310} y={H-12} textAnchor="middle" fontSize={10} fill="#64748b">Crec. alto</text>
+      {quads.map(q => {
+        const active = q.id === activeQuadrant;
+        return (
+          <g key={q.id} style={{cursor: onSelect?'pointer':'default'}} onClick={() => onSelect && onSelect(q.id)}>
+            <rect x={q.x} y={q.y} width={QW} height={QH} rx={8} fill={q.fill} stroke={q.color} strokeWidth={active?4:1.5} opacity={active?1:0.55}/>
+            <text x={q.x+QW/2} y={q.y+32} textAnchor="middle" fontSize={14} fontWeight="bold" fill={q.color}>{q.label}</text>
+            {q.sectors.map((s,i)=>(<text key={i} x={q.x+QW/2} y={q.y+56+i*16} textAnchor="middle" fontSize={11} fill={q.color}>{s}</text>))}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ─── WATCHLIST MANAGER ───────────────────────────────────────
+function WatchlistManager({ supabase, onAnalyze }) {
+  const [items, setItems] = useState([]);
+  const [newTicker, setNewTicker] = useState('');
+  const [sortBy, setSortBy] = useState('score_total');
+  const [loading, setLoading] = useState(false);
+  const load = useCallback(async () => {
+    if (!supabase) return;
+    setLoading(true);
+    const { data: wl } = await supabase.from('sl_watchlist').select('*').order('added_at');
+    if (!wl) { setItems([]); setLoading(false); return; }
+    const tickers = wl.map(w => w.ticker);
+    let analyses = [];
+    if (tickers.length) {
+      const { data } = await supabase.from('sl_analyses').select('*').in('ticker', tickers).order('analysis_date', { ascending: false });
+      analyses = data || [];
+    }
+    const latest = {};
+    for (const a of analyses) if (!latest[a.ticker]) latest[a.ticker] = a;
+    setItems(wl.map(w => ({ ...w, analysis: latest[w.ticker] || null })));
+    setLoading(false);
+  }, [supabase]);
+  useEffect(() => { load(); }, [load]);
+  const addTicker = async () => {
+    const t = newTicker.trim().toUpperCase();
+    if (!t) return;
+    await supabase.from('sl_watchlist').insert({ ticker: t });
+    setNewTicker(''); load();
+  };
+  const removeTicker = async (id) => { await supabase.from('sl_watchlist').delete().eq('id', id); load(); };
+  const sorted = [...items].sort((a,b) => ((b.analysis?.[sortBy] ?? -999) - (a.analysis?.[sortBy] ?? -999)));
+  return (
+    <div style={{padding:16}}>
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        <input value={newTicker} onChange={e=>setNewTicker(e.target.value)} placeholder="Añadir ticker (ej. NVDA)" onKeyDown={e=>e.key==='Enter'&&addTicker()} style={{flex:1,padding:'8px 12px',background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',borderRadius:6}}/>
+        <button onClick={addTicker} style={{padding:'8px 16px',background:'#3b82f6',border:'none',color:'#fff',borderRadius:6,cursor:'pointer',fontWeight:600}}>Añadir</button>
+        <button onClick={load} style={{padding:'8px 16px',background:'#1e2430',border:'1px solid #2d3748',color:'#e2e8f0',borderRadius:6,cursor:'pointer'}}>{loading?'…':'Recargar'}</button>
+      </div>
+      <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+        <thead>
+          <tr style={{color:'#64748b',textAlign:'left',borderBottom:'1px solid #1e2430'}}>
+            <th style={{padding:8}}>Ticker</th>
+            <th style={{padding:8,cursor:'pointer'}} onClick={()=>setSortBy('score_total')}>Score ▾</th>
+            <th style={{padding:8}}>Rating</th>
+            <th style={{padding:8,cursor:'pointer'}} onClick={()=>setSortBy('macro_tilt')}>Macro Tilt</th>
+            <th style={{padding:8}}>Sector</th>
+            <th style={{padding:8}}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map(it => (
+            <tr key={it.id} style={{borderBottom:'1px solid #141720'}}>
+              <td style={{padding:8,fontWeight:600,color:'#3b82f6',cursor:'pointer'}} onClick={()=>onAnalyze&&onAnalyze(it.ticker)}>{it.ticker}</td>
+              <td style={{padding:8}}>{it.analysis?.score_total ?? '—'}</td>
+              <td style={{padding:8}}>{it.analysis?.rating ?? '—'}</td>
+              <td style={{padding:8}}>{it.analysis?.macro_tilt ? ((it.analysis.macro_tilt>0?'+':'')+it.analysis.macro_tilt) : '—'}</td>
+              <td style={{padding:8,color:'#94a3b8'}}>{it.analysis?.sector ?? '—'}</td>
+              <td style={{padding:8}}><button onClick={()=>removeTicker(it.id)} style={{background:'none',border:'none',color:'#ef4444',cursor:'pointer'}}>✕</button></td>
+            </tr>
+          ))}
+          {!sorted.length && <tr><td colSpan={6} style={{padding:16,textAlign:'center',color:'#64748b'}}>Watchlist vacía. Añade tickers arriba, analízalos en Overview, y aparecerán aquí con su score.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ─── LOGIN ───────────────────────────────────────────────────
 function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -2211,7 +2308,27 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       }
 
       // AI verdict
-      fetchAiVerdict(sym, calcScores(met_, rat_, hD_, sD_), pD_, met_);
+      const scores_ = calcScores(met_, rat_, hD_, sD_);
+      fetchAiVerdict(sym, scores_, pD_, met_);
+
+      // Persist analysis to Supabase
+      if (sb) {
+        try {
+          const { data: { session: sess } } = await sb.auth.getSession();
+          if (sess) {
+            await sb.from('sl_analyses').insert({
+              user_id: sess.user.id,
+              ticker: sym.toUpperCase(),
+              analysis_date: new Date().toISOString().slice(0,10),
+              score_total: scores_.total, score_val: scores_.val, score_hlth: scores_.hlth,
+              score_mom: scores_.mom, score_growth: scores_.growth,
+              rating: getRating(scores_.total)?.label,
+              macro_tilt: 0,
+              sector: pD_?.sector || null,
+            });
+          }
+        } catch(e) { /* no romper el análisis si falla el guardado */ }
+      }
 
     } catch(e) {
       setError(e.message);
@@ -2254,7 +2371,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     ];
   },[met,rat]);
 
-  const tabs=['Overview','Fundamentals','Valuation','Chart','Research'];
+  const tabs=['Overview','Fundamentals','Screener','Valuation','Chart','Research'];
 
   if (!authChecked) return null;
   if (!session) return <LoginScreen/>;
@@ -2542,6 +2659,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                       <AboutText text={prof.description}/>
                     </div>
                   )}
+
+                  <div style={{padding:16,background:'#0c0e14',border:'1px solid #1e2430',borderRadius:8,marginTop:16}}>
+                    <CarteraKMatrix activeQuadrant={null} />
+                  </div>
                 </div>
               )}
 
@@ -2639,6 +2760,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     );
                   })()}
                 </div>
+              )}
+
+              {/* ── SCREENER TAB ── */}
+              {activeTab==='Screener'&&(
+                <WatchlistManager supabase={sb} onAnalyze={(t)=>{ setInputTicker(t); setActiveTab('Overview'); analyze(t); }}/>
               )}
 
               {/* ── RESEARCH TAB ── */}
