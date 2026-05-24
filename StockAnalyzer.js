@@ -4356,6 +4356,382 @@ function InsiderTrackerPanel({
   }, "Analizar")))))));
 }
 
+// ─── 13F TRACKER PANELS ──────────────────────────────────────
+function Funds13FPanel({
+  supabase
+}) {
+  const [data, setData] = useState({});
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+      const {
+        data: rows
+      } = await supabase.from('smart_money_13f').select('*').order('filing_date', {
+        ascending: false
+      });
+      const byFund = {};
+      for (const r of rows || []) {
+        if (!byFund[r.fund_name]) byFund[r.fund_name] = [];
+        byFund[r.fund_name].push(r);
+      }
+      setData(byFund);
+      setLoading(false);
+    })();
+  }, [supabase]);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "13F Tracker \u2014 Smart Money Funds"), loading ? /*#__PURE__*/React.createElement(LoadingSkeleton, null) : Object.keys(data).length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#64748b',
+      padding: 16,
+      textAlign: 'center'
+    }
+  }, "Sin datos 13F a\xFAn. El cron los puebla mensualmente (d\xEDa 15).") : Object.entries(data).map(([fund, rows]) => /*#__PURE__*/React.createElement("div", {
+    key: fund,
+    style: {
+      marginBottom: 20,
+      padding: 12,
+      background: '#141720',
+      borderRadius: 8,
+      border: '1px solid #1e2430'
+    }
+  }, /*#__PURE__*/React.createElement("h4", {
+    style: {
+      color: '#e2e8f0',
+      margin: '0 0 4px 0',
+      fontSize: 13
+    }
+  }, fund), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 8
+    }
+  }, "Last filing: ", rows[0]?.filing_date), /*#__PURE__*/React.createElement("table", {
+    style: {
+      width: '100%',
+      fontSize: 11,
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      color: '#64748b',
+      textAlign: 'left',
+      borderBottom: '1px solid #1e2430'
+    }
+  }, /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Issuer"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Shares"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Value"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Action"))), /*#__PURE__*/React.createElement("tbody", null, rows.slice(0, 10).map(r => /*#__PURE__*/React.createElement("tr", {
+    key: r.id,
+    style: {
+      borderBottom: '1px solid #0d1117'
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      maxWidth: 160,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    }
+  }, r.ticker), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, r.shares_held ? (r.shares_held / 1e3).toFixed(0) + 'K' : '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, r.market_value_usd ? '$' + (r.market_value_usd / 1e6).toFixed(1) + 'M' : '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      color: '#94a3b8'
+    }
+  }, r.action))))))));
+}
+function ConsensusPanel({
+  supabase
+}) {
+  const [consensus, setConsensus] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+      const {
+        data
+      } = await supabase.from('smart_money_13f').select('ticker, fund_name');
+      const counts = {};
+      for (const r of data || []) {
+        if (!counts[r.ticker]) counts[r.ticker] = new Set();
+        counts[r.ticker].add(r.fund_name);
+      }
+      const arr = Object.entries(counts).filter(([_, funds]) => funds.size >= 3).map(([ticker, funds]) => ({
+        ticker,
+        fund_count: funds.size,
+        funds: [...funds]
+      })).sort((a, b) => b.fund_count - a.fund_count);
+      setConsensus(arr);
+      setLoading(false);
+    })();
+  }, [supabase]);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Consensus \u2014 Held by \u22653 Smart Money Funds"), loading ? /*#__PURE__*/React.createElement(LoadingSkeleton, null) : consensus.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#64748b',
+      padding: 16,
+      textAlign: 'center'
+    }
+  }, "Sin consenso todav\xEDa (necesita datos 13F de \u22653 fondos).") : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6
+    }
+  }, consensus.map(c => /*#__PURE__*/React.createElement("div", {
+    key: c.ticker,
+    style: {
+      padding: '8px 12px',
+      background: '#141720',
+      borderRadius: 6,
+      border: '1px solid #1e2430',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 700,
+      color: '#3b82f6',
+      fontFamily: 'JetBrains Mono,monospace',
+      minWidth: 60
+    }
+  }, c.ticker), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#94a3b8'
+    }
+  }, c.fund_count, " fondos:"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#64748b'
+    }
+  }, c.funds.join(' · '))))));
+}
+
+// ─── JENSEN PATTERN PANEL ────────────────────────────────────
+const JENSEN_PATTERN = [{
+  ticker: 'NBIS',
+  name: 'Nebius',
+  mention_date: '2024-11-15',
+  mention_price: 21,
+  source: 'AI cloud partner spotlight'
+}, {
+  ticker: 'APLD',
+  name: 'Applied Digital',
+  mention_date: '2024-03-10',
+  mention_price: 3,
+  source: 'Infrastructure partner reference'
+}, {
+  ticker: 'TSM',
+  name: 'TSMC',
+  mention_date: '2024-06-05',
+  mention_price: 180,
+  source: 'Critical to AI buildout'
+}, {
+  ticker: 'MU',
+  name: 'Micron',
+  mention_date: '2024-08-20',
+  mention_price: 86,
+  source: 'HBM memory supplier'
+}, {
+  ticker: 'NOW',
+  name: 'ServiceNow',
+  mention_date: '2026-04-12',
+  mention_price: 90,
+  source: 'Spotlighted as agentic AI leader'
+}, {
+  ticker: 'CRWV',
+  name: 'CoreWeave',
+  mention_date: '2026-01-22',
+  mention_price: 114,
+  source: '$2B direct investment'
+}, {
+  ticker: 'IREN',
+  name: 'IREN',
+  mention_date: '2026-05-15',
+  mention_price: 60,
+  source: '5GW partnership for DSX'
+}, {
+  ticker: 'ORCL',
+  name: 'Oracle',
+  mention_date: '2026-03-01',
+  mention_price: 145,
+  source: 'Compute partnership'
+}, {
+  ticker: 'AVGO',
+  name: 'Broadcom',
+  mention_date: '2026-02-10',
+  mention_price: 1100,
+  source: 'Custom ASIC partner'
+}, {
+  ticker: 'AMD',
+  name: 'AMD',
+  mention_date: '2026-04-08',
+  mention_price: 165,
+  source: 'MI300X co-positioning'
+}, {
+  ticker: 'ASML',
+  name: 'ASML',
+  mention_date: '2026-01-30',
+  mention_price: 720,
+  source: 'EUV supply critical'
+}, {
+  ticker: 'SMH',
+  name: 'VanEck Semi ETF',
+  mention_date: '2026-05-10',
+  mention_price: 320,
+  source: 'Aschenbrenner 13F basket'
+}];
+function JensenPatternPanel({
+  fmpGet
+}) {
+  const [enriched, setEnriched] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      if (!fmpGet) {
+        setLoading(false);
+        return;
+      }
+      const results = await Promise.allSettled(JENSEN_PATTERN.map(async j => {
+        const quote = await fmpGet('quote', {
+          symbol: j.ticker
+        }).catch(() => null);
+        const currentPrice = Array.isArray(quote) ? quote[0]?.price : quote?.price;
+        const returnPct = currentPrice != null ? (currentPrice - j.mention_price) / j.mention_price * 100 : null;
+        return {
+          ...j,
+          currentPrice,
+          returnPct
+        };
+      }));
+      setEnriched(results.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean));
+      setLoading(false);
+    })();
+  }, [fmpGet]);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Jensen Pattern \u2014 Nvidia-Adjacent Companies"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 10,
+      background: '#1a1407',
+      border: '1px solid #D89B26',
+      borderRadius: 6,
+      marginBottom: 14,
+      fontSize: 11,
+      color: '#e8c87a',
+      lineHeight: 1.5
+    }
+  }, "Empresas mencionadas en keynotes de Jensen Huang o en las que NVIDIA ha invertido directamente. Patr\xF3n hist\xF3rico observado, no causalidad confirmada. Past performance does not predict future returns."), loading ? /*#__PURE__*/React.createElement(LoadingSkeleton, null) : /*#__PURE__*/React.createElement("table", {
+    style: {
+      width: '100%',
+      fontSize: 11,
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      color: '#64748b',
+      textAlign: 'left',
+      borderBottom: '1px solid #1e2430'
+    }
+  }, /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Ticker"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Name"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Date"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Entry $"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Now $"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Return"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px',
+      fontSize: 9
+    }
+  }, "Source"))), /*#__PURE__*/React.createElement("tbody", null, enriched.sort((a, b) => (b.returnPct || 0) - (a.returnPct || 0)).map(j => /*#__PURE__*/React.createElement("tr", {
+    key: j.ticker,
+    style: {
+      borderBottom: '1px solid #141720'
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      fontWeight: 700,
+      color: '#3b82f6'
+    }
+  }, j.ticker), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      color: '#94a3b8'
+    }
+  }, j.name), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, j.mention_date), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "$", j.mention_price.toLocaleString()), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, j.currentPrice != null ? '$' + j.currentPrice.toFixed(0) : '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      fontWeight: 700,
+      color: (j.returnPct || 0) > 0 ? '#22c55e' : '#ef4444'
+    }
+  }, j.returnPct != null ? (j.returnPct > 0 ? '+' : '') + j.returnPct.toFixed(0) + '%' : '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      fontSize: 9,
+      color: '#475569'
+    }
+  }, j.source))))));
+}
+
 // ─── WATCHLIST MANAGER ───────────────────────────────────────
 function WatchlistManager({
   supabase,
@@ -5907,14 +6283,26 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       setActiveTab('Overview');
       analyze(t);
     }
-  }), activeTab === 'Smart Money' && /*#__PURE__*/React.createElement(InsiderTrackerPanel, {
+  }), activeTab === 'Smart Money' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 24
+    }
+  }, /*#__PURE__*/React.createElement(InsiderTrackerPanel, {
     supabase: sb,
     onAnalyze: t => {
       setInputTicker(t);
       setActiveTab('Overview');
       analyze(t);
     }
-  }), activeTab === 'Research' && /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement(Funds13FPanel, {
+    supabase: sb
+  }), /*#__PURE__*/React.createElement(ConsensusPanel, {
+    supabase: sb
+  }), /*#__PURE__*/React.createElement(JensenPatternPanel, {
+    fmpGet: fmpGet
+  })), activeTab === 'Research' && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
