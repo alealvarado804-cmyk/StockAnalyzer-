@@ -1967,69 +1967,6 @@ function CarteraKMatrix({ activeQuadrant, onSelect }) {
   );
 }
 
-// ─── INSIDER TRACKER (SMART MONEY) ──────────────────────────
-function InsiderTrackerPanel({ supabase, onAnalyze }) {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      if (!supabase) { setLoading(false); return; }
-      const { data } = await supabase
-        .from('smart_money_top_buyers')
-        .select('*')
-        .order('month', { ascending: false })
-        .order('rank',  { ascending: true })
-        .limit(50);
-      setRows(data || []);
-      setLoading(false);
-    })();
-  }, [supabase]);
-
-  return (
-    <div style={{padding:16}}>
-      <div style={{padding:14,background:'#1a1407',border:'1px solid #D89B26',borderRadius:8,marginBottom:14,color:'#e8c87a',fontSize:12,lineHeight:1.5}}>
-        <strong>⚠ Backtest (2001–2026):</strong> Top-50 insider buyers, rebalanceo mensual, costes incluidos:{' '}
-        <strong>15.1% anual vs S&P 500 9.1% · Sharpe 0.57 vs 0.48</strong>. Premium 5Y rolling actual{' '}
-        <strong>−10.4%</strong> (pico +11% en 2021). Históricamente revierte tras drawdowns. No es consejo de inversión.
-      </div>
-      {loading
-        ? <div style={{color:'#64748b',padding:16}}>Cargando…</div>
-        : rows.length === 0
-          ? <div style={{color:'#64748b',padding:16,textAlign:'center'}}>Sin datos aún. El cron los puebla diariamente (o dispáralo manual).</div>
-          : (
-            <table style={{width:'100%',fontSize:12,fontFamily:'JetBrains Mono,monospace'}}>
-              <thead>
-                <tr style={{color:'#64748b',textAlign:'left',borderBottom:'1px solid #1e2430'}}>
-                  <th style={{padding:6}}>#</th>
-                  <th style={{padding:6}}>Ticker</th>
-                  <th style={{padding:6}}>Net Buying</th>
-                  <th style={{padding:6}}>Score</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(d => (
-                  <tr key={d.id} style={{borderBottom:'1px solid #141720'}}>
-                    <td style={{padding:6}}>{d.rank}</td>
-                    <td style={{padding:6,fontWeight:600,color:'#3b82f6',cursor:'pointer'}} onClick={()=>onAnalyze&&onAnalyze(d.ticker)}>{d.ticker}</td>
-                    <td style={{padding:6}}>${(d.net_insider_buying_usd/1e6).toFixed(1)}M</td>
-                    <td style={{padding:6}}>{d.score?.toFixed(0)}</td>
-                    <td style={{padding:6}}>
-                      <button
-                        onClick={()=>onAnalyze&&onAnalyze(d.ticker)}
-                        style={{background:'none',border:'1px solid #2d3748',color:'#94a3b8',borderRadius:4,cursor:'pointer',fontSize:11,padding:'2px 8px'}}
-                      >Analizar</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )
-      }
-    </div>
-  );
-}
-
 // ─── 13F TRACKER PANELS ──────────────────────────────────────
 function Funds13FPanel({ supabase }) {
   const [data, setData] = useState({});
@@ -3053,7 +2990,6 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               {/* ── SMART MONEY TAB ── */}
               {activeTab==='Smart Money'&&(
                 <div style={{display:'flex',flexDirection:'column',gap:24}}>
-                  <InsiderTrackerPanel supabase={sb} onAnalyze={(t)=>{ setInputTicker(t); setActiveTab('Overview'); analyze(t); }}/>
                   <Funds13FPanel supabase={sb}/>
                   <ConsensusPanel supabase={sb}/>
                   <JensenPatternPanel fmpGet={fmpGet}/>

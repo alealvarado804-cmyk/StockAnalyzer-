@@ -4235,127 +4235,6 @@ function CarteraKMatrix({
   }));
 }
 
-// ─── INSIDER TRACKER (SMART MONEY) ──────────────────────────
-function InsiderTrackerPanel({
-  supabase,
-  onAnalyze
-}) {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      if (!supabase) {
-        setLoading(false);
-        return;
-      }
-      const {
-        data
-      } = await supabase.from('smart_money_top_buyers').select('*').order('month', {
-        ascending: false
-      }).order('rank', {
-        ascending: true
-      }).limit(50);
-      setRows(data || []);
-      setLoading(false);
-    })();
-  }, [supabase]);
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: 16
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: 14,
-      background: '#1a1407',
-      border: '1px solid #D89B26',
-      borderRadius: 8,
-      marginBottom: 14,
-      color: '#e8c87a',
-      fontSize: 12,
-      lineHeight: 1.5
-    }
-  }, /*#__PURE__*/React.createElement("strong", null, "\u26A0 Backtest (2001\u20132026):"), " Top-50 insider buyers, rebalanceo mensual, costes incluidos:", ' ', /*#__PURE__*/React.createElement("strong", null, "15.1% anual vs S&P 500 9.1% \xB7 Sharpe 0.57 vs 0.48"), ". Premium 5Y rolling actual", ' ', /*#__PURE__*/React.createElement("strong", null, "\u221210.4%"), " (pico +11% en 2021). Hist\xF3ricamente revierte tras drawdowns. No es consejo de inversi\xF3n."), loading ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: '#64748b',
-      padding: 16
-    }
-  }, "Cargando\u2026") : rows.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: '#64748b',
-      padding: 16,
-      textAlign: 'center'
-    }
-  }, "Sin datos a\xFAn. El cron los puebla diariamente (o disp\xE1ralo manual).") : /*#__PURE__*/React.createElement("table", {
-    style: {
-      width: '100%',
-      fontSize: 12,
-      fontFamily: 'JetBrains Mono,monospace'
-    }
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
-    style: {
-      color: '#64748b',
-      textAlign: 'left',
-      borderBottom: '1px solid #1e2430'
-    }
-  }, /*#__PURE__*/React.createElement("th", {
-    style: {
-      padding: 6
-    }
-  }, "#"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      padding: 6
-    }
-  }, "Ticker"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      padding: 6
-    }
-  }, "Net Buying"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      padding: 6
-    }
-  }, "Score"), /*#__PURE__*/React.createElement("th", null))), /*#__PURE__*/React.createElement("tbody", null, rows.map(d => /*#__PURE__*/React.createElement("tr", {
-    key: d.id,
-    style: {
-      borderBottom: '1px solid #141720'
-    }
-  }, /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: 6
-    }
-  }, d.rank), /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: 6,
-      fontWeight: 600,
-      color: '#3b82f6',
-      cursor: 'pointer'
-    },
-    onClick: () => onAnalyze && onAnalyze(d.ticker)
-  }, d.ticker), /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: 6
-    }
-  }, "$", (d.net_insider_buying_usd / 1e6).toFixed(1), "M"), /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: 6
-    }
-  }, d.score?.toFixed(0)), /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: 6
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => onAnalyze && onAnalyze(d.ticker),
-    style: {
-      background: 'none',
-      border: '1px solid #2d3748',
-      color: '#94a3b8',
-      borderRadius: 4,
-      cursor: 'pointer',
-      fontSize: 11,
-      padding: '2px 8px'
-    }
-  }, "Analizar")))))));
-}
-
 // ─── 13F TRACKER PANELS ──────────────────────────────────────
 function Funds13FPanel({
   supabase
@@ -6289,14 +6168,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       flexDirection: 'column',
       gap: 24
     }
-  }, /*#__PURE__*/React.createElement(InsiderTrackerPanel, {
-    supabase: sb,
-    onAnalyze: t => {
-      setInputTicker(t);
-      setActiveTab('Overview');
-      analyze(t);
-    }
-  }), /*#__PURE__*/React.createElement(Funds13FPanel, {
+  }, /*#__PURE__*/React.createElement(Funds13FPanel, {
     supabase: sb
   }), /*#__PURE__*/React.createElement(ConsensusPanel, {
     supabase: sb
