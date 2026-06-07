@@ -3031,6 +3031,17 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
   const handleSearch=()=>{const s=inputTicker.trim().toUpperCase();if(s) analyze(s);};
 
+  // Deep-link: ?ticker=SYM → auto-analiza (acción deliberada del usuario; no viola fetch-on-demand)
+  useEffect(() => {
+    if (!session) return;                  // espera a estar logueado
+    const sym = new URLSearchParams(window.location.search).get('ticker');
+    if (sym && /^[A-Za-z.\-]{1,12}$/.test(sym)) {
+      const s = sym.toUpperCase();
+      setInputTicker(s);
+      analyze(s);
+    }
+  }, [session]);   // una vez al haber sesión
+
   // Derived
   const sorted    = useMemo(()=>[...hist].sort((a,b)=>new Date(a.date)-new Date(b.date)),[hist]);
   const priceNow  = quote?.price||sorted[sorted.length-1]?.close;
@@ -3210,6 +3221,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',height:52}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:18,fontWeight:800,color:'#fff',letterSpacing:'-0.5px'}}>⚡ StockLens</span>
+            <a href="https://ic-datalayer-app.vercel.app" target="_blank" rel="noopener noreferrer"
+               title="Ver régimen macro completo (IC DataLayer)"
+               style={{fontSize:11,color:'#60a5fa',textDecoration:'none'}}>🌐 Macro ↗</a>
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
             <input

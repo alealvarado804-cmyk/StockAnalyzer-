@@ -6129,6 +6129,17 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     if (s) analyze(s);
   };
 
+  // Deep-link: ?ticker=SYM → auto-analiza (acción deliberada del usuario; no viola fetch-on-demand)
+  useEffect(() => {
+    if (!session) return; // espera a estar logueado
+    const sym = new URLSearchParams(window.location.search).get('ticker');
+    if (sym && /^[A-Za-z.\-]{1,12}$/.test(sym)) {
+      const s = sym.toUpperCase();
+      setInputTicker(s);
+      analyze(s);
+    }
+  }, [session]); // una vez al haber sesión
+
   // Derived
   const sorted = useMemo(() => [...hist].sort((a, b) => new Date(a.date) - new Date(b.date)), [hist]);
   const priceNow = quote?.price || sorted[sorted.length - 1]?.close;
@@ -6437,7 +6448,17 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       color: '#fff',
       letterSpacing: '-0.5px'
     }
-  }, "\u26A1 StockLens")), /*#__PURE__*/React.createElement("div", {
+  }, "\u26A1 StockLens"), /*#__PURE__*/React.createElement("a", {
+    href: "https://ic-datalayer-app.vercel.app",
+    target: "_blank",
+    rel: "noopener noreferrer",
+    title: "Ver r\xE9gimen macro completo (IC DataLayer)",
+    style: {
+      fontSize: 11,
+      color: '#60a5fa',
+      textDecoration: 'none'
+    }
+  }, "\uD83C\uDF10 Macro \u2197")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
