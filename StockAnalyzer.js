@@ -4925,6 +4925,7 @@ function App() {
   const [historicalDivs, setHistoricalDivs] = useState([]);
   const [spyHistory, setSpyHistory] = useState([]);
   const [macroTilt, setMacroTilt] = useState(null);
+  const [autoLoaded, setAutoLoaded] = useState(false);
   const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 180);
@@ -5471,7 +5472,20 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontWeight: 600,
       whiteSpace: 'nowrap'
     }
-  }, loading ? '…' : 'Analyze'), /*#__PURE__*/React.createElement("button", {
+  }, loading ? '…' : 'Analyze'), !autoLoaded && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAutoLoaded(true),
+    title: "Activar Screener y Smart Money",
+    style: {
+      background: '#1e2430',
+      color: '#94a3b8',
+      border: '1px solid #2d3748',
+      padding: '7px 13px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: 11,
+      whiteSpace: 'nowrap'
+    }
+  }, "\u2B07 Cargar contexto"), /*#__PURE__*/React.createElement("button", {
     onClick: () => sb && sb.auth.signOut(),
     title: "Sign out",
     style: {
@@ -6155,26 +6169,72 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         marginTop: 4
       }
     }, "Based on trailing quarterly EPS \xD7 4 (annualized)"));
-  })()), activeTab === 'Screener' && /*#__PURE__*/React.createElement(WatchlistManager, {
+  })()), activeTab === 'Screener' && (autoLoaded ? /*#__PURE__*/React.createElement(WatchlistManager, {
     supabase: sb,
     onAnalyze: t => {
       setInputTicker(t);
       setActiveTab('Overview');
       analyze(t);
     }
-  }), activeTab === 'Smart Money' && /*#__PURE__*/React.createElement("div", {
+  }) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      padding: '60px 20px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: '#475569',
+      marginBottom: 20
+    }
+  }, "Activa el contexto para cargar el screener."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAutoLoaded(true),
+    style: {
+      background: '#3b82f6',
+      color: '#fff',
+      border: 'none',
+      padding: '10px 24px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontWeight: 600,
+      fontSize: 13
+    }
+  }, "\u2B07 Cargar contexto"))), activeTab === 'Smart Money' && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
       gap: 24
     }
-  }, /*#__PURE__*/React.createElement(Funds13FPanel, {
+  }, autoLoaded ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Funds13FPanel, {
     supabase: sb
   }), /*#__PURE__*/React.createElement(ConsensusPanel, {
     supabase: sb
   }), /*#__PURE__*/React.createElement(JensenPatternPanel, {
     fmpGet: fmpGet
-  })), activeTab === 'Research' && /*#__PURE__*/React.createElement("div", {
+  })) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      padding: '60px 20px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: '#475569',
+      marginBottom: 20
+    }
+  }, "Activa el contexto para cargar los datos Smart Money."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAutoLoaded(true),
+    style: {
+      background: '#3b82f6',
+      color: '#fff',
+      border: 'none',
+      padding: '10px 24px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontWeight: 600,
+      fontSize: 13
+    }
+  }, "\u2B07 Cargar contexto"))), activeTab === 'Research' && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',

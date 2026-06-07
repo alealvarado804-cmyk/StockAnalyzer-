@@ -2287,6 +2287,7 @@ function App() {
   const [historicalDivs,setHistoricalDivs]=useState([]);
   const [spyHistory,    setSpyHistory]    = useState([]);
   const [macroTilt,     setMacroTilt]     = useState(null);
+  const [autoLoaded,    setAutoLoaded]    = useState(false);
 
   const scores = useMemo(()=>calcScores(met,rat,hist,stmts),[met,rat,hist,stmts]);
 
@@ -2659,6 +2660,13 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               padding:'7px 18px',borderRadius:6,cursor:loading?'not-allowed':'pointer',
               fontSize:13,fontWeight:600,whiteSpace:'nowrap'
             }}>{loading?'…':'Analyze'}</button>
+            {!autoLoaded&&(
+              <button onClick={()=>setAutoLoaded(true)} title="Activar Screener y Smart Money" style={{
+                background:'#1e2430',color:'#94a3b8',
+                border:'1px solid #2d3748',padding:'7px 13px',borderRadius:6,
+                cursor:'pointer',fontSize:11,whiteSpace:'nowrap'
+              }}>⬇ Cargar contexto</button>
+            )}
             <button onClick={() => sb && sb.auth.signOut()} title="Sign out" style={{
               background:'#141720',color:'#475569',
               border:'1px solid #1e2430',padding:'7px 11px',borderRadius:6,
@@ -2983,16 +2991,28 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
               {/* ── SCREENER TAB ── */}
               {activeTab==='Screener'&&(
-                <WatchlistManager supabase={sb} onAnalyze={(t)=>{ setInputTicker(t); setActiveTab('Overview'); analyze(t); }}/>
+                autoLoaded
+                  ? <WatchlistManager supabase={sb} onAnalyze={(t)=>{ setInputTicker(t); setActiveTab('Overview'); analyze(t); }}/>
+                  : <div style={{textAlign:'center',padding:'60px 20px'}}>
+                      <div style={{fontSize:13,color:'#475569',marginBottom:20}}>Activa el contexto para cargar el screener.</div>
+                      <button onClick={()=>setAutoLoaded(true)} style={{background:'#3b82f6',color:'#fff',border:'none',padding:'10px 24px',borderRadius:6,cursor:'pointer',fontWeight:600,fontSize:13}}>⬇ Cargar contexto</button>
+                    </div>
               )}
 
               {/* ── SMART MONEY TAB ── */}
-              {/* ── SMART MONEY TAB ── */}
               {activeTab==='Smart Money'&&(
                 <div style={{display:'flex',flexDirection:'column',gap:24}}>
-                  <Funds13FPanel supabase={sb}/>
-                  <ConsensusPanel supabase={sb}/>
-                  <JensenPatternPanel fmpGet={fmpGet}/>
+                  {autoLoaded
+                    ? <>
+                        <Funds13FPanel supabase={sb}/>
+                        <ConsensusPanel supabase={sb}/>
+                        <JensenPatternPanel fmpGet={fmpGet}/>
+                      </>
+                    : <div style={{textAlign:'center',padding:'60px 20px'}}>
+                        <div style={{fontSize:13,color:'#475569',marginBottom:20}}>Activa el contexto para cargar los datos Smart Money.</div>
+                        <button onClick={()=>setAutoLoaded(true)} style={{background:'#3b82f6',color:'#fff',border:'none',padding:'10px 24px',borderRadius:6,cursor:'pointer',fontWeight:600,fontSize:13}}>⬇ Cargar contexto</button>
+                      </div>
+                  }
                 </div>
               )}
 
