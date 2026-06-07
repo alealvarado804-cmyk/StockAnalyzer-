@@ -2046,7 +2046,7 @@ function ShortInterestPanel({data, quote}) {
 
   const shares   = quote?.sharesOutstanding;
   const pctOut   = ok(shares) && shares>0 ? latest.si/shares : null;   // % of shares outstanding (proxy for float)
-  const avgVol   = quote?.averageVolume;
+  const avgVol   = quote?.averageVolume ?? quote?.avgVolume ?? quote?.volAvg;
   const daysCover= ok(avgVol) && avgVol>0 ? latest.si/avgVol : null;
 
   const fmtShares = v => ok(v) ? (v>=1e9 ? (v/1e9).toFixed(2)+'B' : v>=1e6 ? (v/1e6).toFixed(1)+'M' : v>=1e3 ? (v/1e3).toFixed(0)+'K' : v.toFixed(0)) : '—';
@@ -2744,7 +2744,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       const q0  = sD_[0];
       const baseRevenue = q0?.revenue ? q0.revenue * 4 : null;
       const netDebt = bs0?.netDebt ?? (bs0 ? (bs0.totalDebt||0) - (bs0.cashAndCashEquivalents||0) : null);
-      const shares = quote_?.sharesOutstanding ?? pD_?.sharesOutstanding ?? null;
+      const priceForShares = quote_?.price ?? (hD_.length ? hD_[0]?.close : null);
+      const shares = quote_?.sharesOutstanding ?? pD_?.sharesOutstanding
+        ?? (ok(quote_?.marketCap) && ok(priceForShares) && priceForShares > 0 ? quote_.marketCap / priceForShares : null);
       const beta_  = quote_?.beta ?? pD_?.beta ?? 1.2;
       setDcfInputs({
         revGrowth1to5:  12,
@@ -3137,7 +3139,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     </div>
                   )}
                   <div style={{fontSize:11,color:'#334155',marginTop:3}}>
-                    Mkt Cap {fmt.usd(quote?.marketCap)} · Avg Vol {fmt.usd(quote?.averageVolume)}
+                    Mkt Cap {fmt.usd(quote?.marketCap)} · Avg Vol {fmt.usd(quote?.averageVolume ?? quote?.avgVolume ?? quote?.volAvg)}
                   </div>
                   <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:8}}>
                     <button
@@ -3219,7 +3221,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:9}}>
                         <KPIBadge label="P/E Ratio"      value={fmt.mult(met?.peRatioTTM??met?.priceToEarningsRatioTTM)}         sub="trailing 12 months"    bmVal={bm?.pe}   bmLabel="sector avg"/>
                         <KPIBadge label="EV/EBITDA"       value={fmt.mult(met?.evToEBITDATTM??met?.enterpriseValueOverEBITDATTM)}   sub="enterprise value mult." bmVal={bm?.ev}   bmLabel="sector avg"/>
-                        <KPIBadge label="P/FCF"           value={fmt.mult(met?.pfcfRatioTTM??met?.priceToFreeCashFlowRatioTTM)}     sub="price / free cash flow"/>
+                        <KPIBadge label="P/FCF"           value={fmt.mult(met?.pfcfRatioTTM??met?.priceToFreeCashFlowRatioTTM??met?.priceToFreeCashFlowsRatioTTM)}     sub="price / free cash flow"/>
                         <KPIBadge label="Gross Margin"    value={fmt.pct(rat?.grossProfitMarginTTM)}             sub="TTM"
                           highlight={ok(rat?.grossProfitMarginTTM)?(rat.grossProfitMarginTTM>=0.4?'#22c55e':rat.grossProfitMarginTTM>=0.2?'#fbbf24':'#f87171'):undefined}
                           bmVal={bm?.gm} bmLabel="sector avg"/>

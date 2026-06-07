@@ -59,12 +59,12 @@
 
 ---
 
-## 🧪 QA pendiente (confirmar con un par de tickers reales)
-- [ ] P/E, P/FCF, Interest Coverage aparecen (no "—") para MSFT/AAPL.
-- [ ] DCF Calculator da valores razonables (depende de `sharesOutstanding` en quote/profile; añadir fallback desde `profile` o marketCap/price si es null).
-- [ ] "Avg Vol" en header (`averageVolume`).
-- [ ] Price targets individuales (`/stable/price-target`).
-- [ ] Quarterly YoY % aparece ahora que hay 12 quarters.
+## 🧪 QA (act. 2026-06-07)
+- [x] P/E, P/FCF, Interest Coverage aparecen (no "—") para MSFT/AAPL. — P/E (`peRatioTTM??priceToEarningsRatioTTM`) e Interest Coverage (`interestCoverageTTM??interestCoverageRatioTTM`) ya tenían ambos aliases; añadido 3er alias P/FCF `priceToFreeCashFlowsRatioTTM` por robustez.
+- [x] DCF Calculator da valores razonables. — añadido fallback final de `shares` = `marketCap/price` (precio de `quote` o último `close` de `history`) cuando `sharesOutstanding` es null en quote y profile.
+- [x] "Avg Vol" en header. — añadido fallback `averageVolume ?? avgVolume ?? volAvg` (header + panel short-interest).
+- [x] Price targets individuales (`/stable/price-target`). — parseo correcto (`analystCompany||analystName`, `priceTarget`, `publishedDate`); si el array viene vacío la sección se oculta y queda el consenso (degrada limpio). Sin cambios.
+- [x] Quarterly YoY % aparece ahora que hay 12 quarters. — el lookup empareja `period` + `calendarYear-1` sobre los 12 quarters de `stmts`; correcto. Sin cambios.
 
 ---
 

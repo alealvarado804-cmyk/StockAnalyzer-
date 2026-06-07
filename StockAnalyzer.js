@@ -4314,7 +4314,7 @@ function ShortInterestPanel({
   const deltaPct = prev && prev.si > 0 ? (latest.si - prev.si) / prev.si : null;
   const shares = quote?.sharesOutstanding;
   const pctOut = ok(shares) && shares > 0 ? latest.si / shares : null; // % of shares outstanding (proxy for float)
-  const avgVol = quote?.averageVolume;
+  const avgVol = quote?.averageVolume ?? quote?.avgVolume ?? quote?.volAvg;
   const daysCover = ok(avgVol) && avgVol > 0 ? latest.si / avgVol : null;
   const fmtShares = v => ok(v) ? v >= 1e9 ? (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v.toFixed(0) : '—';
   const maxSI = Math.max(...series.map(s => s.si), 1);
@@ -5624,7 +5624,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       const q0 = sD_[0];
       const baseRevenue = q0?.revenue ? q0.revenue * 4 : null;
       const netDebt = bs0?.netDebt ?? (bs0 ? (bs0.totalDebt || 0) - (bs0.cashAndCashEquivalents || 0) : null);
-      const shares = quote_?.sharesOutstanding ?? pD_?.sharesOutstanding ?? null;
+      const priceForShares = quote_?.price ?? (hD_.length ? hD_[0]?.close : null);
+      const shares = quote_?.sharesOutstanding ?? pD_?.sharesOutstanding ?? (ok(quote_?.marketCap) && ok(priceForShares) && priceForShares > 0 ? quote_.marketCap / priceForShares : null);
       const beta_ = quote_?.beta ?? pD_?.beta ?? 1.2;
       setDcfInputs({
         revGrowth1to5: 12,
@@ -6324,7 +6325,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       color: '#334155',
       marginTop: 3
     }
-  }, "Mkt Cap ", fmt.usd(quote?.marketCap), " \xB7 Avg Vol ", fmt.usd(quote?.averageVolume)), /*#__PURE__*/React.createElement("div", {
+  }, "Mkt Cap ", fmt.usd(quote?.marketCap), " \xB7 Avg Vol ", fmt.usd(quote?.averageVolume ?? quote?.avgVolume ?? quote?.volAvg)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -6524,7 +6525,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "P/FCF",
-    value: fmt.mult(met?.pfcfRatioTTM ?? met?.priceToFreeCashFlowRatioTTM),
+    value: fmt.mult(met?.pfcfRatioTTM ?? met?.priceToFreeCashFlowRatioTTM ?? met?.priceToFreeCashFlowsRatioTTM),
     sub: "price / free cash flow"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "Gross Margin",
