@@ -119,9 +119,9 @@
 - Dividend yield · payout ratio · consecutive years paying · CAGR del dividendo
 - Solo mostrar si la empresa paga dividendo
 
-**H. Earnings Transcript Summary (requiere Anthropic)**
-- Si el usuario tiene clave Anthropic: obtener últimos earnings del Finnhub transcript endpoint
-- Pasar a Claude Haiku para resumen en 5 puntos clave
+**H. Earnings Transcript Summary (vía ic-proxy → Anthropic)**
+- Obtener últimos earnings del Finnhub transcript endpoint (`finnhubGet`)
+- Pasar a Claude Haiku vía `fetchAiVerdict` (POST `/api/anthropic/messages` por el proxy) para resumen en 5 puntos clave
 - Mostrar en tab Research
 
 **I. Price Chart mejoras**

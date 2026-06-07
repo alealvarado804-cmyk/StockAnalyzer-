@@ -6,15 +6,62 @@
   <title>StockLens — Stock Analysis</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet"/>
-  <!-- Finance AI UI kit — tokens + componentes base -->
+  <!--
+    Tokens de tema INLINE (fallback resiliente). Van ANTES de los <link> de ic-proxy
+    a propósito: cuando ic-ui.css carga, sobreescribe estos (mismo valor → canónico);
+    si ic-proxy se bloquea/cae, estos tokens mantienen el tema (sin dependencia cross-origin).
+    Mantener en sync con ic-proxy/public/ic-ui.css y con IC-DataLayer/index.html.
+  -->
+  <style id="ic-tokens-fallback">
+    :root {
+      --bg-app: #0a0e1a; --bg-card: #181c25; --bg-card-inner: #1f2937;
+      --bg-input: #111827; --bg-hover: #242937;
+      --text-primary: #e5e7eb; --text-secondary: #9ca3af; --text-muted: #6b7280; --text-inverse: #0a0e1a;
+      --border-subtle: #262b36; --border-focus: #3B82F6;
+      --accent-success: #10B981; --accent-positive: #22c55e; --accent-warn: #f59e0b;
+      --accent-danger: #ef4444; --accent-info: #60a5fa;
+      --accent-action: #3B82F6; --accent-dashboard: #3B82F6; --accent-macro: #10B981;
+      --accent-markets: #F59E0B; --accent-synthesis: #7C3AED; --accent-macro-alt: #8B5CF6;
+      --radius-card: 12px; --radius-button: 8px; --radius-chip: 6px; --radius-pill: 20px;
+      --font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+      --font-size-caption: 10px; --font-size-micro: 11px; --font-size-sm: 12px;
+      --font-size-body: 13px; --font-size-h3: 15px; --font-size-h2: 18px; --font-size-h1: 22px;
+      --font-weight-regular: 400; --font-weight-medium: 500; --font-weight-semibold: 600; --font-weight-bold: 700;
+      --line-height-tight: 1.2; --line-height-normal: 1.5;
+      --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 14px; --space-5: 16px;
+      --space-6: 20px; --space-8: 24px; --gap-sm: 8px; --gap-md: 12px; --gap-lg: 16px;
+      --card-margin-bottom: 10px;
+      --shadow-card: 0 2px 8px rgba(0,0,0,0.35); --shadow-modal: 0 8px 32px rgba(0,0,0,0.6);
+      --transition-fast: 120ms ease; --transition-normal: 200ms ease; --transition-slow: 300ms ease;
+      --z-base: 1; --z-dropdown: 100; --z-sticky: 200; --z-modal: 300; --z-toast: 400;
+      --color-lcc: #06B6D4; --color-csc: #FF6B35; --color-rpc: #EF4444;
+      --color-grc: #F59E0B; --color-hsc: #8B5CF6;
+      --color-regime-moderado: #F59E0B; --color-regime-restrictivo: #F97316;
+      --color-regime-crisis: #EF4444; --color-regime-expansivo: #22c55e;
+    }
+    .ic-theme-light {
+      --bg-app: #F0F4F8; --bg-card: #FFFFFF; --bg-card-inner: #F7F9FC;
+      --bg-input: #F8FAFC; --bg-hover: #EEF2F7;
+      --text-primary: #0F172A; --text-secondary: #475569; --text-muted: #64748B; --text-inverse: #FFFFFF;
+      --border-subtle: #DDE3EE; --border-focus: #2563EB;
+      --accent-success: #059669; --accent-positive: #16A34A; --accent-warn: #D97706;
+      --accent-danger: #DC2626; --accent-info: #2563EB;
+      --accent-action: #2563EB; --accent-dashboard: #2563EB; --accent-macro: #059669;
+      --accent-markets: #D97706; --accent-synthesis: #6D28D9; --accent-macro-alt: #7C3AED;
+      --color-regime-restrictivo: #EA580C;
+      --shadow-card: 0 2px 12px rgba(0,0,0,0.08); --shadow-modal: 0 8px 32px rgba(0,0,0,0.18);
+    }
+  </style>
+
+  <!-- Finance AI UI kit — tokens + componentes base (ic-proxy sobreescribe el fallback de arriba) -->
   <link rel="stylesheet" href="https://ic-proxy-psi.vercel.app/ic-ui.css">
   <link rel="stylesheet" href="https://ic-proxy-psi.vercel.app/ic-ui-components.css">
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body{background:#08090d;color:#e2e8f0;min-height:100vh}
-    #root{min-height:100vh}
+    html,body{background:var(--bg-app, #0a0e1a);color:var(--text-primary, #e2e8f0);min-height:100vh}
+    #root{background:var(--bg-app, #0a0e1a);min-height:100vh}
   </style>
 </head>
 <body>
