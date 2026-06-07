@@ -1240,8 +1240,8 @@ function PriceChart({
     y: vy(v),
     width: Math.max(1, cw / filtered.length - 0.5),
     height: volBottom - vy(v),
-    fill: "#1e2430",
-    opacity: "0.8"
+    fill: i > 0 ? prices[i] >= prices[i - 1] ? '#22c55e' : '#f87171' : '#475569',
+    opacity: "0.3"
   })), ticks.filter((_, i) => i % 2 === 0).map(({
     i,
     m
