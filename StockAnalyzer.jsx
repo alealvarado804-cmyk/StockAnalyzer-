@@ -1921,6 +1921,105 @@ function DividendsPanel({divData, met, currentPrice}) {
   );
 }
 
+// ─── DILUTION / SHARE COUNT SECTION ──────────────────────────
+function DilutionPanel({stmts, cfData}) {
+  if (!stmts || stmts.length < 2) return null;
+
+  // Diluted shares outstanding per quarter (oldest → newest)
+  const series = [...stmts]
+    .filter(s => ok(s.weightedAverageShsOutDil) && s.weightedAverageShsOutDil > 0)
+    .sort((a,b)=>new Date(a.date)-new Date(b.date))
+    .map(s => ({ label:`${s.period} ${s.calendarYear}`, shares:s.weightedAverageShsOutDil, eps:s.eps }));
+  if (series.length < 2) return null;
+
+  const latest   = series[series.length-1];
+  const first    = series[0];
+  const yoyRef   = series.length > 4 ? series[series.length-1-4] : first;  // ~4 quarters back
+  const yoyDelta = ok(yoyRef?.shares) && yoyRef.shares>0 ? (latest.shares - yoyRef.shares)/yoyRef.shares : null;
+  const totDelta = first.shares>0 ? (latest.shares-first.shares)/first.shares : null;
+
+  // Buybacks vs issuance — TTM (last 4 quarters of cash flow)
+  const cfSorted   = (cfData||[]).filter(Boolean).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,4);
+  const ttmRepurch = cfSorted.reduce((s,q)=>s+Math.abs(q.commonStockRepurchased||0),0);
+  const ttmIssued  = cfSorted.reduce((s,q)=>s+Math.abs(q.commonStockIssued||0),0);
+  const netBuyback = ttmRepurch - ttmIssued;  // >0 net buyback (good), <0 net issuance (dilutive)
+  const hasCF      = cfSorted.length>0 && (ttmRepurch>0 || ttmIssued>0);
+
+  // Trend classification on YoY share count
+  const trend = yoyDelta==null ? 'flat' : (yoyDelta > 0.005 ? 'dilution' : yoyDelta < -0.005 ? 'buyback' : 'flat');
+  const trendColor = trend==='buyback' ? '#22c55e' : trend==='dilution' ? '#f87171' : '#fbbf24';
+  const trendLabel = trend==='buyback' ? 'Recompra neta' : trend==='dilution' ? 'Dilución' : 'Estable';
+
+  // Bar chart scaled within min..max so small % changes are visible
+  const sharesArr = series.map(s=>s.shares);
+  const minS = Math.min(...sharesArr), maxS = Math.max(...sharesArr);
+  const range = (maxS - minS) || 1;
+  const fmtShares = v => ok(v) ? (v>=1e9 ? (v/1e9).toFixed(2)+'B' : v>=1e6 ? (v/1e6).toFixed(1)+'M' : v.toFixed(0)) : '—';
+  const view = series.slice(-12);
+
+  return (
+    <div>
+      <SectionTitle>Dilución / Evolución de Acciones</SectionTitle>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+        {[
+          {label:'Δ Shares YoY',  value:ok(yoyDelta)?(yoyDelta>=0?'+':'')+(yoyDelta*100).toFixed(2)+'%':'—', color:trendColor},
+          {label:`Δ Shares (${series.length}T)`, value:ok(totDelta)?(totDelta>=0?'+':'')+(totDelta*100).toFixed(2)+'%':'—', color:ok(totDelta)?(totDelta<=0?'#22c55e':'#f87171'):'#475569'},
+          {label:'Tendencia',     value:trendLabel, color:trendColor},
+        ].map(r=>(
+          <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
+            <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color}}>{r.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Diluted share count bar chart */}
+      <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Diluted Shares Outstanding</div>
+      <div style={{display:'flex',gap:4,alignItems:'flex-end',height:70,marginBottom:4}}>
+        {view.map((q,i)=>{
+          const h = 18 + Math.round(((q.shares-minS)/range)*44);
+          return (
+            <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+              <div style={{fontSize:8,color:'#475569',fontFamily:'JetBrains Mono,monospace'}}>{fmtShares(q.shares)}</div>
+              <div style={{width:'100%',height:h,minHeight:4,background:trend==='buyback'?'#22c55e':trend==='dilution'?'#f87171':'#60a5fa',borderRadius:'2px 2px 0 0',opacity:0.82}}/>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{display:'flex',gap:0,marginBottom:14}}>
+        {view.map((q,i)=>(
+          <div key={i} style={{flex:1,textAlign:'center',fontSize:8,color:'#334155'}}>{q.label.split(' ')[0]}<br/>{q.label.split(' ')[1]}</div>
+        ))}
+      </div>
+
+      {/* Buybacks vs issuance (TTM) */}
+      {hasCF && (
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:12}}>
+          {[
+            {label:'Buybacks (TTM)',  value:fmt.usd(ttmRepurch), color:ttmRepurch>0?'#22c55e':'#475569'},
+            {label:'Issuance (TTM)',  value:fmt.usd(ttmIssued),  color:ttmIssued>0?'#f87171':'#475569'},
+            {label:'Neto (TTM)',      value:(netBuyback>=0?'+':'-')+fmt.usd(Math.abs(netBuyback)), color:netBuyback>=0?'#22c55e':'#f87171'},
+          ].map(r=>(
+            <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
+              <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+              <div style={{fontSize:14,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color}}>{r.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{fontSize:10,color:'#64748b',lineHeight:1.6,background:'#0c0e14',border:'1px solid #1e2430',borderRadius:6,padding:'8px 12px'}}>
+        {trend==='buyback'
+          ? '↓ El share count cae: las recompras concentran el EPS y benefician al accionista.'
+          : trend==='dilution'
+            ? '↑ El share count sube: la dilución reparte el beneficio entre más acciones y presiona el EPS.'
+            : '→ Share count estable: impacto neutro sobre el EPS por dilución/recompra.'}
+        {' '}Impacto EPS = inverso a la variación del número de acciones.
+      </div>
+    </div>
+  );
+}
+
 function AboutText({text}) {
   const [expanded,setExpanded]=React.useState(false);
   const long=text&&text.length>400;
@@ -2924,6 +3023,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   {cfStmts.length>0&&(
                     <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
                       <FCFPanel cfData={cfStmts} incomeData={stmts}/>
+                    </div>
+                  )}
+                  {stmts.length>=2&&(
+                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                      <DilutionPanel stmts={stmts} cfData={cfStmts}/>
                     </div>
                   )}
                   {historicalDivs.length>0&&(
