@@ -5245,6 +5245,12 @@ function App() {
   const [insiderTxns, setInsiderTxns] = useState([]);
   const [shortInt, setShortInt] = useState(null);
 
+  // Earnings transcript summary (gated by button — costs 1 Anthropic call)
+  const [transcriptSum, setTranscriptSum] = useState(null);
+  const [transcriptLoading, setTranscriptLoading] = useState(false);
+  const [transcriptError, setTranscriptError] = useState(null);
+  const transcriptCache = useRef({});
+
   // v5.0 new state
   const [peers, setPeers] = useState([]);
   const [peerMetrics, setPeerMetrics] = useState({});
@@ -5342,6 +5348,102 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       setAiLoading(false);
     }
   }, []);
+
+  // Earnings transcript summary — Finnhub transcript → Claude Haiku. Gated by button.
+  const summarizeTranscript = useCallback(async () => {
+    if (!ticker || transcriptLoading) return;
+    // Cache hit (per ticker/quarter)
+    if (transcriptCache.current[ticker]) {
+      setTranscriptSum(transcriptCache.current[ticker]);
+      setTranscriptError(null);
+      return;
+    }
+    setTranscriptLoading(true);
+    setTranscriptError(null);
+    setTranscriptSum(null);
+    try {
+      const listData = await finnhubGet('stock/transcripts/list', {
+        symbol: ticker
+      });
+      const list = listData?.transcripts || (Array.isArray(listData) ? listData : []);
+      if (!list.length) {
+        setTranscriptError('empty');
+        return;
+      }
+      const latest = [...list].sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0))[0];
+      const id = latest?.id;
+      if (!id) {
+        setTranscriptError('empty');
+        return;
+      }
+      const content = await finnhubGet('stock/transcripts', {
+        id
+      });
+      const tr = content?.transcript;
+      if (!Array.isArray(tr) || tr.length === 0) {
+        setTranscriptError('empty');
+        return;
+      }
+
+      // Concatenate speaker: speech (prepared remarks come first, then Q&A)
+      let text = tr.map(seg => {
+        const speech = Array.isArray(seg.speech) ? seg.speech.join(' ') : seg.speech || '';
+        const who = seg.name || seg.speaker || '';
+        return `${who}: ${speech}`.trim();
+      }).join('\n');
+      const LIMIT = 30000; // margen seguro bajo el límite de 50KB del proxy (tras escape JSON)
+      const truncated = text.length > LIMIT;
+      if (truncated) text = text.slice(0, LIMIT);
+      const qLabel = `Q${latest.quarter ?? content?.quarter ?? '?'} ${latest.year ?? content?.year ?? ''}`.trim();
+      const dateLabel = (latest.time || content?.time || '').substring(0, 10);
+      const prompt = `Eres analista de equity. Resume este earnings call de ${ticker} en 5 puntos clave: (1) guidance/outlook, (2) números/sorpresas vs consenso, (3) drivers del negocio, (4) riesgos mencionados, (5) tono del management. Conciso, en español, sin relleno.${truncated ? ' El texto es un extracto (truncado), asúmelo.' : ''} Transcript: ${text}`;
+      const res = await authedFetch('/api/anthropic/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 700,
+          messages: [{
+            role: 'user',
+            content: prompt
+          }]
+        })
+      });
+      if (res.status === 401) {
+        setTranscriptError('Sesión expirada — vuelve a iniciar sesión.');
+        return;
+      }
+      if (res.status === 429) {
+        setTranscriptError('Límite de uso alcanzado — espera 1 minuto e inténtalo de nuevo.');
+        return;
+      }
+      if (!res.ok) {
+        setTranscriptError('Resumen no disponible ahora mismo.');
+        return;
+      }
+      const data = await res.json();
+      const summary = data?.content?.[0]?.text;
+      if (!summary) {
+        setTranscriptError('Resumen no disponible ahora mismo.');
+        return;
+      }
+      const result = {
+        ticker,
+        label: qLabel,
+        date: dateLabel,
+        summary,
+        truncated
+      };
+      transcriptCache.current[ticker] = result;
+      setTranscriptSum(result);
+    } catch (e) {
+      setTranscriptError('Resumen no disponible ahora mismo.');
+    } finally {
+      setTranscriptLoading(false);
+    }
+  }, [ticker, transcriptLoading, finnhubGet]);
   const analyze = useCallback(async sym => {
     if (!sym) return;
     setLoading(true);
@@ -5365,6 +5467,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setEarnSurprise([]);
     setInsiderTxns([]);
     setShortInt(null);
+    setTranscriptSum(null);
+    setTranscriptError(null);
+    setTranscriptLoading(false);
     setPeers([]);
     setPeerMetrics({});
     setCfStmts([]);
@@ -6760,7 +6865,117 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     ratios: rat,
     aiVerdict: aiVerdict,
     aiLoading: aiLoading
-  }), news.length > 0 && /*#__PURE__*/React.createElement(NewsCard, {
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 8,
+      padding: '16px 20px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 12,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '1px',
+      color: '#334155'
+    }
+  }, "Earnings Call \u2014 Resumen IA"), /*#__PURE__*/React.createElement("button", {
+    onClick: summarizeTranscript,
+    disabled: transcriptLoading,
+    style: {
+      background: transcriptLoading ? '#1e2430' : '#3b82f6',
+      color: '#fff',
+      border: 'none',
+      padding: '7px 14px',
+      borderRadius: 6,
+      cursor: transcriptLoading ? 'not-allowed' : 'pointer',
+      fontSize: 12,
+      fontWeight: 600,
+      whiteSpace: 'nowrap'
+    }
+  }, transcriptLoading ? 'Resumiendo…' : '🎙 Resumir último earnings call')), transcriptLoading && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14,
+      fontSize: 12,
+      color: '#64748b'
+    }
+  }, "Trayendo transcript y resumiendo con Claude Haiku\u2026"), !transcriptLoading && transcriptError === 'empty' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14,
+      fontSize: 11,
+      color: '#475569',
+      background: '#0c0e14',
+      border: '1px solid #1e2430',
+      borderRadius: 6,
+      padding: '10px 14px'
+    }
+  }, "Sin transcript disponible para ", ticker, " (puede requerir plan premium de Finnhub)."), !transcriptLoading && transcriptError && transcriptError !== 'empty' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14,
+      fontSize: 11,
+      color: '#f87171',
+      background: '#2a0d0d',
+      border: '1px solid #7f1d1d',
+      borderRadius: 6,
+      padding: '10px 14px'
+    }
+  }, "\u26A0 ", transcriptError), !transcriptLoading && transcriptSum && transcriptSum.ticker === ticker && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      alignItems: 'baseline',
+      marginBottom: 10,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: '#e2e8f0',
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, transcriptSum.label), transcriptSum.date && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: '#475569'
+    }
+  }, transcriptSum.date), transcriptSum.truncated && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#fbbf24',
+      background: '#2a230d',
+      border: '1px solid #5c4a14',
+      borderRadius: 3,
+      padding: '1px 6px'
+    }
+  }, "extracto")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: '#cbd5e1',
+      lineHeight: 1.7,
+      whiteSpace: 'pre-wrap'
+    }
+  }, transcriptSum.summary), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#334155',
+      marginTop: 12,
+      fontStyle: 'italic'
+    }
+  }, "Resumen IA (Claude Haiku) \u2014 verificar con la fuente original."))), news.length > 0 && /*#__PURE__*/React.createElement(NewsCard, {
     items: news
   }), /*#__PURE__*/React.createElement(React.Fragment, null, earnSurprise.length > 0 && /*#__PURE__*/React.createElement(EarningsSurpriseChart, {
     data: earnSurprise

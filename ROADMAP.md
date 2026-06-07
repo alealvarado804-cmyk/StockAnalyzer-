@@ -41,9 +41,8 @@
 
 > Verificado en código 2026-06-05: 0 menciones de estas features en `StockAnalyzer.jsx`.
 
-**1. Earnings Transcript Summary** (vía Anthropic/ic-proxy) — *alto impacto*
-- Traer el último transcript (Finnhub) y resumirlo con Claude Haiku (POST `/api/anthropic/messages`) en 5 puntos clave.
-- Mostrar en tab Research. Condicional a disponibilidad del transcript.
+**1. ~~Earnings Transcript Summary~~** — ✅ Hecho (2026-06-07) · ⚠️ pendiente verificar datos en plan Finnhub free
+- `summarizeTranscript` + sección en tab Research, **gated por botón** "🎙 Resumir último earnings call" (1 llamada Anthropic). Trae `stock/transcripts/list` → último `stock/transcripts` (id), trunca a ~30KB y resume con `claude-haiku-4-5-20251001` (max_tokens 700) en 5 puntos. Estados idle/loading/resultado/vacío/error, fecha+quarter + disclaimer, cache por ticker. Degrada con "sin transcript disponible (puede requerir plan premium)" si Finnhub no devuelve datos.
 
 **2. ~~Short Interest & Options~~** — ✅ Hecho (2026-06-07) · ⚠️ pendiente verificar datos en plan Finnhub free
 - `ShortInterestPanel` en tab Overview: short interest, % shares out (proxy float), days to cover (SI/avg vol) + sparkline de tendencia, vía `finnhubGet('stock/short-interest')`. Degrada limpio con placeholder "no disponible en plan actual" si el endpoint es premium/vacío. (Put/call ratio omitido: opciones premium en Finnhub.)
