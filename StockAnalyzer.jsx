@@ -2804,7 +2804,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
       const payload = {
         symbol: ticker,
-        currentPrice: ok(priceNow) ? +priceNow.toFixed(2) : null,
+        currentPrice: ok(quote?.price) ? +quote.price.toFixed(2) : null,
         peRatioTTM: met?.peRatioTTM ?? met?.priceToEarningsRatioTTM ?? null,
         quarters, lastQuarterSurprise, estimates, priceTarget, analystConsensus,
       };
@@ -2838,7 +2838,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     } finally {
       setTranscriptLoading(false);
     }
-  }, [ticker, transcriptLoading, stmts, earnSurprise, analystEst, ptC, udC, met, priceNow]);
+  }, [ticker, transcriptLoading, stmts, earnSurprise, analystEst, ptC, udC, met, quote]);
 
   const analyze = useCallback(async (sym)=>{
     if (!sym) return;
