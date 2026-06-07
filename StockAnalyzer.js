@@ -4286,6 +4286,140 @@ function DilutionPanel({
     }
   }, trend === 'buyback' ? '↓ El share count cae: las recompras concentran el EPS y benefician al accionista.' : trend === 'dilution' ? '↑ El share count sube: la dilución reparte el beneficio entre más acciones y presiona el EPS.' : '→ Share count estable: impacto neutro sobre el EPS por dilución/recompra.', ' ', "Impacto EPS = inverso a la variaci\xF3n del n\xFAmero de acciones."));
 }
+
+// ─── SHORT INTEREST SECTION ──────────────────────────────────
+function ShortInterestPanel({
+  data,
+  quote
+}) {
+  const arr = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+  const series = arr.map(d => ({
+    date: d.settlementDate || d.date || d.recordDate || null,
+    si: d.shortInterest ?? d.interest ?? d.sharesShort ?? d.shares ?? null
+  })).filter(x => ok(x.si) && x.date).sort((a, b) => new Date(a.date) - new Date(b.date));
+  if (series.length === 0) {
+    return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Short Interest"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: '#475569',
+        background: '#0c0e14',
+        border: '1px solid #1e2430',
+        borderRadius: 6,
+        padding: '10px 14px'
+      }
+    }, "Short interest no disponible en el plan actual de datos."));
+  }
+  const latest = series[series.length - 1];
+  const prev = series.length > 1 ? series[series.length - 2] : null;
+  const deltaPct = prev && prev.si > 0 ? (latest.si - prev.si) / prev.si : null;
+  const shares = quote?.sharesOutstanding;
+  const pctOut = ok(shares) && shares > 0 ? latest.si / shares : null; // % of shares outstanding (proxy for float)
+  const avgVol = quote?.averageVolume;
+  const daysCover = ok(avgVol) && avgVol > 0 ? latest.si / avgVol : null;
+  const fmtShares = v => ok(v) ? v >= 1e9 ? (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v.toFixed(0) : '—';
+  const maxSI = Math.max(...series.map(s => s.si), 1);
+  const view = series.slice(-12);
+  const cards = [{
+    label: 'Short Interest',
+    value: fmtShares(latest.si),
+    sub: latest.date,
+    color: '#e2e8f0'
+  }, {
+    label: '% Shares Out',
+    value: ok(pctOut) ? (pctOut * 100).toFixed(2) + '%' : '—',
+    sub: 'aprox. float',
+    color: ok(pctOut) ? pctOut > 0.10 ? '#f87171' : pctOut > 0.05 ? '#fbbf24' : '#22c55e' : '#475569'
+  }, {
+    label: 'Days to Cover',
+    value: ok(daysCover) ? daysCover.toFixed(1) : '—',
+    sub: 'SI / avg vol',
+    color: ok(daysCover) ? daysCover > 5 ? '#f87171' : daysCover > 2 ? '#fbbf24' : '#22c55e' : '#475569'
+  }];
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Short Interest"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3,1fr)',
+      gap: 8,
+      marginBottom: 12
+    }
+  }, cards.map(c => /*#__PURE__*/React.createElement("div", {
+    key: c.label,
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 6,
+      padding: '10px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '0.7px',
+      marginBottom: 4
+    }
+  }, c.label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 700,
+      fontFamily: 'JetBrains Mono,monospace',
+      color: c.color
+    }
+  }, c.value), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: '#334155',
+      marginTop: 2
+    }
+  }, c.sub)))), view.length >= 2 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '0.7px'
+    }
+  }, "Tendencia (short interest)"), ok(deltaPct) && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      fontFamily: 'JetBrains Mono,monospace',
+      color: deltaPct > 0 ? '#f87171' : '#22c55e'
+    }
+  }, deltaPct >= 0 ? '▲' : '▼', " ", Math.abs(deltaPct * 100).toFixed(1), "% vs anterior")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 3,
+      alignItems: 'flex-end',
+      height: 50
+    }
+  }, view.map((q, i) => {
+    const h = 6 + Math.round(q.si / maxSI * 40);
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      title: `${q.date}: ${fmtShares(q.si)}`,
+      style: {
+        flex: 1,
+        height: h,
+        minHeight: 3,
+        background: i === view.length - 1 ? '#fbbf24' : '#475569',
+        borderRadius: '2px 2px 0 0',
+        opacity: 0.85
+      }
+    });
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: '#334155',
+      marginTop: 6
+    }
+  }, "% Shares Out usa acciones en circulaci\xF3n como aproximaci\xF3n al float. Fuente: Finnhub."));
+}
 function AboutText({
   text
 }) {
@@ -5109,6 +5243,7 @@ function App() {
   const [earnCalendar, setEarnCalendar] = useState(null);
   const [earnSurprise, setEarnSurprise] = useState([]);
   const [insiderTxns, setInsiderTxns] = useState([]);
+  const [shortInt, setShortInt] = useState(null);
 
   // v5.0 new state
   const [peers, setPeers] = useState([]);
@@ -5229,6 +5364,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setEarnCalendar(null);
     setEarnSurprise([]);
     setInsiderTxns([]);
+    setShortInt(null);
     setPeers([]);
     setPeerMetrics({});
     setCfStmts([]);
@@ -5381,7 +5517,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         const today = new Date();
         const from = today.toISOString().substring(0, 10);
         const to = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
-        const [earnCalRes, earnSurpRes, insiderRes] = await Promise.allSettled([finnhubGet('calendar/earnings', {
+        const siFrom = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+        const [earnCalRes, earnSurpRes, insiderRes, shortIntRes] = await Promise.allSettled([finnhubGet('calendar/earnings', {
           symbol: sym,
           from,
           to
@@ -5390,12 +5527,17 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
           limit: '8'
         }), finnhubGet('stock/insider-transactions', {
           symbol: sym
+        }), finnhubGet('stock/short-interest', {
+          symbol: sym,
+          from: siFrom,
+          to: from
         })]);
         const fg = r => r.status === 'fulfilled' ? r.value : null;
-        const [ec, es, it] = [earnCalRes, earnSurpRes, insiderRes].map(fg);
+        const [ec, es, it, si] = [earnCalRes, earnSurpRes, insiderRes, shortIntRes].map(fg);
         setEarnCalendar(ec?.earningsCalendar?.[0] || null);
         setEarnSurprise(Array.isArray(es) ? es.slice(0, 8) : []);
         setInsiderTxns(Array.isArray(it?.data) ? it.data.slice(0, 10) : []);
+        setShortInt(si || null);
       }
 
       // AI verdict
@@ -6319,6 +6461,16 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     analystEst: analystEst,
     currentPrice: priceNow,
     ptList: ptList
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#141720',
+      border: '1px solid #1e2430',
+      borderRadius: 8,
+      padding: '16px 20px'
+    }
+  }, /*#__PURE__*/React.createElement(ShortInterestPanel, {
+    data: shortInt,
+    quote: quote
   })), prof?.description && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "About ", prof.companyName), /*#__PURE__*/React.createElement(AboutText, {
     text: prof.description
   })), /*#__PURE__*/React.createElement("div", {

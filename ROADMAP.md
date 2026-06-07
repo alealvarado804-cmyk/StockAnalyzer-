@@ -45,9 +45,8 @@
 - Traer el último transcript (Finnhub) y resumirlo con Claude Haiku (POST `/api/anthropic/messages`) en 5 puntos clave.
 - Mostrar en tab Research. Condicional a disponibilidad del transcript.
 
-**2. Short Interest & Options** (Finnhub) — *medio*
-- Short interest % of float, days to cover (`stock/short-interest`); put/call ratio si disponible.
-- Sección en Overview o Fundamentals.
+**2. ~~Short Interest & Options~~** — ✅ Hecho (2026-06-07) · ⚠️ pendiente verificar datos en plan Finnhub free
+- `ShortInterestPanel` en tab Overview: short interest, % shares out (proxy float), days to cover (SI/avg vol) + sparkline de tendencia, vía `finnhubGet('stock/short-interest')`. Degrada limpio con placeholder "no disponible en plan actual" si el endpoint es premium/vacío. (Put/call ratio omitido: opciones premium en Finnhub.)
 
 **3. ~~Dilución / evolución de acciones~~** — ✅ Hecho (2026-06-07)
 - `DilutionPanel` en tab Fundamentals: serie trimestral de `weightedAverageShsOutDil`, Δ YoY y Δ ventana, buybacks vs issuance TTM (cash-flow) + nota de impacto en EPS. Sin API nueva (reusa `stmts` + `cfStmts`).
