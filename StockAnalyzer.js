@@ -5331,7 +5331,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
+          model: 'claude-sonnet-4-6',
           max_tokens: 200,
           messages: [{
             role: 'user',
@@ -5350,9 +5350,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, []);
 
   // Earnings transcript summary — Finnhub transcript → Claude Haiku. Gated by button.
-  const summarizeTranscript = useCallback(async () => {
+  // AI Earnings Analysis — ensambla datos FMP ya disponibles → Claude Sonnet. Gated por botón.
+  const summarizeEarnings = useCallback(async () => {
     if (!ticker || transcriptLoading) return;
-    // Cache hit (per ticker/quarter)
+    // Cache hit (por ticker)
     if (transcriptCache.current[ticker]) {
       setTranscriptSum(transcriptCache.current[ticker]);
       setTranscriptError(null);
@@ -5362,48 +5363,75 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setTranscriptError(null);
     setTranscriptSum(null);
     try {
-      const listData = await finnhubGet('stock/transcripts/list', {
-        symbol: ticker
-      });
-      const list = listData?.transcripts || (Array.isArray(listData) ? listData : []);
-      if (!list.length) {
-        setTranscriptError('empty');
-        return;
-      }
-      const latest = [...list].sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0))[0];
-      const id = latest?.id;
-      if (!id) {
-        setTranscriptError('empty');
-        return;
-      }
-      const content = await finnhubGet('stock/transcripts', {
-        id
-      });
-      const tr = content?.transcript;
-      if (!Array.isArray(tr) || tr.length === 0) {
-        setTranscriptError('empty');
-        return;
-      }
+      const m1 = (n, d) => ok(n) && ok(d) && d !== 0 ? +(n / d * 100).toFixed(1) : null; // margen %
 
-      // Concatenate speaker: speech (prepared remarks come first, then Q&A)
-      let text = tr.map(seg => {
-        const speech = Array.isArray(seg.speech) ? seg.speech.join(' ') : seg.speech || '';
-        const who = seg.name || seg.speaker || '';
-        return `${who}: ${speech}`.trim();
-      }).join('\n');
-      const LIMIT = 30000; // margen seguro bajo el límite de 50KB del proxy (tras escape JSON)
-      const truncated = text.length > LIMIT;
-      if (truncated) text = text.slice(0, LIMIT);
-      const qLabel = `Q${latest.quarter ?? content?.quarter ?? '?'} ${latest.year ?? content?.year ?? ''}`.trim();
-      const dateLabel = (latest.time || content?.time || '').substring(0, 10);
-      const prompt = `Eres analista de equity. Resume este earnings call de ${ticker} en 5 puntos clave: (1) guidance/outlook, (2) números/sorpresas vs consenso, (3) drivers del negocio, (4) riesgos mencionados, (5) tono del management. Conciso, en español, sin relleno.${truncated ? ' El texto es un extracto (truncado), asúmelo.' : ''} Transcript: ${text}`;
+      // Últimos ~8 trimestres de income-statement (stmts viene newest-first)
+      const quarters = (Array.isArray(stmts) ? stmts : []).slice(0, 8).map(s => ({
+        period: `${s.period || ''} ${s.calendarYear || s.fiscalYear || (s.date || '').slice(0, 4)}`.trim(),
+        revenue: ok(s.revenue) ? s.revenue : null,
+        eps: s.eps ?? s.epsdiluted ?? null,
+        grossMarginPct: m1(s.grossProfit, s.revenue),
+        operatingMarginPct: m1(s.operatingIncome, s.revenue),
+        netMarginPct: m1(s.netIncome, s.revenue)
+      }));
+
+      // Sorpresa del último Q (Finnhub stock/earnings → EPS actual vs estimado, ya en estado)
+      const le = (Array.isArray(earnSurprise) ? earnSurprise : [])[0];
+      const lastQuarterSurprise = le ? {
+        period: le.period || (le.quarter && le.year ? `Q${le.quarter} ${le.year}` : null),
+        epsActual: le.actual ?? null,
+        epsEstimate: le.estimate ?? null,
+        surprisePct: le.surprisePercent ?? le.surprise ?? null
+      } : null;
+
+      // Estimaciones forward (analyst-estimates)
+      const estimates = (Array.isArray(analystEst) ? analystEst : []).slice(0, 2).map(e => ({
+        date: e.date || e.period || null,
+        revenueAvg: e.revenueAvg ?? e.estimatedRevenueAvg ?? null,
+        epsAvg: e.epsAvg ?? e.estimatedEpsAvg ?? null
+      }));
+
+      // Price target consensus + rating de analistas
+      const pt = Array.isArray(ptC) ? ptC[0] : ptC;
+      const ud = Array.isArray(udC) ? udC[0] : udC;
+      const priceTarget = pt ? {
+        consensus: pt.targetConsensus ?? null,
+        high: pt.targetHigh ?? null,
+        low: pt.targetLow ?? null,
+        median: pt.targetMedian ?? null
+      } : null;
+      const analystConsensus = ud ? {
+        rating: ud.consensus ?? null,
+        strongBuy: ud.strongBuy,
+        buy: ud.buy,
+        hold: ud.hold,
+        sell: ud.sell,
+        strongSell: ud.strongSell
+      } : null;
+      if (quarters.length === 0 && !lastQuarterSurprise) {
+        setTranscriptError('empty');
+        return;
+      }
+      const payload = {
+        symbol: ticker,
+        currentPrice: ok(priceNow) ? +priceNow.toFixed(2) : null,
+        peRatioTTM: met?.peRatioTTM ?? met?.priceToEarningsRatioTTM ?? null,
+        quarters,
+        lastQuarterSurprise,
+        estimates,
+        priceTarget,
+        analystConsensus
+      };
+      const label = quarters[0]?.period || lastQuarterSurprise?.period || '';
+      const dateLabel = ((Array.isArray(stmts) ? stmts : [])[0]?.date || '').slice(0, 10);
+      const prompt = `Eres analista de equity. Con estos datos de earnings de ${ticker}, da un análisis en 5 puntos: (1) último trimestre (revenue/EPS y beat/miss vs estimación), (2) tendencia de revenue/EPS (¿acelera o desacelera?), (3) márgenes (expansión/compresión), (4) sentimiento de analistas / price target vs precio actual, (5) lectura forward / qué vigilar. Conciso, en español, sin relleno. Datos: ${JSON.stringify(payload)}`;
       const res = await authedFetch('/api/anthropic/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
+          model: 'claude-sonnet-4-6',
           max_tokens: 700,
           messages: [{
             role: 'user',
@@ -5420,30 +5448,29 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         return;
       }
       if (!res.ok) {
-        setTranscriptError('Resumen no disponible ahora mismo.');
+        setTranscriptError('Análisis no disponible ahora mismo.');
         return;
       }
       const data = await res.json();
       const summary = data?.content?.[0]?.text;
       if (!summary) {
-        setTranscriptError('Resumen no disponible ahora mismo.');
+        setTranscriptError('Análisis no disponible ahora mismo.');
         return;
       }
       const result = {
         ticker,
-        label: qLabel,
+        label,
         date: dateLabel,
-        summary,
-        truncated
+        summary
       };
       transcriptCache.current[ticker] = result;
       setTranscriptSum(result);
     } catch (e) {
-      setTranscriptError('Resumen no disponible ahora mismo.');
+      setTranscriptError('Análisis no disponible ahora mismo.');
     } finally {
       setTranscriptLoading(false);
     }
-  }, [ticker, transcriptLoading, finnhubGet]);
+  }, [ticker, transcriptLoading, stmts, earnSurprise, analystEst, ptC, udC, met, priceNow]);
   const analyze = useCallback(async sym => {
     if (!sym) return;
     setLoading(true);
@@ -6888,8 +6915,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       letterSpacing: '1px',
       color: '#334155'
     }
-  }, "Earnings Call \u2014 Resumen IA"), /*#__PURE__*/React.createElement("button", {
-    onClick: summarizeTranscript,
+  }, "AI Earnings Analysis"), /*#__PURE__*/React.createElement("button", {
+    onClick: summarizeEarnings,
     disabled: transcriptLoading,
     style: {
       background: transcriptLoading ? '#1e2430' : '#3b82f6',
@@ -6902,13 +6929,13 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontWeight: 600,
       whiteSpace: 'nowrap'
     }
-  }, transcriptLoading ? 'Resumiendo…' : '🎙 Resumir último earnings call')), transcriptLoading && /*#__PURE__*/React.createElement("div", {
+  }, transcriptLoading ? 'Analizando…' : '📊 Analizar últimos earnings')), transcriptLoading && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14,
       fontSize: 12,
       color: '#64748b'
     }
-  }, "Trayendo transcript y resumiendo con Claude Haiku\u2026"), !transcriptLoading && transcriptError === 'empty' && /*#__PURE__*/React.createElement("div", {
+  }, "Analizando earnings con Claude Sonnet\u2026"), !transcriptLoading && transcriptError === 'empty' && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14,
       fontSize: 11,
@@ -6918,7 +6945,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       borderRadius: 6,
       padding: '10px 14px'
     }
-  }, "Sin transcript disponible para ", ticker, " (puede requerir plan premium de Finnhub)."), !transcriptLoading && transcriptError && transcriptError !== 'empty' && /*#__PURE__*/React.createElement("div", {
+  }, "Sin datos de earnings suficientes para analizar ", ticker, "."), !transcriptLoading && transcriptError && transcriptError !== 'empty' && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14,
       fontSize: 11,
@@ -6952,16 +6979,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontSize: 10,
       color: '#475569'
     }
-  }, transcriptSum.date), transcriptSum.truncated && /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 9,
-      color: '#fbbf24',
-      background: '#2a230d',
-      border: '1px solid #5c4a14',
-      borderRadius: 3,
-      padding: '1px 6px'
-    }
-  }, "extracto")), /*#__PURE__*/React.createElement("div", {
+  }, transcriptSum.date)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12.5,
       color: '#cbd5e1',
@@ -6975,7 +6993,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       marginTop: 12,
       fontStyle: 'italic'
     }
-  }, "Resumen IA (Claude Haiku) \u2014 verificar con la fuente original."))), news.length > 0 && /*#__PURE__*/React.createElement(NewsCard, {
+  }, "An\xE1lisis IA (Claude Sonnet) sobre datos reportados \u2014 no es asesor\xEDa."))), news.length > 0 && /*#__PURE__*/React.createElement(NewsCard, {
     items: news
   }), /*#__PURE__*/React.createElement(React.Fragment, null, earnSurprise.length > 0 && /*#__PURE__*/React.createElement(EarningsSurpriseChart, {
     data: earnSurprise

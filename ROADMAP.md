@@ -41,11 +41,13 @@
 
 > Verificado en código 2026-06-05: 0 menciones de estas features en `StockAnalyzer.jsx`.
 
-**1. ~~Earnings Transcript Summary~~** — ✅ Hecho (2026-06-07) · ⚠️ pendiente verificar datos en plan Finnhub free
-- `summarizeTranscript` + sección en tab Research, **gated por botón** "🎙 Resumir último earnings call" (1 llamada Anthropic). Trae `stock/transcripts/list` → último `stock/transcripts` (id), trunca a ~30KB y resume con `claude-haiku-4-5-20251001` (max_tokens 700) en 5 puntos. Estados idle/loading/resultado/vacío/error, fecha+quarter + disclaimer, cache por ticker. Degrada con "sin transcript disponible (puede requerir plan premium)" si Finnhub no devuelve datos.
+> **Nota IA (2026-06-07):** TODAS las llamadas Anthropic de StockLens usan `claude-sonnet-4-6` (antes Haiku). Opus NO está permitido por la allow-list del proxy. 0 `claude-haiku` en el código.
 
-**2. ~~Short Interest & Options~~** — ✅ Hecho (2026-06-07) · ⚠️ pendiente verificar datos en plan Finnhub free
-- `ShortInterestPanel` en tab Overview: short interest, % shares out (proxy float), days to cover (SI/avg vol) + sparkline de tendencia, vía `finnhubGet('stock/short-interest')`. Degrada limpio con placeholder "no disponible en plan actual" si el endpoint es premium/vacío. (Put/call ratio omitido: opciones premium en Finnhub.)
+**1. ~~Earnings Transcript Summary~~ → AI Earnings Analysis** — ✅ Hecho (pivote 2026-06-07)
+- No hay API free de transcripts (Finnhub/FMP/AlphaVantage/API-Ninjas premium) → **pivote**: `summarizeEarnings` ensambla un JSON compacto con datos FMP ya disponibles (income-statement últimos ~8Q + márgenes, sorpresa EPS del último Q, `analyst-estimates`, `price-target-consensus`, `upgrades-downgrades-consensus`, P/E TTM, precio) y lo analiza con `claude-sonnet-4-6` (max_tokens 700) en 5 puntos (último Q beat/miss, tendencia rev/EPS, márgenes, sentimiento/PT, lectura forward). Sección tab Research **gated por botón** "📊 Analizar últimos earnings" (1 llamada Anthropic). Estados loading/resultado/vacío/error, cache por ticker, disclaimer "no es asesoría". $0 de datos extra (sin endpoints nuevos ni Finnhub transcript).
+
+**2. ~~Short Interest & Options~~** — ✅ Hecho (2026-06-07) · placeholder (sin fuente free fiable)
+- `ShortInterestPanel` en tab Overview: short interest, % shares out (proxy float), days to cover (SI/avg vol) + sparkline, vía `finnhubGet('stock/short-interest')`. Finnhub short-interest es premium → la sección **queda como placeholder** "no disponible en plan actual" (degrada limpio). No se invierte más aquí hasta tener fuente free. (Put/call ratio omitido: opciones premium.)
 
 **3. ~~Dilución / evolución de acciones~~** — ✅ Hecho (2026-06-07)
 - `DilutionPanel` en tab Fundamentals: serie trimestral de `weightedAverageShsOutDil`, Δ YoY y Δ ventana, buybacks vs issuance TTM (cash-flow) + nota de impacto en EPS. Sin API nueva (reusa `stmts` + `cfStmts`).
