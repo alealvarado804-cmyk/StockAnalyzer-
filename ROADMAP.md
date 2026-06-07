@@ -52,8 +52,8 @@
 **3. ~~Dilución / evolución de acciones~~** — ✅ Hecho (2026-06-07)
 - `DilutionPanel` en tab Fundamentals: serie trimestral de `weightedAverageShsOutDil`, Δ YoY y Δ ventana, buybacks vs issuance TTM (cash-flow) + nota de impacto en EPS. Sin API nueva (reusa `stmts` + `cfStmts`).
 
-**4. Export PDF del análisis** — *bajo / nice-to-have*
-- Botón "Export Report" → PDF con scores, métricas, ticker, fecha (skill PDF o jsPDF, igual que IC DataLayer).
+**4. ~~Export PDF del análisis~~** — ✅ Hecho (2026-06-07)
+- jsPDF (cdnjs 2.5.1) en `index.html` antes de `StockAnalyzer.js`. Botón "⬇ Export Report" en la cabecera (solo con análisis cargado) → PDF con ticker+nombre, fecha, score compuesto + subscores, rating, KPIs TTM, veredicto IA (si existe) y disclaimer. Client-side, sin API.
 
 **Ideas menores / futuras:** overlay FRED (Fed Funds) en el gráfico de precio; EV/EBITDA histórico con mediana; volumen como barras en el chart; zoom con scroll.
 
