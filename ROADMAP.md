@@ -55,7 +55,11 @@
 **4. ~~Export PDF del análisis~~** — ✅ Hecho (2026-06-07)
 - jsPDF (cdnjs 2.5.1) en `index.html` antes de `StockAnalyzer.js`. Botón "⬇ Export Report" en la cabecera (solo con análisis cargado) → PDF con ticker+nombre, fecha, score compuesto + subscores, rating, KPIs TTM, veredicto IA (si existe) y disclaimer. Client-side, sin API.
 
-**Ideas menores / futuras:** overlay FRED (Fed Funds) en el gráfico de precio; EV/EBITDA histórico con mediana; volumen como barras en el chart; zoom con scroll.
+**Ideas del gráfico** — ✅ Hecho (2026-06-07)
+- **Barras de volumen up/down** — banda inferior del `PriceChart` tintada verde/rojo según `close ≥ closePrevio` (opacidad 0.3). `feat(chart): barras de volumen con color up/down`.
+- **Zoom con rueda** — estado `zoom {startIdx,endIdx}` sobre el slice del período; listener `wheel` nativo no-pasivo anclado al cursor (mín. 10 puntos); botón "reset zoom"; cambiar de período/ticker resetea. `feat(chart): zoom con rueda del ratón en el gráfico de precio`.
+- **EV/EBITDA histórico + mediana** — panel `EVEBITDAHistory` en tab Valuation: EV = precio·acciones + deuda − caja, EBITDA TTM (4Q), línea + mediana dashed + actual; degrada limpio. `balance-sheet-statement` subido a limit 12. `feat(valuation): EV/EBITDA histórico con línea de mediana`.
+- **Overlay FRED Fed Funds** — toggle gated sobre el chart (solo trae `/api/fred/series?series_id=FEDFUNDS` al activar, cache por sesión); 2ª polyline ámbar con eje Y secundario (%), step mensual alineado por fecha; estados loading/error. `feat(chart): overlay opcional Fed Funds (FRED) con eje secundario`.
 
 ---
 

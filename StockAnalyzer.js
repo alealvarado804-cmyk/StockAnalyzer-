@@ -1085,6 +1085,8 @@ const PERIODS = {
   '1Y': 365,
   '5Y': 1825
 };
+const _fredCache = {}; // cache por sesion: series_id -> [{date,val}]
+
 function PriceChart({
   history,
   ticker,
@@ -1092,6 +1094,9 @@ function PriceChart({
 }) {
   const [hoverIdx, setHoverIdx] = useState(null);
   const [zoom, setZoom] = useState(null); // {startIdx,endIdx} sobre `filtered`; null = periodo completo
+  const [fredOn, setFredOn] = useState(false);
+  const [fredObs, setFredObs] = useState(null); // [{date,val}] Fed Funds
+  const [fredStatus, setFredStatus] = useState('idle'); // idle|loading|error
   const svgRef = useRef(null);
   const sorted = useMemo(() => [...history].sort((a, b) => new Date(a.date) - new Date(b.date)), [history]);
   const filtered = useMemo(() => {
@@ -1155,6 +1160,37 @@ function PriceChart({
     });
     return () => el.removeEventListener('wheel', onWheel);
   }, [zoom, filtered]);
+
+  // FRED Fed Funds — gated: solo se trae al activar el toggle (cache por sesion)
+  const toggleFred = useCallback(async () => {
+    if (fredOn) {
+      setFredOn(false);
+      return;
+    }
+    setFredOn(true);
+    if (fredObs && fredObs.length) return;
+    if (_fredCache.FEDFUNDS) {
+      setFredObs(_fredCache.FEDFUNDS);
+      return;
+    }
+    setFredStatus('loading');
+    try {
+      const start = (sorted[0]?.date || '').substring(0, 10) || '2019-01-01';
+      const res = await authedFetch(`/api/fred/series?series_id=FEDFUNDS&observation_start=${start}`);
+      if (!res.ok) throw new Error('fred ' + res.status);
+      const data = await res.json();
+      const obs = (data?.observations || []).filter(o => o && o.value !== '.' && o.value != null).map(o => ({
+        date: o.date,
+        val: parseFloat(o.value)
+      })).filter(o => ok(o.val));
+      if (!obs.length) throw new Error('fred empty');
+      _fredCache.FEDFUNDS = obs;
+      setFredObs(obs);
+      setFredStatus('idle');
+    } catch (e) {
+      setFredStatus('error');
+    }
+  }, [fredOn, fredObs, sorted]);
   if (!view.length || view.length < 2) return /*#__PURE__*/React.createElement("div", {
     style: {
       height: 200,
@@ -1186,6 +1222,28 @@ function PriceChart({
   const px = i => pl + i / Math.max(1, view.length - 1) * cw;
   const py = p => pt + (1 - (p - minP) / rngP) * priceH;
   const vy = v => volBottom - v / maxV * volH;
+
+  // FRED Fed Funds overlay — alineado por fecha al eje X (step mensual), eje Y secundario propio
+  const fredSamples = fredOn && fredObs && fredObs.length ? (() => {
+    const obsS = [...fredObs].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const valAt = t => {
+      let v = null;
+      for (const o of obsS) {
+        if (new Date(o.date).getTime() <= t) v = o.val;else break;
+      }
+      return v ?? obsS[0].val;
+    };
+    return view.map((d, i) => ({
+      i,
+      val: valAt(new Date(d.date).getTime())
+    }));
+  })() : null;
+  const fredVals = fredSamples ? fredSamples.map(s => s.val) : [];
+  const fMin = fredVals.length ? Math.min(...fredVals) : 0;
+  const fMax = fredVals.length ? Math.max(...fredVals) : 1;
+  const fRng = fMax - fMin || 1;
+  const fy = v => pt + (1 - (v - fMin) / fRng) * priceH;
+  const fredPts = fredSamples ? fredSamples.map(s => `${px(s.i)},${fy(s.val)}`).join(' ') : null;
   const isUp = prices[prices.length - 1] >= prices[0];
   const stroke = isUp ? '#22c55e' : '#f87171';
   const pts = prices.map((p, i) => `${px(i)},${py(p)}`).join(' ');
@@ -1227,7 +1285,40 @@ function PriceChart({
     style: {
       position: 'relative'
     }
-  }, zoom && /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      top: 6,
+      left: 8,
+      zIndex: 11,
+      display: 'flex',
+      gap: 6,
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: toggleFred,
+    style: {
+      background: fredOn ? '#3a2e14' : '#141720',
+      border: `1px solid ${fredOn ? '#f59e0b' : '#1e2430'}`,
+      color: fredOn ? '#f59e0b' : '#475569',
+      padding: '2px 9px',
+      borderRadius: 4,
+      cursor: 'pointer',
+      fontSize: 9,
+      fontFamily: 'JetBrains Mono,monospace',
+      fontWeight: 600
+    }
+  }, fredOn ? '● ' : '○ ', "Fed Funds"), fredStatus === 'loading' && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#475569'
+    }
+  }, "cargando\u2026"), fredStatus === 'error' && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#f87171'
+    }
+  }, "FRED no disponible")), zoom && /*#__PURE__*/React.createElement("button", {
     onClick: () => setZoom(null),
     style: {
       position: 'absolute',
@@ -1309,7 +1400,37 @@ function PriceChart({
     strokeWidth: "1",
     strokeOpacity: "0.7",
     strokeDasharray: "3 2"
-  }), volumes.map((v, i) => /*#__PURE__*/React.createElement("rect", {
+  }), fredPts && /*#__PURE__*/React.createElement("polyline", {
+    points: fredPts,
+    fill: "none",
+    stroke: "#f59e0b",
+    strokeWidth: "1.4",
+    strokeOpacity: "0.9"
+  }), fredPts && /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("text", {
+    x: W - pr - 2,
+    y: fy(fMax) + (fy(fMax) < pt + 12 ? 12 : -2),
+    fontSize: "7.5",
+    fill: "#f59e0b",
+    textAnchor: "end"
+  }, fMax.toFixed(2), "%"), /*#__PURE__*/React.createElement("text", {
+    x: W - pr - 2,
+    y: fy(fMin) - 2,
+    fontSize: "7.5",
+    fill: "#f59e0b",
+    textAnchor: "end"
+  }, fMin.toFixed(2), "%"), /*#__PURE__*/React.createElement("line", {
+    x1: W - 80,
+    x2: W - 68,
+    y1: pt + 22,
+    y2: pt + 22,
+    stroke: "#f59e0b",
+    strokeWidth: "1.4"
+  }), /*#__PURE__*/React.createElement("text", {
+    x: W - 65,
+    y: pt + 25,
+    fontSize: "7.5",
+    fill: "#f59e0b"
+  }, "Fed Funds")), volumes.map((v, i) => /*#__PURE__*/React.createElement("rect", {
     key: i,
     x: pl + i * (cw / view.length),
     y: vy(v),
