@@ -1530,6 +1530,105 @@ function DCFCalculator({inputs,setInputs,currentPrice,profile}) {
   );
 }
 
+// ─── EV/EBITDA HISTORY ──────────────────────────────────────
+function EVEBITDAHistory({stmts, balanceSheets, history, shares}) {
+  const series = useMemo(()=>{
+    if(!Array.isArray(stmts)||stmts.length<4||!ok(shares)||shares<=0) return null;
+    const inc=stmts;  // FMP devuelve trimestres mas recientes primero
+    const bsByDate={};
+    (balanceSheets||[]).forEach(b=>{
+      if(b?.date) bsByDate[b.date.substring(0,10)]=b;
+      if(b?.period&&b?.calendarYear) bsByDate[`${b.period}-${b.calendarYear}`]=b;
+    });
+    const hist=[...(history||[])].filter(h=>ok(h.close)).sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const priceAt=(dateStr)=>{
+      if(!hist.length||!dateStr) return null;
+      const t=new Date(dateStr).getTime();
+      let chosen=null;
+      for(const h of hist){ if(new Date(h.date).getTime()<=t) chosen=h.close; else break; }
+      return chosen ?? hist[0].close;
+    };
+    const ebitdaOf=(q)=>{
+      if(ok(q?.ebitda)) return q.ebitda;
+      if(ok(q?.operatingIncome)&&ok(q?.depreciationAndAmortization)) return q.operatingIncome+q.depreciationAndAmortization;
+      return null;
+    };
+    const out=[];
+    for(let i=0;i+3<inc.length;i++){
+      const q=inc[i];
+      let ttm=0, allOk=true;
+      for(let j=i;j<=i+3;j++){ const e=ebitdaOf(inc[j]); if(!ok(e)){ allOk=false; break; } ttm+=e; }
+      if(!allOk||ttm<=0) continue;
+      const price=priceAt(q.date);
+      if(!ok(price)||price<=0) continue;
+      const bs=bsByDate[q.date?.substring(0,10)]||bsByDate[`${q.period}-${q.calendarYear}`]||balanceSheets?.[0]||null;
+      const totalDebt=ok(bs?.totalDebt)?bs.totalDebt:0;
+      const cashRaw=bs?.cashAndCashEquivalents ?? bs?.cashAndShortTermInvestments;
+      const cash=ok(cashRaw)?cashRaw:0;
+      const ev=price*shares+totalDebt-cash;
+      const ratio=ev/ttm;
+      if(!ok(ratio)||ratio<=0||ratio>200) continue;
+      out.push({date:q.date, label:`${q.period||''} ${q.calendarYear||(q.date?.substring(0,4))||''}`.trim(), ratio});
+    }
+    return out.reverse();  // cronologico ascendente
+  },[stmts,balanceSheets,history,shares]);
+
+  if(!series||series.length<3) return (
+    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+      <SectionTitle>EV/EBITDA — Histórico</SectionTitle>
+      <div style={{fontSize:11,color:'#475569',padding:'6px 0'}}>Histórico no disponible (faltan datos de balance o EBITDA).</div>
+    </div>
+  );
+
+  const vals=series.map(s=>s.ratio);
+  const sv=[...vals].sort((a,b)=>a-b);
+  const median=sv.length%2 ? sv[(sv.length-1)/2] : (sv[sv.length/2-1]+sv[sv.length/2])/2;
+  const current=vals[vals.length-1];
+  const minV=Math.min(...vals,median), maxV=Math.max(...vals,median), rng=maxV-minV||1;
+  const W=800,H=170,pt=14,pb=22,pl=14,pr=46;
+  const cw=W-pl-pr, ch=H-pt-pb;
+  const px=i=>pl+(i/Math.max(1,vals.length-1))*cw;
+  const py=v=>pt+(1-(v-minV)/rng)*ch;
+  const linePts=vals.map((v,i)=>`${px(i)},${py(v)}`).join(' ');
+  const medY=py(median);
+  const curColor=current>median*1.1?'#f87171':current<median*0.9?'#22c55e':'#fbbf24';
+
+  return (
+    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+      <SectionTitle>EV/EBITDA — Histórico ({series.length}Q)</SectionTitle>
+      <div style={{display:'flex',gap:18,marginBottom:10,flexWrap:'wrap'}}>
+        <div>
+          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px'}}>Actual</div>
+          <div style={{fontSize:20,fontWeight:800,color:curColor,fontFamily:'JetBrains Mono,monospace',lineHeight:1.1}}>{current.toFixed(1)}x</div>
+        </div>
+        <div>
+          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px'}}>Mediana</div>
+          <div style={{fontSize:20,fontWeight:800,color:'#94a3b8',fontFamily:'JetBrains Mono,monospace',lineHeight:1.1}}>{median.toFixed(1)}x</div>
+        </div>
+        <div style={{alignSelf:'flex-end',fontSize:10,color:current>median?'#f87171':'#22c55e'}}>
+          {current>median?'▲ prima':'▼ descuento'} {Math.abs((current/median-1)*100).toFixed(0)}% vs mediana
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:150,display:'block'}}>
+        {[0.25,0.5,0.75].map(f=>(
+          <line key={f} x1={pl} x2={W-pr} y1={pt+f*ch} y2={pt+f*ch} stroke="#161b26" strokeWidth="1"/>
+        ))}
+        <line x1={pl} x2={W-pr} y1={medY} y2={medY} stroke="#94a3b8" strokeWidth="0.9" strokeDasharray="5 4"/>
+        <text x={W-pr+3} y={medY+3} fontSize="8.5" fill="#94a3b8">med {median.toFixed(1)}x</text>
+        <polyline points={linePts} fill="none" stroke="#60a5fa" strokeWidth="1.8" strokeLinejoin="round"/>
+        <circle cx={px(vals.length-1)} cy={py(current)} r="3.5" fill={curColor} stroke="#0c0e14" strokeWidth="1.5"/>
+        <text x={pl+2} y={pt+8} fontSize="8" fill="#334155">{maxV.toFixed(0)}x</text>
+        <text x={pl+2} y={H-pb+8} fontSize="8" fill="#334155">{minV.toFixed(0)}x</text>
+        {series.filter((_,i)=>i%Math.ceil(series.length/6)===0).map((s,k)=>{
+          const idx=series.indexOf(s);
+          return <text key={k} x={px(idx)} y={H-6} fontSize="7.5" fill="#334155" textAnchor="middle">{s.label}</text>;
+        })}
+      </svg>
+      <div style={{fontSize:9,color:'#334155',marginTop:6}}>EV ≈ precio·acciones + deuda total − caja · EBITDA TTM (4Q) · EV aproximado con acciones actuales.</div>
+    </div>
+  );
+}
+
 // ─── MULTI-MODEL VALUATION ───────────────────────────────────
 function MultiModelValuation({met,rat,quote,prof,stmts,currentPrice}) {
   if (!met||!rat||!currentPrice) return null;
@@ -2705,7 +2804,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         fmpGet('analyst-estimates',            { symbol: sym, limit: '2' }),
         fmpGet('upgrades-downgrades-consensus',{ symbol: sym }),
         fmpGet('discounted-cash-flow',         { symbol: sym }),
-        fmpGet('balance-sheet-statement',      { symbol: sym, period: 'quarter', limit: '4' }),
+        fmpGet('balance-sheet-statement',      { symbol: sym, period: 'quarter', limit: '12' }),
         fmpGet('price-target',                 { symbol: sym, limit: '10' }),
         fmpGet('cash-flow-statement',          { symbol: sym, period: 'quarter', limit: '8' }),
         fmpGet('peers',                        { symbol: sym }),
@@ -3365,6 +3464,14 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                 <div style={{display:'flex',flexDirection:'column',gap:16}}>
                   <DCFCalculator inputs={dcfInputs} setInputs={setDcfInputs} currentPrice={priceNow} profile={prof}/>
                   <MultiModelValuation met={met} rat={rat} quote={quote} prof={prof} stmts={stmts} currentPrice={priceNow}/>
+                  {stmts.length>=4&&(
+                    <EVEBITDAHistory
+                      stmts={stmts}
+                      balanceSheets={balanceSheets}
+                      history={hist}
+                      shares={quote?.sharesOutstanding ?? (ok(quote?.marketCap)&&ok(priceNow)&&priceNow>0 ? quote.marketCap/priceNow : null)}
+                    />
+                  )}
                 </div>
               )}
 
