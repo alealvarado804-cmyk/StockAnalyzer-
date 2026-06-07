@@ -1091,13 +1091,71 @@ function PriceChart({
   period
 }) {
   const [hoverIdx, setHoverIdx] = useState(null);
+  const [zoom, setZoom] = useState(null); // {startIdx,endIdx} sobre `filtered`; null = periodo completo
   const svgRef = useRef(null);
   const sorted = useMemo(() => [...history].sort((a, b) => new Date(a.date) - new Date(b.date)), [history]);
   const filtered = useMemo(() => {
     const n = PERIODS[period] || 365;
     return sorted.slice(-n);
   }, [sorted, period]);
-  if (!filtered.length || filtered.length < 2) return /*#__PURE__*/React.createElement("div", {
+
+  // cambiar de periodo o ticker resetea el zoom
+  useEffect(() => {
+    setZoom(null);
+    setHoverIdx(null);
+  }, [period, ticker]);
+
+  // ventana visible (slice del periodo segun zoom)
+  const view = useMemo(() => {
+    if (!zoom) return filtered;
+    const a = Math.max(0, Math.min(zoom.startIdx, zoom.endIdx));
+    const b = Math.min(filtered.length - 1, Math.max(zoom.startIdx, zoom.endIdx));
+    return filtered.slice(a, b + 1);
+  }, [filtered, zoom]);
+
+  // zoom con rueda — listener nativo no-pasivo para poder preventDefault sin scrollear la pagina
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const onWheel = e => {
+      if (filtered.length < 2) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const cur = zoom || {
+        startIdx: 0,
+        endIdx: filtered.length - 1
+      };
+      const span = cur.endIdx - cur.startIdx;
+      const anchor = cur.startIdx + frac * span;
+      const factor = e.deltaY < 0 ? 0.8 : 1.25; // in acerca, out aleja
+      let newSpan = Math.round(span * factor);
+      newSpan = Math.max(10, Math.min(filtered.length - 1, newSpan));
+      if (newSpan >= filtered.length - 1) {
+        setZoom(null);
+        return;
+      }
+      let start = Math.round(anchor - frac * newSpan);
+      let end = start + newSpan;
+      if (start < 0) {
+        start = 0;
+        end = newSpan;
+      }
+      if (end > filtered.length - 1) {
+        end = filtered.length - 1;
+        start = Math.max(0, end - newSpan);
+      }
+      setZoom({
+        startIdx: start,
+        endIdx: end
+      });
+    };
+    el.addEventListener('wheel', onWheel, {
+      passive: false
+    });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [zoom, filtered]);
+  if (!view.length || view.length < 2) return /*#__PURE__*/React.createElement("div", {
     style: {
       height: 200,
       display: 'flex',
@@ -1107,8 +1165,8 @@ function PriceChart({
       fontSize: 12
     }
   }, "No price data");
-  const prices = filtered.map(d => d.close);
-  const volumes = filtered.map(d => d.volume || 0);
+  const prices = view.map(d => d.close);
+  const volumes = view.map(d => d.volume || 0);
   const W = 800,
     H = 230,
     pt = 10,
@@ -1125,7 +1183,7 @@ function PriceChart({
     maxP = Math.max(...prices),
     rngP = maxP - minP || 1;
   const maxV = Math.max(...volumes, 1);
-  const px = i => pl + i / Math.max(1, filtered.length - 1) * cw;
+  const px = i => pl + i / Math.max(1, view.length - 1) * cw;
   const py = p => pt + (1 - (p - minP) / rngP) * priceH;
   const vy = v => volBottom - v / maxV * volH;
   const isUp = prices[prices.length - 1] >= prices[0];
@@ -1145,7 +1203,7 @@ function PriceChart({
     lo52 = Math.min(...prices);
   const ticks = [];
   let lastM = -1;
-  filtered.forEach((d, i) => {
+  view.forEach((d, i) => {
     const m = new Date(d.date).getMonth();
     if (m !== lastM) {
       ticks.push({
@@ -1160,16 +1218,33 @@ function PriceChart({
     if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
     const frac = (e.clientX - rect.left) / rect.width;
-    const idx = Math.round(frac * (filtered.length - 1));
-    setHoverIdx(Math.max(0, Math.min(filtered.length - 1, idx)));
-  }, [filtered.length]);
-  const hd = hoverIdx != null ? filtered[hoverIdx] : null;
+    const idx = Math.round(frac * (view.length - 1));
+    setHoverIdx(Math.max(0, Math.min(view.length - 1, idx)));
+  }, [view.length]);
+  const hd = hoverIdx != null ? view[hoverIdx] : null;
   const hx = hoverIdx != null ? px(hoverIdx) : null;
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'relative'
     }
-  }, /*#__PURE__*/React.createElement("svg", {
+  }, zoom && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setZoom(null),
+    style: {
+      position: 'absolute',
+      top: 6,
+      right: 8,
+      zIndex: 11,
+      background: '#141720',
+      border: '1px solid #1e3a5f',
+      color: '#60a5fa',
+      padding: '2px 9px',
+      borderRadius: 4,
+      cursor: 'pointer',
+      fontSize: 9,
+      fontFamily: 'JetBrains Mono,monospace',
+      fontWeight: 600
+    }
+  }, "\u2922 reset zoom"), /*#__PURE__*/React.createElement("svg", {
     ref: svgRef,
     viewBox: `0 0 ${W} ${H}`,
     preserveAspectRatio: "none",
@@ -1236,9 +1311,9 @@ function PriceChart({
     strokeDasharray: "3 2"
   }), volumes.map((v, i) => /*#__PURE__*/React.createElement("rect", {
     key: i,
-    x: pl + i * (cw / filtered.length),
+    x: pl + i * (cw / view.length),
     y: vy(v),
-    width: Math.max(1, cw / filtered.length - 0.5),
+    width: Math.max(1, cw / view.length - 0.5),
     height: volBottom - vy(v),
     fill: i > 0 ? prices[i] >= prices[i - 1] ? '#22c55e' : '#f87171' : '#475569',
     opacity: "0.3"
