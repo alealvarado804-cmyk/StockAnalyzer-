@@ -5717,7 +5717,7 @@ function App() {
       return null;
     }
   }, []);
-  const fetchAiVerdict = useCallback(async (sym, scoreData, profileData, metricsData) => {
+  const fetchAiVerdict = useCallback(async (sym, scoreData, profileData, metricsData, macroData) => {
     if (!sym) return;
     setAiLoading(true);
     setAiVerdict(null);
@@ -5735,6 +5735,7 @@ Key data:
 - P/E (TTM): ${metricsData?.priceToEarningsRatioTTM?.toFixed(1) || 'N/A'}
 - ROIC (TTM): ${metricsData?.returnOnInvestedCapitalTTM ? (metricsData.returnOnInvestedCapitalTTM * 100).toFixed(1) + '%' : 'N/A'}
 - Net Debt/EBITDA: ${metricsData?.netDebtToEBITDATTM?.toFixed(1) || 'N/A'}
+${macroData?.regime ? `- Contexto macro actual: régimen ${macroData.regime}${macroData.quadrant ? ` (cuadrante ${macroData.quadrant})` : ''}; ajuste macro al score ${macroData.tilt > 0 ? '+' : ''}${macroData.tilt} por: ${(macroData.reasons || []).join('; ')}. Pondera este régimen en el veredicto (p.ej. penalizar growth/high-beta en régimen restrictivo).` : ''}
 
 Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End with the rating word (STRONG BUY / BUY / HOLD / CAUTION / AVOID).`;
       const res = await authedFetch('/api/anthropic/messages', {
@@ -5832,11 +5833,14 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         lastQuarterSurprise,
         estimates,
         priceTarget,
-        analystConsensus
+        analystConsensus,
+        macroRegime: macroTilt?.regime ?? null,
+        macroTilt: macroTilt?.tilt ?? null,
+        macroReasons: macroTilt?.reasons ?? null
       };
       const label = quarters[0]?.period || lastQuarterSurprise?.period || '';
       const dateLabel = ((Array.isArray(stmts) ? stmts : [])[0]?.date || '').slice(0, 10);
-      const prompt = `Eres analista de equity. Con estos datos de earnings de ${ticker}, da un análisis en 5 puntos: (1) último trimestre (revenue/EPS y beat/miss vs estimación), (2) tendencia de revenue/EPS (¿acelera o desacelera?), (3) márgenes (expansión/compresión), (4) sentimiento de analistas / price target vs precio actual, (5) lectura forward / qué vigilar. Conciso, en español, sin relleno. Datos: ${JSON.stringify(payload)}`;
+      const prompt = `Eres analista de equity. Con estos datos de earnings de ${ticker}, da un análisis en 5 puntos: (1) último trimestre (revenue/EPS y beat/miss vs estimación), (2) tendencia de revenue/EPS (¿acelera o desacelera?), (3) márgenes (expansión/compresión), (4) sentimiento de analistas / price target vs precio actual, (5) lectura forward / qué vigilar. Considera el contexto macro: régimen ${payload.macroRegime ?? 'n/d'}, ajuste ${payload.macroTilt ?? 0}. Ajusta el tono/riesgos a ese régimen. Conciso, en español, sin relleno. Datos: ${JSON.stringify(payload)}`;
       const res = await authedFetch('/api/anthropic/messages', {
         method: 'POST',
         headers: {
@@ -5882,7 +5886,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     } finally {
       setTranscriptLoading(false);
     }
-  }, [ticker, transcriptLoading, stmts, earnSurprise, analystEst, ptC, udC, met, quote]);
+  }, [ticker, transcriptLoading, stmts, earnSurprise, analystEst, ptC, udC, met, quote, macroTilt]);
   const analyze = useCallback(async sym => {
     if (!sym) return;
     setLoading(true);
@@ -6085,13 +6089,13 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         setShortInt(si || null);
       }
 
-      // AI verdict
+      // Compute macro tilt from IC DataLayer macro_state (antes del verdict para alimentar la IA)
       const scores_ = calcScores(met_, rat_, hD_, sD_);
-      fetchAiVerdict(sym, scores_, pD_, met_);
-
-      // Compute macro tilt from IC DataLayer macro_state
       const _mt = await computeMacroTilt(sb, pD_?.sector, met_?.netDebtToEBITDATTM, met_?.peRatioTTM ?? met_?.priceToEarningsRatioTTM);
       setMacroTilt(_mt);
+
+      // AI verdict (con contexto macro/régimen)
+      fetchAiVerdict(sym, scores_, pD_, met_, _mt);
 
       // Persist analysis to Supabase
       if (sb) {
@@ -6149,6 +6153,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   const isUpDay = (chg1d || 0) >= 0;
   const hasData = !!(quote || prof);
   const r = scores ? getRating(scores.total) : null;
+
+  // ── Score ajustado por macro (display layer — NO toca calcScores) ──
+  const tiltN = macroTilt?.tilt || 0;
+  const macroAdj = Math.max(0, Math.min(100, Math.round((scores?.total ?? 0) + tiltN)));
+  const baseRating = scores ? getRating(scores.total) : null;
+  const adjRating = scores ? getRating(macroAdj) : null;
   const bm = useMemo(() => SECTOR_BM[prof?.sector] || null, [prof?.sector]);
 
   // ── Export Report → PDF (client-side, jsPDF) ──
@@ -6203,6 +6213,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       align: 'right'
     });
     y += 30;
+
+    // Score ajustado por macro (si hay tilt)
+    if (macroTilt && tiltN !== 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Macro-adjusted: ${macroAdj}/100 (${adjRating?.label || '—'})  ·  tilt ${tiltN > 0 ? '+' : ''}${tiltN}  ·  régimen ${macroTilt.regime || 'n/d'}`, M, y);
+      y += 22;
+    }
 
     // Sub-scores row
     const subs = [['Valuation', `${scores?.val ?? '—'}/25`], ['Fin. Health', `${scores?.hlth ?? '—'}/30`], ['Momentum', `${scores?.mom ?? '—'}/25`], ['Growth', `${scores?.growth ?? '—'}/20`]];
@@ -6873,7 +6892,86 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     value: scores.growth,
     max: 20,
     color: "#a78bfa"
-  })), earnCalendar && /*#__PURE__*/React.createElement(EarningsCalendarBadge, {
+  })), macroTilt && tiltN !== 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: '100%',
+      background: '#0c0e14',
+      border: `1px solid ${tiltN > 0 ? '#166534' : '#7f1d1d'}`,
+      borderRadius: 8,
+      padding: '10px 12px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '0.7px',
+      fontWeight: 700
+    }
+  }, "Score ajustado por macro"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 28,
+      fontWeight: 800,
+      color: adjRating?.color,
+      fontFamily: 'JetBrains Mono,monospace',
+      lineHeight: 1
+    }
+  }, macroAdj), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: tiltN > 0 ? '#22c55e' : '#f87171',
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, tiltN > 0 ? '+' : '', tiltN), /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginLeft: 'auto',
+      fontSize: 10,
+      fontWeight: 700,
+      color: adjRating?.color,
+      letterSpacing: '1px'
+    }
+  }, adjRating?.label)), adjRating && baseRating && adjRating.label !== baseRating.label && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: tiltN > 0 ? '#22c55e' : '#f87171'
+    }
+  }, baseRating.label, " \u2192 ", adjRating.label, " por macro"), (macroTilt.regime || macroTilt.quadrant) && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#64748b',
+      lineHeight: 1.4
+    }
+  }, macroTilt.regime ? `Régimen: ${macroTilt.regime}` : '', macroTilt.quadrant ? ` · ${macroTilt.quadrant}` : ''), (macroTilt.reasons || []).length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#475569',
+      lineHeight: 1.4
+    },
+    title: (macroTilt.reasons || []).join(' · ')
+  }, (macroTilt.reasons || []).join(' · ')), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: '#334155'
+    }
+  }, "Titular = score micro (", scores.total, "). Ajustado = micro + tilt macro, acotado 0\u2013100.")) : macroTilt ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: '100%',
+      fontSize: 9,
+      color: '#334155',
+      textAlign: 'center'
+    }
+  }, "Sin ajuste macro para este perfil") : null, earnCalendar && /*#__PURE__*/React.createElement(EarningsCalendarBadge, {
     earn: earnCalendar
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Key Metrics \u2014 TTM"), ok(quote?.yearHigh) && ok(quote?.yearLow) && ok(priceNow) && /*#__PURE__*/React.createElement("div", {
     style: {
