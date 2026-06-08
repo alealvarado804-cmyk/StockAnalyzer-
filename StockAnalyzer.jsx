@@ -2648,6 +2648,127 @@ function WatchlistManager({ supabase, onAnalyze }) {
   );
 }
 
+// ─── COMPARADOR (2-3 tickers ya analizados, lee sl_analyses, $0) ───
+function CompareView({ supabase, onAnalyze }) {
+  const [rows, setRows]       = useState([]);   // [{ticker, analysis}] de la watchlist
+  const [sel, setSel]         = useState([]);   // tickers seleccionados (máx 3)
+  const [loading, setLoading] = useState(false);
+  const load = useCallback(async () => {
+    if (!supabase) return;
+    setLoading(true);
+    const { data: wl } = await supabase.from('sl_watchlist').select('ticker').order('added_at');
+    const tickers = (wl || []).map(w => w.ticker);
+    let analyses = [];
+    if (tickers.length) {
+      const { data } = await supabase.from('sl_analyses').select('*').in('ticker', tickers).order('analysis_date', { ascending: false });
+      analyses = data || [];
+    }
+    const latest = {};
+    for (const a of analyses) if (!latest[a.ticker]) latest[a.ticker] = a;
+    setRows(tickers.map(t => ({ ticker: t, analysis: latest[t] || null })));
+    setLoading(false);
+  }, [supabase]);
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = (t) => setSel(s => s.includes(t) ? s.filter(x => x !== t) : (s.length >= 3 ? s : [...s, t]));
+  const chosen = sel.map(t => rows.find(r => r.ticker === t)).filter(Boolean);
+  const noAnalysis = chosen.filter(c => !c.analysis).map(c => c.ticker);
+
+  const metricRows = [
+    { k:'IC Score',    get:a => icScore(a.score_total, a.macro_tilt),    hi:'max' },
+    { k:'Score base',  get:a => a.score_total ?? null,                   hi:'max' },
+    { k:'Rating',      get:a => a.rating ?? null,                        hi:null  },
+    { k:'Sector',      get:a => a.sector ?? null,                        hi:null  },
+    { k:'Macro Tilt',  get:a => a.macro_tilt ?? null,                    hi:'max', fmt:v => v==null?'—':((v>0?'+':'')+v) },
+    { k:'Valuation',   get:a => a.score_val ?? null,                     hi:'max' },
+    { k:'Fin. Health', get:a => a.score_hlth ?? null,                    hi:'max' },
+    { k:'Momentum',    get:a => a.score_mom ?? null,                     hi:'max' },
+    { k:'Growth',      get:a => a.score_growth ?? null,                  hi:'max' },
+  ];
+
+  return (
+    <div style={{padding:16}}>
+      <div style={{fontSize:13,color:'#94a3b8',marginBottom:8}}>Selecciona 2–3 tickers de tu watchlist para compararlos lado a lado (datos ya guardados, $0).</div>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:16}}>
+        {rows.map(r => {
+          const on = sel.includes(r.ticker);
+          const has = !!r.analysis;
+          const blocked = !on && sel.length >= 3;
+          return (
+            <button key={r.ticker} onClick={() => toggle(r.ticker)} disabled={blocked}
+              title={has ? '' : 'Sin análisis guardado — analízalo primero'}
+              style={{
+                padding:'6px 12px',borderRadius:6,cursor:blocked?'not-allowed':'pointer',
+                background:on?'#3b82f6':'#141720',border:`1px solid ${on?'#3b82f6':'#1e2430'}`,
+                color:on?'#fff':(has?'#e2e8f0':'#64748b'),fontWeight:600,fontSize:12,opacity:blocked?0.5:1
+              }}>{r.ticker}{has?'':' ·—'}</button>
+          );
+        })}
+        <button onClick={load} style={{padding:'6px 12px',background:'#1e2430',border:'1px solid #2d3748',color:'#e2e8f0',borderRadius:6,cursor:'pointer',fontSize:12}}>{loading?'…':'↻'}</button>
+      </div>
+
+      {!rows.length && !loading && (
+        <div style={{padding:'40px 20px',textAlign:'center',color:'#64748b',fontSize:13}}>Watchlist vacía. Añade tickers en la pestaña Screener y analízalos.</div>
+      )}
+
+      {rows.length > 0 && chosen.length < 2 && (
+        <div style={{padding:'40px 20px',textAlign:'center',color:'#64748b',fontSize:13}}>Elige al menos 2 tickers para comparar.</div>
+      )}
+
+      {chosen.length >= 2 && (
+        <>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+            <thead>
+              <tr style={{color:'#64748b',textAlign:'left',borderBottom:'1px solid #1e2430'}}>
+                <th style={{padding:8}}>Métrica</th>
+                {chosen.map(c => (
+                  <th key={c.ticker} style={{padding:8,color:'#3b82f6',cursor:'pointer'}}
+                    title="Analizar este ticker" onClick={() => onAnalyze && onAnalyze(c.ticker)}>{c.ticker}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {metricRows.map(mr => {
+                const cells = chosen.map(c => c.analysis ? mr.get(c.analysis) : null);
+                const nums = cells.filter(v => typeof v === 'number');
+                const best = (mr.hi === 'max' && nums.length) ? Math.max(...nums) : null;
+                const manyDistinct = new Set(nums).size > 1;
+                return (
+                  <tr key={mr.k} style={{borderBottom:'1px solid #141720'}}>
+                    <td style={{padding:8,color:'#94a3b8'}}>{mr.k}</td>
+                    {chosen.map((c, i) => {
+                      const v = cells[i];
+                      const isBest = best != null && manyDistinct && typeof v === 'number' && v === best;
+                      const display = c.analysis ? (mr.fmt ? mr.fmt(v) : (v ?? '—')) : '—';
+                      return (
+                        <td key={c.ticker} style={{
+                          padding:8,fontWeight:isBest?800:500,
+                          color:isBest?'#22c55e':(c.analysis?'#e2e8f0':'#64748b')
+                        }}>{display}</td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {noAnalysis.length > 0 && (
+            <div style={{marginTop:12,fontSize:11,color:'#64748b'}}>
+              Sin análisis guardado: {noAnalysis.map((t, i) => (
+                <span key={t}>
+                  <span style={{color:'#3b82f6',cursor:'pointer',fontWeight:600}} onClick={() => onAnalyze && onAnalyze(t)}>{t}</span>
+                  {i < noAnalysis.length - 1 ? ', ' : ''}
+                </span>
+              ))} — analízalo(s) primero para comparar.
+            </div>
+          )}
+          <div style={{marginTop:10,fontSize:9,color:'#334155'}}>Verde = mejor valor de la fila. Comparativa de análisis ya guardados; no dispara nuevos análisis.</div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── LOGIN ───────────────────────────────────────────────────
 function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -3380,7 +3501,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     ];
   },[met,rat]);
 
-  const tabs=['Overview','Fundamentals','Screener','Smart Money','Valuation','Chart','Research'];
+  const tabs=['Overview','Fundamentals','Screener','⚖ Comparar','Smart Money','Valuation','Chart','Research'];
 
   if (!authChecked) return null;
   if (!session) return <LoginScreen/>;
@@ -3855,6 +3976,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                       <div style={{fontSize:13,color:'#475569',marginBottom:20}}>Activa el contexto para cargar el screener.</div>
                       <button onClick={()=>setAutoLoaded(true)} style={{background:'#3b82f6',color:'#fff',border:'none',padding:'10px 24px',borderRadius:6,cursor:'pointer',fontWeight:600,fontSize:13}}>⬇ Cargar contexto</button>
                     </div>
+              )}
+
+              {/* ── COMPARAR TAB (lee sl_analyses/sl_watchlist, $0) ── */}
+              {activeTab==='⚖ Comparar'&&(
+                <CompareView supabase={sb} onAnalyze={(t)=>{ setInputTicker(t); setActiveTab('Overview'); analyze(t); }}/>
               )}
 
               {/* ── SMART MONEY TAB ── */}

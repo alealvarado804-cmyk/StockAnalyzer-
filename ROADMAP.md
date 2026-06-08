@@ -12,7 +12,7 @@
 
 **Núcleo de análisis**
 - Scoring 0-100 (Valuation 25 · Health 30 · Momentum 25 · Growth 20) + rating (STRONG BUY/BUY/HOLD/CAUTION/AVOID).
-- 7 tabs: Overview · Fundamentals · Chart · Valuation · Research · Screener · Smart Money.
+- 8 tabs: Overview · Fundamentals · Chart · Valuation · Research · Screener · ⚖ Comparar · Smart Money.
 - Perfil, precio (1M/3M/6M/1Y/**5Y**), 52-week range interactivo, P/E histórico.
 - FMP `/stable/` (v3 deprecado), campos TTM renombrados correctos.
 
@@ -30,6 +30,12 @@
 **Screener / Watchlist** — guardar tickers, vista resumen, click → análisis.
 **Macro Tilt** — badge de régimen macro (lee `macro_state`).
 **Macro Tilt que muerde (2026-06-08):** ✅ Hecho. El tilt ya no es solo badge: (A) "Score ajustado por macro" visible en Overview (número + rating + delta + razones; resalta cambio de banda, p.ej. BUY → HOLD) + línea en Export PDF; (B) régimen/cuadrante/tilt/razones como contexto en el AI Verdict y el AI Earnings. Sin tocar `calcScores` (capa de display, `macroAdj = clamp(total + tilt, 0, 100)`). Degrada si no hay tilt. commit `9145cb4`.
+**Histórico IC Score (2026-06-08):** ✅ Hecho. Sparkline temporal del IC Score por ticker en Overview (junto al bloque "IC Score macro×micro"). Al analizar, una lectura extra de `sl_analyses` (`analysis_date, score_total, macro_tilt` del ticker) → serie `icScore` por fila con tooltip fecha+valor y delta total. Degrada con <2 puntos ("el histórico se construye con cada análisis"). $0 (solo lectura Supabase, sin FMP/IA). commit `08246c2`.
+
+**Full Report 1-clic (2026-06-08):** ✅ Hecho. Botón "📄 Full Report" junto a "Export Report" → PDF extendido con todo lo ya en memoria: cabecera, Composite (micro) + IC Score + rating + subscores, contexto macro (régimen/cuadrante/tilt/razones), KPIs TTM, AI Verdict (si existe) y AI Earnings **solo si `transcriptSum` ya se generó** (si no, nota para generarlo — nunca lo auto-dispara). Paginación con `addPage` automático. $0 (composición client-side, cero llamadas nuevas). commit `ec4302f`.
+
+**Comparador lado a lado (2026-06-08):** ✅ Hecho. Tab "⚖ Comparar": selector de 2–3 tickers de la watchlist (lectura `sl_watchlist` + `sl_analyses`) y tabla comparativa (IC Score · Score base · Rating · Sector · Macro Tilt · Val/Health/Mom/Growth) resaltando el mejor por fila. Tickers sin análisis guardado → "—" + enlace para analizarlos (acción explícita del usuario); nunca analiza en automático. $0 (solo lecturas Supabase de lo ya guardado).
+
 **IC Score — Score Unificado macro×micro (2026-06-08):** ✅ Hecho. Métrica canónica única en ambas apps: helper `icScore(total,tilt)=clamp(round(total+tilt),0,100)`, mismas bandas (getRating 80/65/50/35). Bloque Overview rebautizado "IC Score (macro × micro)"; columna "IC Score" (color por banda) + orden en Screener/Watchlist; línea PDF "IC Score: NN/100". Recompute-on-read (sin migración). Espejo exacto en IC DataLayer (panel Tu Watchlist, columna IC Score). commit `ac65b8a`. **Integración macro↔micro CERRADA** (#1 tilt muerde + #2 panel watchlist + #3 IC Score).
 
 **Infra / UX**
