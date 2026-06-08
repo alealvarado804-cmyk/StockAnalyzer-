@@ -80,6 +80,16 @@
 
 ---
 
+## 🛡️ Red de seguridad / Tooling (2026-06-08)
+
+- **Smoke-test headless (anti-TDZ, $0):** ✅ `scripts/smoke.js` carga StockLens **e** IC DataLayer peladas (URL base, sin `?ticker=`, sin clics) en Chrome headless vía DevTools Protocol (Node `fetch`+`WebSocket`, **sin Playwright ni descargas**) y **falla (exit≠0)** si `#root` no monta en 15s o si hay `pageerror`/`console.error` propios (allow-list mínima para ruido de terceros). Caza el TDZ que dejaba la app en blanco sin romper el build. Probado: ✅ ambas apps montan limpias; ✅ FAIL con motivo claro ante un TDZ inyectado (`Cannot access 'x' before initialization`). No analiza ni carga datos → $0.
+  - Correr: `node scripts/smoke.js` (o `powershell -File scripts\smoke.ps1`). URL extra: `node scripts/smoke.js https://preview…`.
+- **Gate de compilación:** ✅ `scripts/compile-check.js` babel-compila `StockAnalyzer.jsx` y falla si no compila o si el `.js` resultante no tiene `ReactDOM`/cola de montaje (truncado). Es la mitad "compila"; el smoke-test es la mitad "monta".
+- **Antes de push:** recompilar `.jsx→.js` y correr el smoke-test. **Un TDZ no rompe el build pero sí el montaje** — solo el smoke-test lo caza.
+- **Macro Tilt siempre fresco:** `macro_state` ahora lo refresca también un cron diario en ic-proxy (`/api/cron/macro-refresh`, 11:00 UTC), así el régimen no queda rancio aunque nadie abra IC DataLayer.
+
+---
+
 ## 🔑 APIs activas
 
 | API | Acceso | Plan | Límite proxy |

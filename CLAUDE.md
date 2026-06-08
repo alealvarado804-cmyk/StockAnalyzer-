@@ -8,7 +8,8 @@ GitHub: alealvarado804-cmyk/StockAnalyzer- → main branch (Vercel auto-deploys 
 2. Compile: `"/c/Users/aaao0/bin/node.exe" -e "const fs=require('fs');const babel=require('C:/Users/aaao0/bin/babel-standalone.js');const src=fs.readFileSync('StockAnalyzer.jsx','utf8');const r=babel.transform(src,{presets:['react'],filename:'StockAnalyzer.jsx',sourceType:'script'});fs.writeFileSync('StockAnalyzer.js',r.code);console.log('OK',r.code.length,'bytes')"`
 3. Verify: command prints "OK <bytes>", `ReactDOM` present in .js, tail not truncated. (Size may shrink if code was removed — that's fine; what matters is it compiled.)
 4. Commit BOTH: `git add StockAnalyzer.jsx StockAnalyzer.js && git commit -m "..."`
-5. Push: `git push origin main`
+5. Before push, run the safety net: `node scripts/compile-check.js && node scripts/smoke.js` (or `powershell -File scripts\smoke.ps1`). A TDZ does NOT break the build but DOES leave the app mounted-blank — only the smoke-test ($0, mount-only) catches it.
+6. Push: `git push origin main`
 ## Architecture (post Fase-0 security migration, 2026-05-22)
 - React 18 UMD — no imports, global React from CDN. Hooks destructured at top: `const { useState, ... } = React;`
 - Supabase SDK loaded in index.html (`unpkg.com/@supabase/supabase-js@2`) BEFORE StockAnalyzer.js.
