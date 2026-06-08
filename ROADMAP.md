@@ -30,6 +30,7 @@
 **Screener / Watchlist** — guardar tickers, vista resumen, click → análisis.
 **Macro Tilt** — badge de régimen macro (lee `macro_state`).
 **Macro Tilt que muerde (2026-06-08):** ✅ Hecho. El tilt ya no es solo badge: (A) "Score ajustado por macro" visible en Overview (número + rating + delta + razones; resalta cambio de banda, p.ej. BUY → HOLD) + línea en Export PDF; (B) régimen/cuadrante/tilt/razones como contexto en el AI Verdict y el AI Earnings. Sin tocar `calcScores` (capa de display, `macroAdj = clamp(total + tilt, 0, 100)`). Degrada si no hay tilt. commit `9145cb4`.
+**IC Score — Score Unificado macro×micro (2026-06-08):** ✅ Hecho. Métrica canónica única en ambas apps: helper `icScore(total,tilt)=clamp(round(total+tilt),0,100)`, mismas bandas (getRating 80/65/50/35). Bloque Overview rebautizado "IC Score (macro × micro)"; columna "IC Score" (color por banda) + orden en Screener/Watchlist; línea PDF "IC Score: NN/100". Recompute-on-read (sin migración). Espejo exacto en IC DataLayer (panel Tu Watchlist, columna IC Score). commit `ac65b8a`. **Integración macro↔micro CERRADA** (#1 tilt muerde + #2 panel watchlist + #3 IC Score).
 
 **Infra / UX**
 - **Seguridad (Fase 0):** migración a ic-proxy + Supabase magic link; rate-limit Upstash; claves fuera del navegador.
