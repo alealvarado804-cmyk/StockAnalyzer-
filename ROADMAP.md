@@ -29,6 +29,7 @@
 
 **Screener / Watchlist** — guardar tickers, vista resumen, click → análisis.
 **Macro Tilt** — badge de régimen macro (lee `macro_state`).
+**Macro Tilt que muerde (2026-06-08):** ✅ Hecho. El tilt ya no es solo badge: (A) "Score ajustado por macro" visible en Overview (número + rating + delta + razones; resalta cambio de banda, p.ej. BUY → HOLD) + línea en Export PDF; (B) régimen/cuadrante/tilt/razones como contexto en el AI Verdict y el AI Earnings. Sin tocar `calcScores` (capa de display, `macroAdj = clamp(total + tilt, 0, 100)`). Degrada si no hay tilt. commit `9145cb4`.
 
 **Infra / UX**
 - **Seguridad (Fase 0):** migración a ic-proxy + Supabase magic link; rate-limit Upstash; claves fuera del navegador.
