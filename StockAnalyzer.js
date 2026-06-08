@@ -6445,6 +6445,215 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     doc.text('Generado por StockLens · Solo fines informativos, no es consejo de inversión · Verificar con la fuente.', M, H - 36);
     doc.save(`${ticker}_StockLens_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
+
+  // ── Full Report → PDF extendido (todo en memoria, $0 — no dispara llamadas) ──
+  const exportFullPDF = () => {
+    const JS = window.jspdf && window.jspdf.jsPDF;
+    if (!JS) {
+      alert('Export no disponible: jsPDF no cargó.');
+      return;
+    }
+    const doc = new JS({
+      unit: 'pt',
+      format: 'a4'
+    });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const M = 48;
+    let y = 58;
+    const ensure = need => {
+      if (y + need > H - 50) {
+        doc.addPage();
+        y = 58;
+      }
+    };
+    const drawLines = (lines, lh) => {
+      lines.forEach(ln => {
+        ensure(lh);
+        doc.text(ln, M, y);
+        y += lh;
+      });
+    };
+    const rating = getRating(scores?.total);
+
+    // Title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(20, 20, 20);
+    doc.text(`${ticker} — ${prof?.companyName || ''}`.trim(), M, y);
+    y += 18;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(110, 110, 110);
+    const meta = [prof?.exchange, prof?.sector, prof?.industry].filter(Boolean).join('  ·  ');
+    if (meta) {
+      doc.text(meta, M, y);
+      y += 13;
+    }
+    doc.text(`StockLens · Full Report · ${new Date().toISOString().slice(0, 10)}`, M, y);
+    y += 8;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(M, y, W - M, y);
+    y += 30;
+
+    // Composite score (micro) + rating
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(32);
+    doc.setTextColor(30, 30, 30);
+    doc.text(`${scores?.total ?? '—'}`, M, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(120, 120, 120);
+    doc.text('/ 100   Composite Score (micro)', M + 54, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text(rating?.label || '—', W - M, y, {
+      align: 'right'
+    });
+    y += 28;
+
+    // IC Score (macro × micro)
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(30, 30, 30);
+    doc.text(`IC Score: ${macroAdj}/100`, M, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`(${adjRating?.label || '—'})  ·  tilt ${tiltN > 0 ? '+' : ''}${tiltN}${macroTilt?.regime ? `  ·  régimen ${macroTilt.regime}` : ''}`, M + 120, y);
+    y += 24;
+
+    // Sub-scores row
+    const subs = [['Valuation', `${scores?.val ?? '—'}/25`], ['Fin. Health', `${scores?.hlth ?? '—'}/30`], ['Momentum', `${scores?.mom ?? '—'}/25`], ['Growth', `${scores?.growth ?? '—'}/20`]];
+    const colW = (W - 2 * M) / subs.length;
+    subs.forEach((s, i) => {
+      const x = M + i * colW;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(130, 130, 130);
+      doc.text(s[0].toUpperCase(), x, y);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(40, 40, 40);
+      doc.text(s[1], x, y + 15);
+    });
+    y += 38;
+    doc.setDrawColor(235, 235, 235);
+    doc.line(M, y, W - M, y);
+    y += 24;
+
+    // Contexto macro
+    if (macroTilt) {
+      ensure(70);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(30, 30, 30);
+      doc.text('Contexto macro', M, y);
+      y += 16;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(70, 70, 70);
+      const macroLine = [macroTilt.regime ? `Régimen: ${macroTilt.regime}` : null, macroTilt.quadrant ? `Cuadrante: ${macroTilt.quadrant}` : null, `Tilt macro: ${tiltN > 0 ? '+' : ''}${tiltN}`].filter(Boolean).join('  ·  ');
+      drawLines(doc.splitTextToSize(macroLine, W - 2 * M), 13);
+      y += 2;
+      if ((macroTilt.reasons || []).length) {
+        drawLines(doc.splitTextToSize('Razones: ' + macroTilt.reasons.join(' · '), W - 2 * M), 13);
+      }
+      y += 8;
+      doc.setDrawColor(235, 235, 235);
+      doc.line(M, y, W - M, y);
+      y += 24;
+    }
+
+    // KPI grid (2 columns)
+    const kpis = [['Price', fmt.price(priceNow)], ['Market Cap', fmt.usd(quote?.marketCap)], ['P/E (TTM)', fmt.mult(met?.peRatioTTM ?? met?.priceToEarningsRatioTTM)], ['EV/EBITDA', fmt.mult(met?.evToEBITDATTM ?? met?.enterpriseValueOverEBITDATTM)], ['ROIC', fmt.pct(met?.returnOnInvestedCapitalTTM ?? met?.roicTTM)], ['ROE', fmt.pct(met?.returnOnEquityTTM ?? met?.roeTTM)], ['Gross Margin', fmt.pct(rat?.grossProfitMarginTTM)], ['Net Debt/EBITDA', fmt.ndx(met?.netDebtToEBITDATTM)], ['FCF Yield', fmt.pct(met?.freeCashFlowYieldTTM)], ['Beta', ok(quote?.beta) ? quote.beta.toFixed(2) : ok(prof?.beta) ? parseFloat(prof.beta).toFixed(2) : '—']];
+    ensure(40 + Math.ceil(kpis.length / 2) * 20);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(30, 30, 30);
+    doc.text('Key Metrics — TTM', M, y);
+    y += 18;
+    const kpiColW = (W - 2 * M) / 2;
+    kpis.forEach((kv, i) => {
+      const col = i % 2,
+        row = Math.floor(i / 2);
+      const x = M + col * kpiColW,
+        ry = y + row * 20;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text(kv[0], x, ry);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(40, 40, 40);
+      doc.text(String(kv[1]), x + kpiColW - 14, ry, {
+        align: 'right'
+      });
+    });
+    y += Math.ceil(kpis.length / 2) * 20 + 14;
+
+    // AI Verdict
+    if (aiVerdict) {
+      ensure(50);
+      doc.setDrawColor(235, 235, 235);
+      doc.line(M, y, W - M, y);
+      y += 22;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(30, 30, 30);
+      ensure(16);
+      doc.text('AI Verdict', M, y);
+      y += 16;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(70, 70, 70);
+      drawLines(doc.splitTextToSize(aiVerdict, W - 2 * M), 13);
+      y += 6;
+    }
+
+    // AI Earnings — SOLO si ya se generó (no auto-disparar)
+    if (transcriptSum && transcriptSum.ticker === ticker) {
+      ensure(50);
+      doc.setDrawColor(235, 235, 235);
+      doc.line(M, y, W - M, y);
+      y += 22;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(30, 30, 30);
+      ensure(16);
+      doc.text('AI Earnings Analysis', M, y);
+      y += 16;
+      const head = [transcriptSum.label, transcriptSum.date].filter(Boolean).join('  ·  ');
+      if (head) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        ensure(13);
+        doc.text(head, M, y);
+        y += 14;
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(70, 70, 70);
+      drawLines(doc.splitTextToSize(transcriptSum.summary || '', W - 2 * M), 13);
+      y += 6;
+    } else {
+      ensure(28);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Genera el «Análisis de Earnings» (pestaña Research) para incluirlo en el informe.', M, y);
+      y += 16;
+    }
+
+    // Footer disclaimer
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Generado por StockLens · Solo fines informativos, no es consejo de inversión · Verificar con la fuente.', M, H - 36);
+    doc.save(`${ticker}_StockLens_FullReport_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
   const dcfVal = dcf?.dcf;
   const mosFrac = ok(dcfVal) && ok(priceNow) && dcfVal > 0 ? (dcfVal - priceNow) / dcfVal : null;
   const mosColor = !ok(mosFrac) ? '#475569' : mosFrac > 0.15 ? '#22c55e' : mosFrac > -0.15 ? '#fbbf24' : '#f87171';
@@ -6958,7 +7167,19 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontSize: 11,
       cursor: 'pointer'
     }
-  }, "\u2B07 Export Report"))))), /*#__PURE__*/React.createElement("div", {
+  }, "\u2B07 Export Report"), /*#__PURE__*/React.createElement("button", {
+    onClick: exportFullPDF,
+    title: "Informe completo: IC Score + macro + AI Verdict + earnings (si ya se gener\xF3)",
+    style: {
+      background: '#141720',
+      border: '1px solid #2d3a5f',
+      borderRadius: 5,
+      padding: '5px 12px',
+      color: '#60a5fa',
+      fontSize: 11,
+      cursor: 'pointer'
+    }
+  }, "\uD83D\uDCC4 Full Report"))))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#0c0e14',
       borderLeft: '1px solid #161b26',
