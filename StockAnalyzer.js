@@ -1085,6 +1085,116 @@ function Sparkline({
   }));
 }
 
+// ─── IC SCORE HISTORY SPARKLINE (lee sl_analyses, $0) ───────
+function ScoreHistorySparkline({
+  data
+}) {
+  const [hover, setHover] = useState(null);
+  const n = data ? data.length : 0;
+  if (n < 2) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: '100%',
+        background: '#0c0e14',
+        border: '1px solid #161b26',
+        borderRadius: 8,
+        padding: '10px 12px'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: '#475569',
+        textTransform: 'uppercase',
+        letterSpacing: '0.7px',
+        fontWeight: 700,
+        marginBottom: 4
+      }
+    }, "Hist\xF3rico IC Score"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: '#334155',
+        lineHeight: 1.4
+      }
+    }, "El hist\xF3rico se construye con cada an\xE1lisis (a\xFAn ", n, " punto", n === 1 ? '' : 's', ")."));
+  }
+  const w = 168,
+    h = 44,
+    pad = 4;
+  const vals = data.map(d => d.ic);
+  const mn = Math.min(...vals),
+    mx = Math.max(...vals),
+    rng = mx - mn || 1;
+  const xAt = i => pad + i / (n - 1) * (w - 2 * pad);
+  const yAt = v => h - pad - (v - mn) / rng * (h - 2 * pad);
+  const pts = data.map((d, i) => `${xAt(i)},${yAt(d.ic)}`).join(' ');
+  const last = data[n - 1],
+    first = data[0],
+    delta = last.ic - first.ic;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: '100%',
+      background: '#0c0e14',
+      border: '1px solid #161b26',
+      borderRadius: 8,
+      padding: '10px 12px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#475569',
+      textTransform: 'uppercase',
+      letterSpacing: '0.7px',
+      fontWeight: 700
+    }
+  }, "Hist\xF3rico IC Score"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: delta >= 0 ? '#22c55e' : '#f87171',
+      fontFamily: 'JetBrains Mono,monospace'
+    }
+  }, delta >= 0 ? '+' : '', delta, " \xB7 ", n, "p")), /*#__PURE__*/React.createElement("svg", {
+    width: w,
+    height: h,
+    style: {
+      display: 'block',
+      maxWidth: '100%'
+    },
+    onMouseLeave: () => setHover(null)
+  }, /*#__PURE__*/React.createElement("polyline", {
+    points: pts,
+    fill: "none",
+    stroke: "#3b82f6",
+    strokeWidth: "1.5",
+    strokeLinejoin: "round"
+  }), data.map((d, i) => /*#__PURE__*/React.createElement("circle", {
+    key: i,
+    cx: xAt(i),
+    cy: yAt(d.ic),
+    r: hover === i ? 3.5 : 2.2,
+    fill: hover === i ? '#60a5fa' : '#3b82f6',
+    style: {
+      cursor: 'pointer'
+    },
+    onMouseEnter: () => setHover(i)
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#64748b',
+      fontFamily: 'JetBrains Mono,monospace',
+      marginTop: 4,
+      minHeight: 12
+    }
+  }, hover != null ? `${data[hover].date} · IC ${data[hover].ic}` : `Último: ${last.date} · IC ${last.ic}`));
+}
+
 // ─── PRICE CHART (enhanced) ─────────────────────────────────
 const PERIODS = {
   '1M': 21,
@@ -5695,6 +5805,8 @@ function App() {
   const [spyHistory, setSpyHistory] = useState([]);
   const [macroTilt, setMacroTilt] = useState(null);
   const [autoLoaded, setAutoLoaded] = useState(false);
+  const [scoreHistory, setScoreHistory] = useState([]); // [{date, ic}] histórico IC Score del ticker (lectura sl_analyses, $0)
+
   const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 180);
@@ -5943,6 +6055,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setHistoricalDivs([]);
     setSpyHistory([]);
     setMacroTilt(null);
+    setScoreHistory([]);
     try {
       const results = await Promise.allSettled([fmpGet('quote', {
         symbol: sym
@@ -6144,6 +6257,21 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
             });
           }
         } catch (e) {/* no romper el análisis si falla el guardado */}
+
+        // Histórico del IC Score (lectura $0; incluye el análisis recién guardado)
+        try {
+          const {
+            data: histRows
+          } = await sb.from('sl_analyses').select('analysis_date, score_total, macro_tilt').eq('ticker', sym.toUpperCase()).order('analysis_date', {
+            ascending: true
+          });
+          if (Array.isArray(histRows)) {
+            setScoreHistory(histRows.map(row => ({
+              date: row.analysis_date,
+              ic: icScore(row.score_total, row.macro_tilt)
+            })));
+          }
+        } catch (e) {/* histórico opcional — no romper el análisis */}
       }
     } catch (e) {
       setError(e.message);
@@ -6994,7 +7122,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       color: '#334155',
       textAlign: 'center'
     }
-  }, "Sin ajuste macro para este perfil") : null, earnCalendar && /*#__PURE__*/React.createElement(EarningsCalendarBadge, {
+  }, "Sin ajuste macro para este perfil") : null, scoreHistory.length >= 1 && /*#__PURE__*/React.createElement(ScoreHistorySparkline, {
+    data: scoreHistory
+  }), earnCalendar && /*#__PURE__*/React.createElement(EarningsCalendarBadge, {
     earn: earnCalendar
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Key Metrics \u2014 TTM"), ok(quote?.yearHigh) && ok(quote?.yearLow) && ok(priceNow) && /*#__PURE__*/React.createElement("div", {
     style: {
