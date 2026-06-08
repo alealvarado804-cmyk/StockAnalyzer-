@@ -487,6 +487,14 @@ function getRating(s) {
     border: '#7f1d1d'
   };
 }
+
+// ─── IC SCORE — métrica canónica unificada (macro × micro) ───
+// IC Score = clamp(round(micro_total + macro_tilt), 0, 100)
+//   micro_total = score 0-100 de StockLens (calcScores)
+//   macro_tilt  = ajuste del régimen (computeMacroTilt, ∈[-15,15])
+// Bandas (getRating): ≥80 STRONG BUY · ≥65 BUY · ≥50 HOLD · ≥35 CAUTION · <35 AVOID
+// Mismo concepto y fórmula en IC DataLayer (panel "Tu Watchlist", columna "IC Score").
+const icScore = (total, tilt) => Math.max(0, Math.min(100, Math.round((total || 0) + (tilt || 0))));
 async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
   if (!supabase) return {
     tilt: 0,
@@ -5404,7 +5412,8 @@ function WatchlistManager({
     await supabase.from('sl_watchlist').delete().eq('id', id);
     load();
   };
-  const sorted = [...items].sort((a, b) => (b.analysis?.[sortBy] ?? -999) - (a.analysis?.[sortBy] ?? -999));
+  const sortKey = x => sortBy === 'ic' ? icScore(x.analysis?.score_total, x.analysis?.macro_tilt) : x.analysis?.[sortBy] ?? -999;
+  const sorted = [...items].sort((a, b) => sortKey(b) - sortKey(a));
   return /*#__PURE__*/React.createElement("div", {
     style: {
       padding: 16
@@ -5471,17 +5480,24 @@ function WatchlistManager({
       cursor: 'pointer'
     },
     onClick: () => setSortBy('score_total')
-  }, "Score \u25BE"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      padding: 8
-    }
-  }, "Rating"), /*#__PURE__*/React.createElement("th", {
+  }, "Score", sortBy === 'score_total' ? ' ▾' : ''), /*#__PURE__*/React.createElement("th", {
     style: {
       padding: 8,
       cursor: 'pointer'
     },
     onClick: () => setSortBy('macro_tilt')
-  }, "Macro Tilt"), /*#__PURE__*/React.createElement("th", {
+  }, "Macro Tilt", sortBy === 'macro_tilt' ? ' ▾' : ''), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: 8,
+      cursor: 'pointer'
+    },
+    onClick: () => setSortBy('ic'),
+    title: "IC Score = clamp(score + macro tilt, 0, 100)"
+  }, "IC Score", sortBy === 'ic' ? ' ▾' : ''), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: 8
+    }
+  }, "Rating"), /*#__PURE__*/React.createElement("th", {
     style: {
       padding: 8
     }
@@ -5508,13 +5524,20 @@ function WatchlistManager({
     }
   }, it.analysis?.score_total ?? '—'), /*#__PURE__*/React.createElement("td", {
     style: {
-      padding: 8
+      padding: 8,
+      color: it.analysis?.macro_tilt ? it.analysis.macro_tilt > 0 ? '#22c55e' : '#f87171' : '#64748b'
     }
-  }, it.analysis?.rating ?? '—'), /*#__PURE__*/React.createElement("td", {
+  }, it.analysis?.macro_tilt ? (it.analysis.macro_tilt > 0 ? '+' : '') + it.analysis.macro_tilt : '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: 8,
+      fontWeight: 700,
+      color: it.analysis ? getRating(icScore(it.analysis.score_total, it.analysis.macro_tilt)).color : '#64748b'
+    }
+  }, it.analysis ? icScore(it.analysis.score_total, it.analysis.macro_tilt) : '—'), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: 8
     }
-  }, it.analysis?.macro_tilt ? (it.analysis.macro_tilt > 0 ? '+' : '') + it.analysis.macro_tilt : '—'), /*#__PURE__*/React.createElement("td", {
+  }, it.analysis?.rating ?? '—'), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: 8,
       color: '#94a3b8'
@@ -5532,7 +5555,7 @@ function WatchlistManager({
       cursor: 'pointer'
     }
   }, "\u2715")))), !sorted.length && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
-    colSpan: 6,
+    colSpan: 7,
     style: {
       padding: 16,
       textAlign: 'center',
@@ -6154,9 +6177,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   const hasData = !!(quote || prof);
   const r = scores ? getRating(scores.total) : null;
 
-  // ── Score ajustado por macro (display layer — NO toca calcScores) ──
+  // ── IC Score (macro × micro) — display layer, NO toca calcScores ──
   const tiltN = macroTilt?.tilt || 0;
-  const macroAdj = Math.max(0, Math.min(100, Math.round((scores?.total ?? 0) + tiltN)));
+  const macroAdj = icScore(scores?.total, tiltN); // IC Score canónico
   const baseRating = scores ? getRating(scores.total) : null;
   const adjRating = scores ? getRating(macroAdj) : null;
   const bm = useMemo(() => SECTOR_BM[prof?.sector] || null, [prof?.sector]);
@@ -6214,12 +6237,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     });
     y += 30;
 
-    // Score ajustado por macro (si hay tilt)
+    // IC Score (macro × micro) — si hay tilt
     if (macroTilt && tiltN !== 0) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
-      doc.text(`Macro-adjusted: ${macroAdj}/100 (${adjRating?.label || '—'})  ·  tilt ${tiltN > 0 ? '+' : ''}${tiltN}  ·  régimen ${macroTilt.regime || 'n/d'}`, M, y);
+      doc.text(`IC Score: ${macroAdj}/100 (${adjRating?.label || '—'})  ·  tilt ${tiltN > 0 ? '+' : ''}${tiltN}  ·  régimen ${macroTilt.regime || 'n/d'}`, M, y);
       y += 22;
     }
 
@@ -6911,7 +6934,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       letterSpacing: '0.7px',
       fontWeight: 700
     }
-  }, "Score ajustado por macro"), /*#__PURE__*/React.createElement("div", {
+  }, "IC Score (macro \xD7 micro)"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'baseline',
@@ -6964,7 +6987,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontSize: 8,
       color: '#334155'
     }
-  }, "Titular = score micro (", scores.total, "). Ajustado = micro + tilt macro, acotado 0\u2013100.")) : macroTilt ? /*#__PURE__*/React.createElement("div", {
+  }, "Titular = score micro (", scores.total, "). IC Score = micro + tilt macro, acotado 0\u2013100.")) : macroTilt ? /*#__PURE__*/React.createElement("div", {
     style: {
       width: '100%',
       fontSize: 9,

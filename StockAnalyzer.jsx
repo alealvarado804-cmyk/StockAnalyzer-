@@ -348,6 +348,14 @@ function getRating(s) {
   return          {label:'AVOID',      color:'#f87171',bg:'#2a0d0d',border:'#7f1d1d'};
 }
 
+// ─── IC SCORE — métrica canónica unificada (macro × micro) ───
+// IC Score = clamp(round(micro_total + macro_tilt), 0, 100)
+//   micro_total = score 0-100 de StockLens (calcScores)
+//   macro_tilt  = ajuste del régimen (computeMacroTilt, ∈[-15,15])
+// Bandas (getRating): ≥80 STRONG BUY · ≥65 BUY · ≥50 HOLD · ≥35 CAUTION · <35 AVOID
+// Mismo concepto y fórmula en IC DataLayer (panel "Tu Watchlist", columna "IC Score").
+const icScore = (total, tilt) => Math.max(0, Math.min(100, Math.round((total||0) + (tilt||0))));
+
 async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
   if (!supabase) return { tilt: 0, reasons: ["Sin Supabase"], quadrant: null, regime: null };
   let m = null;
@@ -2558,7 +2566,10 @@ function WatchlistManager({ supabase, onAnalyze }) {
     setNewTicker(''); load();
   };
   const removeTicker = async (id) => { await supabase.from('sl_watchlist').delete().eq('id', id); load(); };
-  const sorted = [...items].sort((a,b) => ((b.analysis?.[sortBy] ?? -999) - (a.analysis?.[sortBy] ?? -999)));
+  const sortKey = (x) => sortBy === 'ic'
+    ? icScore(x.analysis?.score_total, x.analysis?.macro_tilt)
+    : (x.analysis?.[sortBy] ?? -999);
+  const sorted = [...items].sort((a,b) => (sortKey(b) - sortKey(a)));
   return (
     <div style={{padding:16}}>
       <div style={{display:'flex',gap:8,marginBottom:16}}>
@@ -2570,9 +2581,10 @@ function WatchlistManager({ supabase, onAnalyze }) {
         <thead>
           <tr style={{color:'#64748b',textAlign:'left',borderBottom:'1px solid #1e2430'}}>
             <th style={{padding:8}}>Ticker</th>
-            <th style={{padding:8,cursor:'pointer'}} onClick={()=>setSortBy('score_total')}>Score ▾</th>
+            <th style={{padding:8,cursor:'pointer'}} onClick={()=>setSortBy('score_total')}>Score{sortBy==='score_total'?' ▾':''}</th>
+            <th style={{padding:8,cursor:'pointer'}} onClick={()=>setSortBy('macro_tilt')}>Macro Tilt{sortBy==='macro_tilt'?' ▾':''}</th>
+            <th style={{padding:8,cursor:'pointer'}} onClick={()=>setSortBy('ic')} title="IC Score = clamp(score + macro tilt, 0, 100)">IC Score{sortBy==='ic'?' ▾':''}</th>
             <th style={{padding:8}}>Rating</th>
-            <th style={{padding:8,cursor:'pointer'}} onClick={()=>setSortBy('macro_tilt')}>Macro Tilt</th>
             <th style={{padding:8}}>Sector</th>
             <th style={{padding:8}}></th>
           </tr>
@@ -2582,13 +2594,14 @@ function WatchlistManager({ supabase, onAnalyze }) {
             <tr key={it.id} style={{borderBottom:'1px solid #141720'}}>
               <td style={{padding:8,fontWeight:600,color:'#3b82f6',cursor:'pointer'}} onClick={()=>onAnalyze&&onAnalyze(it.ticker)}>{it.ticker}</td>
               <td style={{padding:8}}>{it.analysis?.score_total ?? '—'}</td>
+              <td style={{padding:8,color: it.analysis?.macro_tilt ? (it.analysis.macro_tilt>0?'#22c55e':'#f87171') : '#64748b'}}>{it.analysis?.macro_tilt ? ((it.analysis.macro_tilt>0?'+':'')+it.analysis.macro_tilt) : '—'}</td>
+              <td style={{padding:8,fontWeight:700,color: it.analysis ? getRating(icScore(it.analysis.score_total, it.analysis.macro_tilt)).color : '#64748b'}}>{it.analysis ? icScore(it.analysis.score_total, it.analysis.macro_tilt) : '—'}</td>
               <td style={{padding:8}}>{it.analysis?.rating ?? '—'}</td>
-              <td style={{padding:8}}>{it.analysis?.macro_tilt ? ((it.analysis.macro_tilt>0?'+':'')+it.analysis.macro_tilt) : '—'}</td>
               <td style={{padding:8,color:'#94a3b8'}}>{it.analysis?.sector ?? '—'}</td>
               <td style={{padding:8}}><button onClick={()=>removeTicker(it.id)} style={{background:'none',border:'none',color:'#ef4444',cursor:'pointer'}}>✕</button></td>
             </tr>
           ))}
-          {!sorted.length && <tr><td colSpan={6} style={{padding:16,textAlign:'center',color:'#64748b'}}>Watchlist vacía. Añade tickers arriba, analízalos en Overview, y aparecerán aquí con su score.</td></tr>}
+          {!sorted.length && <tr><td colSpan={7} style={{padding:16,textAlign:'center',color:'#64748b'}}>Watchlist vacía. Añade tickers arriba, analízalos en Overview, y aparecerán aquí con su score.</td></tr>}
         </tbody>
       </table>
     </div>
@@ -3055,9 +3068,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   const hasData = !!(quote||prof);
   const r = scores ? getRating(scores.total) : null;
 
-  // ── Score ajustado por macro (display layer — NO toca calcScores) ──
+  // ── IC Score (macro × micro) — display layer, NO toca calcScores ──
   const tiltN     = macroTilt?.tilt || 0;
-  const macroAdj  = Math.max(0, Math.min(100, Math.round((scores?.total ?? 0) + tiltN)));
+  const macroAdj  = icScore(scores?.total, tiltN);   // IC Score canónico
   const baseRating = scores ? getRating(scores.total) : null;
   const adjRating  = scores ? getRating(macroAdj) : null;
 
@@ -3090,10 +3103,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(40,40,40);
     doc.text(rating?.label || '—', W-M, y, { align:'right' }); y += 30;
 
-    // Score ajustado por macro (si hay tilt)
+    // IC Score (macro × micro) — si hay tilt
     if (macroTilt && tiltN !== 0) {
       doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120,120,120);
-      doc.text(`Macro-adjusted: ${macroAdj}/100 (${adjRating?.label || '—'})  ·  tilt ${tiltN>0?'+':''}${tiltN}  ·  régimen ${macroTilt.regime || 'n/d'}`, M, y);
+      doc.text(`IC Score: ${macroAdj}/100 (${adjRating?.label || '—'})  ·  tilt ${tiltN>0?'+':''}${tiltN}  ·  régimen ${macroTilt.regime || 'n/d'}`, M, y);
       y += 22;
     }
 
@@ -3428,10 +3441,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                         <ScoreBar label="Growth"            value={scores.growth} max={20} color="#a78bfa"/>
                       </div>
 
-                      {/* ── Score ajustado por macro (micro vs macro-ajustado) ── */}
+                      {/* ── IC Score (macro × micro) — score unificado ── */}
                       {macroTilt && tiltN !== 0 ? (
                         <div style={{width:'100%',background:'#0c0e14',border:`1px solid ${tiltN>0?'#166534':'#7f1d1d'}`,borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:6}}>
-                          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',fontWeight:700}}>Score ajustado por macro</div>
+                          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',fontWeight:700}}>IC Score (macro × micro)</div>
                           <div style={{display:'flex',alignItems:'baseline',gap:8}}>
                             <span style={{fontSize:28,fontWeight:800,color:adjRating?.color,fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>{macroAdj}</span>
                             <span style={{fontSize:12,fontWeight:700,color:tiltN>0?'#22c55e':'#f87171',fontFamily:'JetBrains Mono,monospace'}}>{tiltN>0?'+':''}{tiltN}</span>
@@ -3446,7 +3459,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                           {(macroTilt.reasons||[]).length>0&&(
                             <div style={{fontSize:9,color:'#475569',lineHeight:1.4}} title={(macroTilt.reasons||[]).join(' · ')}>{(macroTilt.reasons||[]).join(' · ')}</div>
                           )}
-                          <div style={{fontSize:8,color:'#334155'}}>Titular = score micro ({scores.total}). Ajustado = micro + tilt macro, acotado 0–100.</div>
+                          <div style={{fontSize:8,color:'#334155'}}>Titular = score micro ({scores.total}). IC Score = micro + tilt macro, acotado 0–100.</div>
                         </div>
                       ) : macroTilt ? (
                         <div style={{width:'100%',fontSize:9,color:'#334155',textAlign:'center'}}>Sin ajuste macro para este perfil</div>
