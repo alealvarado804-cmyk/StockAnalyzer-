@@ -564,7 +564,35 @@ async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
     tilt,
     reasons: reasons.length ? reasons : ["Sin ajustes para este perfil"],
     quadrant: m.cartera_quadrant,
-    regime: m.regime_label
+    regime: m.regime_label,
+    updatedAt: m.updated_at || null
+  };
+}
+
+// ─── FRESCURA MACRO — badge de salud del cron macro-refresh ──
+// Calcula edad de macro_state.updated_at (dato ya cargado, 0 fetches nuevos).
+// Umbrales: verde ≤48h · ámbar >48h · rojo >5 días.
+function macroFreshness(updatedAt) {
+  if (!updatedAt) return null;
+  const ts = new Date(updatedAt).getTime();
+  if (!isFinite(ts)) return null;
+  const h = (Date.now() - ts) / 3.6e6;
+  const d = h / 24;
+  let age;
+  if (h < 1) age = "hace <1h";else if (h < 48) age = `hace ${Math.round(h)}h`;else age = `hace ${Math.round(d)}d`;
+  let color,
+    warn = null;
+  if (h <= 48) color = "#22c55e";else if (d <= 5) {
+    color = "#fbbf24";
+    warn = "el cron macro-refresh puede estar fallando";
+  } else {
+    color = "#ef4444";
+    warn = "el cron macro-refresh puede estar fallando";
+  }
+  return {
+    age,
+    color,
+    warn
   };
 }
 
@@ -7481,7 +7509,35 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     value: scores.growth,
     max: 20,
     color: "#a78bfa"
-  })), macroTilt && tiltN !== 0 ? /*#__PURE__*/React.createElement("div", {
+  })), macroTilt && macroTilt.updatedAt && (() => {
+    const fr = macroFreshness(macroTilt.updatedAt);
+    if (!fr) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      title: fr.warn || `macro_state actualizado ${new Date(macroTilt.updatedAt).toLocaleString()}`,
+      style: {
+        alignSelf: 'flex-start',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        padding: '2px 8px',
+        borderRadius: 10,
+        background: `${fr.color}22`,
+        border: `1px solid ${fr.color}`,
+        fontSize: 9,
+        fontWeight: 700,
+        color: fr.color,
+        fontFamily: 'JetBrains Mono,monospace',
+        cursor: 'help'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background: fr.color
+      }
+    }), "macro: ", fr.age, fr.warn ? ' ⚠' : '');
+  })(), macroTilt && tiltN !== 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       width: '100%',
       background: '#0c0e14',
