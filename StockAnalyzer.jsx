@@ -2634,7 +2634,7 @@ function WatchlistManager({ supabase, onAnalyze }) {
     <div style={{padding:16}}>
       <div style={{display:'flex',gap:8,marginBottom:16}}>
         <input value={newTicker} onChange={e=>setNewTicker(e.target.value)} placeholder="Añadir ticker (ej. NVDA)" onKeyDown={e=>e.key==='Enter'&&addTicker()} style={{flex:1,padding:'8px 12px',background:'#1c1d26',border:'1px solid #24262f',color:'#edeef4',borderRadius:6}}/>
-        <button onClick={addTicker} style={{padding:'8px 16px',background:'#968ff7',border:'none',color:'#fff',borderRadius:6,cursor:'pointer',fontWeight:600}}>Añadir</button>
+        <button onClick={addTicker} style={{padding:'8px 16px',background:'#968ff7',border:'none',color:'#15151c',borderRadius:6,cursor:'pointer',fontWeight:600}}>Añadir</button>
         <button onClick={load} style={{padding:'8px 16px',background:'#24262f',border:'1px solid #33353f',color:'#edeef4',borderRadius:6,cursor:'pointer'}}>{loading?'…':'Recargar'}</button>
       </div>
       <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
@@ -2720,7 +2720,7 @@ function CompareView({ supabase, onAnalyze }) {
               style={{
                 padding:'6px 12px',borderRadius:6,cursor:blocked?'not-allowed':'pointer',
                 background:on?'#968ff7':'#1c1d26',border:`1px solid ${on?'#968ff7':'#24262f'}`,
-                color:on?'#fff':(has?'#edeef4':'#787a83'),fontWeight:600,fontSize:12,opacity:blocked?0.5:1
+                color:on?'#15151c':(has?'#edeef4':'#787a83'),fontWeight:600,fontSize:12,opacity:blocked?0.5:1
               }}>{r.ticker}{has?'':' ·—'}</button>
           );
         })}
@@ -2807,7 +2807,7 @@ function LoginScreen() {
       <input type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)}
         style={{width:'100%',padding:'10px 12px',background:'#1c1d26',border:'1px solid #24262f',color:'#edeef4',borderRadius:6,fontSize:14,marginBottom:12}}/>
       <button onClick={sendMagicLink}
-        style={{width:'100%',padding:'10px',background:'#968ff7',border:'none',color:'#fff',borderRadius:6,cursor:'pointer',fontWeight:600}}>
+        style={{width:'100%',padding:'10px',background:'#968ff7',border:'none',color:'#15151c',borderRadius:6,cursor:'pointer',fontWeight:600}}>
         Send magic link
       </button>
       {err && <div style={{color:'#eb6459',fontSize:12,marginTop:10}}>{err}</div>}
@@ -3598,7 +3598,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               }}
             />
             <button onClick={handleSearch} disabled={loading||!inputTicker.trim()} style={{
-              background:loading?'#24262f':'#968ff7',color:'#fff',border:'none',
+              background:loading?'#24262f':'#968ff7',color:loading?'#edeef4':'#15151c',border:'none',
               padding:'7px 18px',borderRadius:6,cursor:loading?'not-allowed':'pointer',
               fontSize:13,fontWeight:600,whiteSpace:'nowrap'
             }}>{loading?'…':'Analyze'}</button>

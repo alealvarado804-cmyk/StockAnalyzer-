@@ -5581,7 +5581,7 @@ function WatchlistManager({
       padding: '8px 16px',
       background: '#968ff7',
       border: 'none',
-      color: '#fff',
+      color: '#15151c',
       borderRadius: 6,
       cursor: 'pointer',
       fontWeight: 600
@@ -5811,7 +5811,7 @@ function CompareView({
         cursor: blocked ? 'not-allowed' : 'pointer',
         background: on ? '#968ff7' : '#1c1d26',
         border: `1px solid ${on ? '#968ff7' : '#24262f'}`,
-        color: on ? '#fff' : has ? '#edeef4' : '#787a83',
+        color: on ? '#15151c' : has ? '#edeef4' : '#787a83',
         fontWeight: 600,
         fontSize: 12,
         opacity: blocked ? 0.5 : 1
@@ -5985,7 +5985,7 @@ function LoginScreen() {
       padding: '10px',
       background: '#968ff7',
       border: 'none',
-      color: '#fff',
+      color: '#15151c',
       borderRadius: 6,
       cursor: 'pointer',
       fontWeight: 600
@@ -7113,7 +7113,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     disabled: loading || !inputTicker.trim(),
     style: {
       background: loading ? '#24262f' : '#968ff7',
-      color: '#fff',
+      color: loading ? '#edeef4' : '#15151c',
       border: 'none',
       padding: '7px 18px',
       borderRadius: 6,
