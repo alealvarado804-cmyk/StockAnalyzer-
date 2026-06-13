@@ -225,7 +225,7 @@ function computeMoatScore(metrics, ratios, stmts, profile) {
   capEff = Math.max(0, Math.min(25, Math.round(capEff)));
   const total = demand + supply + pricing + capEff;
   const moatRating = total >= 85 ? 'Ultra-Wide Moat' : total >= 70 ? 'Wide Moat' : total >= 55 ? 'Moderate Moat' : total >= 40 ? 'Narrow Moat' : 'No Moat';
-  const moatColor = total >= 85 ? '#10b981' : total >= 70 ? '#3b82f6' : total >= 55 ? '#8b5cf6' : total >= 40 ? '#f59e0b' : '#6b7280';
+  const moatColor = total >= 85 ? '#5ac576' : total >= 70 ? '#968ff7' : total >= 55 ? '#968ff7' : total >= 40 ? '#eca851' : '#787a83';
   return {
     demand,
     supply,
@@ -458,33 +458,33 @@ function calcScores(metrics, ratios, history, stmts) {
 function getRating(s) {
   if (s >= 80) return {
     label: 'STRONG BUY',
-    color: '#22c55e',
-    bg: '#0d2e1a',
-    border: '#166534'
+    color: '#5ac576',
+    bg: '#194224',
+    border: '#194224'
   };
   if (s >= 65) return {
     label: 'BUY',
-    color: '#4ade80',
-    bg: '#0d2318',
-    border: '#14532d'
+    color: '#5ac576',
+    bg: '#194224',
+    border: '#194224'
   };
   if (s >= 50) return {
     label: 'HOLD',
-    color: '#fbbf24',
-    bg: '#2a1f00',
-    border: '#78350f'
+    color: '#eca851',
+    bg: '#54360b',
+    border: '#54360b'
   };
   if (s >= 35) return {
     label: 'CAUTION',
-    color: '#f97316',
-    bg: '#2a1200',
-    border: '#7c2d12'
+    color: '#eca851',
+    bg: '#54360b',
+    border: '#54360b'
   };
   return {
     label: 'AVOID',
-    color: '#f87171',
-    bg: '#2a0d0d',
-    border: '#7f1d1d'
+    color: '#eb6459',
+    bg: '#602a25',
+    border: '#602a25'
   };
 }
 
@@ -582,11 +582,11 @@ function macroFreshness(updatedAt) {
   if (h < 1) age = "hace <1h";else if (h < 48) age = `hace ${Math.round(h)}h`;else age = `hace ${Math.round(d)}d`;
   let color,
     warn = null;
-  if (h <= 48) color = "#22c55e";else if (d <= 5) {
-    color = "#fbbf24";
+  if (h <= 48) color = "#5ac576";else if (d <= 5) {
+    color = "#eca851";
     warn = "el cron macro-refresh puede estar fallando";
   } else {
-    color = "#ef4444";
+    color = "#eb6459";
     warn = "el cron macro-refresh puede estar fallando";
   }
   return {
@@ -604,7 +604,7 @@ function Sk({
 }) {
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: 'linear-gradient(90deg,#0c0e14 25%,#141720 50%,#0c0e14 75%)',
+      background: 'linear-gradient(90deg,#15151c 25%,#1c1d26 50%,#15151c 75%)',
       backgroundSize: '200% 100%',
       animation: 'shimmer 1.5s infinite',
       borderRadius: 4,
@@ -624,8 +624,8 @@ function LoadingSkeleton() {
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0c0e14',
-      border: '1px solid #161b26',
+      background: '#15151c',
+      border: '1px solid #1c1d26',
       borderRadius: 10,
       padding: '20px 24px'
     }
@@ -658,8 +658,8 @@ function LoadingSkeleton() {
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0c0e14',
-      border: '1px solid #161b26',
+      background: '#15151c',
+      border: '1px solid #1c1d26',
       borderRadius: 10,
       padding: '20px 24px',
       display: 'flex',
@@ -682,8 +682,8 @@ function LoadingSkeleton() {
     }
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0c0e14',
-      border: '1px solid #161b26',
+      background: '#15151c',
+      border: '1px solid #1c1d26',
       borderRadius: 10,
       padding: '20px 24px'
     }
@@ -702,7 +702,7 @@ function LoadingSkeleton() {
   }, [...Array(9)].map((_, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
-      background: '#141720',
+      background: '#1c1d26',
       borderRadius: 6,
       padding: '10px 14px'
     }
@@ -717,8 +717,8 @@ function LoadingSkeleton() {
     w: "70%"
   })))))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0c0e14',
-      border: '1px solid #161b26',
+      background: '#15151c',
+      border: '1px solid #1c1d26',
       borderRadius: 10,
       padding: '20px 24px'
     }
@@ -734,8 +734,8 @@ function Panel({
 }) {
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0c0e14',
-      border: '1px solid #161b26',
+      background: '#15151c',
+      border: '1px solid #1c1d26',
       borderRadius: 10,
       padding: '20px 24px',
       ...style
@@ -751,10 +751,10 @@ function SectionTitle({
       fontWeight: 700,
       textTransform: 'uppercase',
       letterSpacing: '1px',
-      color: '#334155',
+      color: '#33353f',
       marginBottom: 14,
       paddingBottom: 8,
-      borderBottom: '1px solid #141720'
+      borderBottom: '1px solid #1c1d26'
     }
   }, children);
 }
@@ -776,16 +776,16 @@ function KPIBadge({
     if (Math.abs(diff) < 0.15) return null;
     return diff > 0 ? {
       t: `↑ vs ${bmLabel || 'sector'}`,
-      c: '#22c55e'
+      c: '#5ac576'
     } : {
       t: `↓ vs ${bmLabel || 'sector'}`,
-      c: '#f87171'
+      c: '#eb6459'
     };
   }, [bmVal, value, bmLabel]);
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 14px',
       display: 'flex',
@@ -795,7 +795,7 @@ function KPIBadge({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.5px'
     }
@@ -803,8 +803,8 @@ function KPIBadge({
     style: {
       fontSize: 17,
       fontWeight: 700,
-      color: highlight || '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace',
+      color: highlight || '#edeef4',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1
     }
   }, value), /*#__PURE__*/React.createElement("div", {
@@ -816,7 +816,7 @@ function KPIBadge({
   }, sub && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#334155'
+      color: '#33353f'
     }
   }, sub), vsStr && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -836,27 +836,27 @@ function HealthCard({
 }) {
   const C = {
     green: {
-      bg: '#0d2e1a',
-      border: '#166534',
-      badge: '#22c55e',
+      bg: '#194224',
+      border: '#194224',
+      badge: '#5ac576',
       icon: '✓ BEAT'
     },
     amber: {
-      bg: '#2a1f00',
-      border: '#78350f',
-      badge: '#fbbf24',
+      bg: '#54360b',
+      border: '#54360b',
+      badge: '#eca851',
       icon: '⚠ WATCH'
     },
     red: {
-      bg: '#2a0d0d',
-      border: '#7f1d1d',
-      badge: '#f87171',
+      bg: '#602a25',
+      border: '#602a25',
+      badge: '#eb6459',
       icon: '✗ MISS'
     },
     neutral: {
-      bg: '#141720',
-      border: '#1e2430',
-      badge: '#475569',
+      bg: '#1c1d26',
+      border: '#24262f',
+      badge: '#787a83',
       icon: '— N/A'
     }
   }[status || 'neutral'];
@@ -879,7 +879,7 @@ function HealthCard({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#64748b',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.5px'
     }
@@ -894,13 +894,13 @@ function HealthCard({
       fontSize: 19,
       fontWeight: 800,
       color: C.badge,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1.1
     }
   }, value), note && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569'
+      color: '#787a83'
     }
   }, note));
 }
@@ -912,7 +912,7 @@ function ScoreGauge({
   const r = getRating(score);
   const cir = 2 * Math.PI * 52;
   const prog = score / 100 * cir;
-  const col = score >= 65 ? '#22c55e' : score >= 50 ? '#fbbf24' : '#f87171';
+  const col = score >= 65 ? '#5ac576' : score >= 50 ? '#eca851' : '#eb6459';
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
@@ -950,7 +950,7 @@ function ScoreGauge({
     cy: "68",
     r: "52",
     fill: "none",
-    stroke: "#1e2430",
+    stroke: "#24262f",
     strokeWidth: "10"
   }), /*#__PURE__*/React.createElement("circle", {
     cx: "68",
@@ -979,13 +979,13 @@ function ScoreGauge({
       fontSize: 34,
       fontWeight: 800,
       color: col,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1
     }
   }, score), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       letterSpacing: '1px'
     }
   }, "/100"))), /*#__PURE__*/React.createElement("div", {
@@ -1021,22 +1021,22 @@ function ScoreBar({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: '#94a3b8'
+      color: '#a6a7b1'
     }
   }, label), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       fontWeight: 700,
-      color: '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: '#edeef4',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, value, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#334155'
+      color: '#33353f'
     }
   }, "/", max))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#1e2430',
+      background: '#24262f',
       borderRadius: 4,
       height: 5,
       overflow: 'hidden'
@@ -1056,7 +1056,7 @@ function ScoreBar({
 function Sparkline({
   data,
   type = 'bar',
-  color = '#3b82f6',
+  color = '#968ff7',
   h = 48,
   w = 120
 }) {
@@ -1065,7 +1065,7 @@ function Sparkline({
     style: {
       width: w,
       height: h,
-      background: '#141720',
+      background: '#1c1d26',
       borderRadius: 3
     }
   });
@@ -1088,7 +1088,7 @@ function Sparkline({
         y: h - bh,
         width: Math.max(1, bw - 1),
         height: bh,
-        fill: v < 0 ? '#f87171' : color,
+        fill: v < 0 ? '#eb6459' : color,
         rx: 1
       });
     }));
@@ -1123,15 +1123,15 @@ function ScoreHistorySparkline({
     return /*#__PURE__*/React.createElement("div", {
       style: {
         width: '100%',
-        background: '#0c0e14',
-        border: '1px solid #161b26',
+        background: '#15151c',
+        border: '1px solid #1c1d26',
         borderRadius: 8,
         padding: '10px 12px'
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 9,
-        color: '#475569',
+        color: '#787a83',
         textTransform: 'uppercase',
         letterSpacing: '0.7px',
         fontWeight: 700,
@@ -1140,7 +1140,7 @@ function ScoreHistorySparkline({
     }, "Hist\xF3rico IC Score"), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 9,
-        color: '#334155',
+        color: '#33353f',
         lineHeight: 1.4
       }
     }, "El hist\xF3rico se construye con cada an\xE1lisis (a\xFAn ", n, " punto", n === 1 ? '' : 's', ")."));
@@ -1161,8 +1161,8 @@ function ScoreHistorySparkline({
   return /*#__PURE__*/React.createElement("div", {
     style: {
       width: '100%',
-      background: '#0c0e14',
-      border: '1px solid #161b26',
+      background: '#15151c',
+      border: '1px solid #1c1d26',
       borderRadius: 8,
       padding: '10px 12px'
     }
@@ -1176,7 +1176,7 @@ function ScoreHistorySparkline({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       fontWeight: 700
@@ -1185,8 +1185,8 @@ function ScoreHistorySparkline({
     style: {
       fontSize: 10,
       fontWeight: 700,
-      color: delta >= 0 ? '#22c55e' : '#f87171',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: delta >= 0 ? '#5ac576' : '#eb6459',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, delta >= 0 ? '+' : '', delta, " \xB7 ", n, "p")), /*#__PURE__*/React.createElement("svg", {
     width: w,
@@ -1199,7 +1199,7 @@ function ScoreHistorySparkline({
   }, /*#__PURE__*/React.createElement("polyline", {
     points: pts,
     fill: "none",
-    stroke: "#3b82f6",
+    stroke: "#968ff7",
     strokeWidth: "1.5",
     strokeLinejoin: "round"
   }), data.map((d, i) => /*#__PURE__*/React.createElement("circle", {
@@ -1207,7 +1207,7 @@ function ScoreHistorySparkline({
     cx: xAt(i),
     cy: yAt(d.ic),
     r: hover === i ? 3.5 : 2.2,
-    fill: hover === i ? '#60a5fa' : '#3b82f6',
+    fill: hover === i ? '#968ff7' : '#968ff7',
     style: {
       cursor: 'pointer'
     },
@@ -1215,8 +1215,8 @@ function ScoreHistorySparkline({
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#64748b',
-      fontFamily: 'JetBrains Mono,monospace',
+      color: '#787a83',
+      fontFamily: 'Geist Mono,monospace',
       marginTop: 4,
       minHeight: 12
     }
@@ -1343,7 +1343,7 @@ function PriceChart({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: '#334155',
+      color: '#33353f',
       fontSize: 12
     }
   }, "No price data");
@@ -1391,7 +1391,7 @@ function PriceChart({
   const fy = v => pt + (1 - (v - fMin) / fRng) * priceH;
   const fredPts = fredSamples ? fredSamples.map(s => `${px(s.i)},${fy(s.val)}`).join(' ') : null;
   const isUp = prices[prices.length - 1] >= prices[0];
-  const stroke = isUp ? '#22c55e' : '#f87171';
+  const stroke = isUp ? '#5ac576' : '#eb6459';
   const pts = prices.map((p, i) => `${px(i)},${py(p)}`).join(' ');
   const fillPts = `${pl},${priceBottom} ${pts} ${W - pr},${priceBottom}`;
   const sma50pts = useMemo(() => {
@@ -1444,25 +1444,25 @@ function PriceChart({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: toggleFred,
     style: {
-      background: fredOn ? '#3a2e14' : '#141720',
-      border: `1px solid ${fredOn ? '#f59e0b' : '#1e2430'}`,
-      color: fredOn ? '#f59e0b' : '#475569',
+      background: fredOn ? '#54360b' : '#1c1d26',
+      border: `1px solid ${fredOn ? '#eca851' : '#24262f'}`,
+      color: fredOn ? '#eca851' : '#787a83',
       padding: '2px 9px',
       borderRadius: 4,
       cursor: 'pointer',
       fontSize: 9,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       fontWeight: 600
     }
   }, fredOn ? '● ' : '○ ', "Fed Funds"), fredStatus === 'loading' && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 9,
-      color: '#475569'
+      color: '#787a83'
     }
   }, "cargando\u2026"), fredStatus === 'error' && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 9,
-      color: '#f87171'
+      color: '#eb6459'
     }
   }, "FRED no disponible")), zoom && /*#__PURE__*/React.createElement("button", {
     onClick: () => setZoom(null),
@@ -1471,14 +1471,14 @@ function PriceChart({
       top: 6,
       right: 8,
       zIndex: 11,
-      background: '#141720',
-      border: '1px solid #1e3a5f',
-      color: '#60a5fa',
+      background: '#1c1d26',
+      border: '1px solid #34315f',
+      color: '#968ff7',
       padding: '2px 9px',
       borderRadius: 4,
       cursor: 'pointer',
       fontSize: 9,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       fontWeight: 600
     }
   }, "\u2922 reset zoom"), /*#__PURE__*/React.createElement("svg", {
@@ -1512,14 +1512,14 @@ function PriceChart({
     x2: W - pr,
     y1: pt + f * priceH,
     y2: pt + f * priceH,
-    stroke: "#161b26",
+    stroke: "#1c1d26",
     strokeWidth: "1"
   })), /*#__PURE__*/React.createElement("line", {
     x1: pl,
     x2: W - pr,
     y1: py(hi52),
     y2: py(hi52),
-    stroke: "#334155",
+    stroke: "#33353f",
     strokeWidth: "0.8",
     strokeDasharray: "4 4"
   }), /*#__PURE__*/React.createElement("line", {
@@ -1527,7 +1527,7 @@ function PriceChart({
     x2: W - pr,
     y1: py(lo52),
     y2: py(lo52),
-    stroke: "#334155",
+    stroke: "#33353f",
     strokeWidth: "0.8",
     strokeDasharray: "4 4"
   }), /*#__PURE__*/React.createElement("polygon", {
@@ -1542,47 +1542,47 @@ function PriceChart({
   }), sma50pts && /*#__PURE__*/React.createElement("polyline", {
     points: sma50pts,
     fill: "none",
-    stroke: "#60a5fa",
+    stroke: "#968ff7",
     strokeWidth: "1",
     strokeOpacity: "0.7",
     strokeDasharray: "3 2"
   }), fredPts && /*#__PURE__*/React.createElement("polyline", {
     points: fredPts,
     fill: "none",
-    stroke: "#f59e0b",
+    stroke: "#eca851",
     strokeWidth: "1.4",
     strokeOpacity: "0.9"
   }), fredPts && /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("text", {
     x: W - pr - 2,
     y: fy(fMax) + (fy(fMax) < pt + 12 ? 12 : -2),
     fontSize: "7.5",
-    fill: "#f59e0b",
+    fill: "#eca851",
     textAnchor: "end"
   }, fMax.toFixed(2), "%"), /*#__PURE__*/React.createElement("text", {
     x: W - pr - 2,
     y: fy(fMin) - 2,
     fontSize: "7.5",
-    fill: "#f59e0b",
+    fill: "#eca851",
     textAnchor: "end"
   }, fMin.toFixed(2), "%"), /*#__PURE__*/React.createElement("line", {
     x1: W - 80,
     x2: W - 68,
     y1: pt + 22,
     y2: pt + 22,
-    stroke: "#f59e0b",
+    stroke: "#eca851",
     strokeWidth: "1.4"
   }), /*#__PURE__*/React.createElement("text", {
     x: W - 65,
     y: pt + 25,
     fontSize: "7.5",
-    fill: "#f59e0b"
+    fill: "#eca851"
   }, "Fed Funds")), volumes.map((v, i) => /*#__PURE__*/React.createElement("rect", {
     key: i,
     x: pl + i * (cw / view.length),
     y: vy(v),
     width: Math.max(1, cw / view.length - 0.5),
     height: volBottom - vy(v),
-    fill: i > 0 ? prices[i] >= prices[i - 1] ? '#22c55e' : '#f87171' : '#475569',
+    fill: i > 0 ? prices[i] >= prices[i - 1] ? '#5ac576' : '#eb6459' : '#787a83',
     opacity: "0.3"
   })), ticks.filter((_, i) => i % 2 === 0).map(({
     i,
@@ -1592,36 +1592,36 @@ function PriceChart({
     x: px(i),
     y: H - 8,
     fontSize: "8",
-    fill: "#334155",
+    fill: "#33353f",
     textAnchor: "middle"
   }, mLbls[m])), /*#__PURE__*/React.createElement("text", {
     x: pl + 2,
     y: pt + 10,
     fontSize: "8",
-    fill: "#334155"
+    fill: "#33353f"
   }, "$", maxP.toFixed(0)), /*#__PURE__*/React.createElement("text", {
     x: pl + 2,
     y: priceBottom - 4,
     fontSize: "8",
-    fill: "#334155"
+    fill: "#33353f"
   }, "$", minP.toFixed(0)), /*#__PURE__*/React.createElement("text", {
     x: W - pr - 2,
     y: py(hi52) - 3,
     fontSize: "7.5",
-    fill: "#475569",
+    fill: "#787a83",
     textAnchor: "end"
   }, "52W H"), /*#__PURE__*/React.createElement("text", {
     x: W - pr - 2,
     y: py(lo52) + 8,
     fontSize: "7.5",
-    fill: "#475569",
+    fill: "#787a83",
     textAnchor: "end"
   }, "52W L"), hx != null && /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("line", {
     x1: hx,
     x2: hx,
     y1: pt,
     y2: priceBottom,
-    stroke: "#475569",
+    stroke: "#787a83",
     strokeWidth: "0.8",
     strokeDasharray: "3 2"
   }), /*#__PURE__*/React.createElement("circle", {
@@ -1629,32 +1629,32 @@ function PriceChart({
     cy: py(prices[hoverIdx]),
     r: "3.5",
     fill: stroke,
-    stroke: "#0c0e14",
+    stroke: "#15151c",
     strokeWidth: "1.5"
   })), sma50pts && /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("line", {
     x1: W - 80,
     x2: W - 68,
     y1: pt + 10,
     y2: pt + 10,
-    stroke: "#60a5fa",
+    stroke: "#968ff7",
     strokeWidth: "1.2",
     strokeDasharray: "3 2"
   }), /*#__PURE__*/React.createElement("text", {
     x: W - 65,
     y: pt + 13,
     fontSize: "7.5",
-    fill: "#60a5fa"
+    fill: "#968ff7"
   }, "50 SMA"))), hd && hx != null && /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
       top: 8,
       left: Math.min(hx / 800 * 100, 72) + '%',
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '8px 11px',
       fontSize: 11,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       pointerEvents: 'none',
       minWidth: 130,
       zIndex: 10,
@@ -1662,13 +1662,13 @@ function PriceChart({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#64748b',
+      color: '#787a83',
       fontSize: 9,
       marginBottom: 5
     }
   }, hd.date?.substring(0, 10)), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#e2e8f0',
+      color: '#edeef4',
       marginBottom: 2
     }
   }, "C: ", /*#__PURE__*/React.createElement("span", {
@@ -1677,19 +1677,19 @@ function PriceChart({
     }
   }, "$", hd.close?.toFixed(2))), hd.open && /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#94a3b8'
+      color: '#a6a7b1'
     }
   }, "O: $", hd.open?.toFixed(2)), hd.high && /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#94a3b8'
+      color: '#a6a7b1'
     }
   }, "H: $", hd.high?.toFixed(2)), hd.low && /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#94a3b8'
+      color: '#a6a7b1'
     }
   }, "L: $", hd.low?.toFixed(2)), hd.volume && /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#475569',
+      color: '#787a83',
       fontSize: 9,
       marginTop: 3
     }
@@ -1735,7 +1735,7 @@ function TechnicalSignals({
     lo52,
     rangePct
   } = data;
-  const rsiColor = !ok(rsi) ? '#475569' : rsi > 70 ? '#f87171' : rsi < 30 ? '#22c55e' : '#fbbf24';
+  const rsiColor = !ok(rsi) ? '#787a83' : rsi > 70 ? '#eb6459' : rsi < 30 ? '#5ac576' : '#eca851';
   const rsiLabel = !ok(rsi) ? '—' : rsi > 70 ? 'OVERBOUGHT' : rsi < 30 ? 'OVERSOLD' : 'NEUTRAL';
   const vs50 = sma50 ? (cur - sma50) / sma50 : null;
   const vs200 = sma200 ? (cur - sma200) / sma200 : null;
@@ -1746,8 +1746,8 @@ function TechnicalSignals({
     extra
   }) => /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: `1px solid #1e2430`,
+      background: '#1c1d26',
+      border: `1px solid #24262f`,
       borderRadius: 6,
       padding: '10px 13px',
       flex: 1,
@@ -1756,7 +1756,7 @@ function TechnicalSignals({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.5px',
       marginBottom: 5
@@ -1765,13 +1765,13 @@ function TechnicalSignals({
     style: {
       fontSize: 14,
       fontWeight: 700,
-      color: color || '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: color || '#edeef4',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, val), extra && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 3
     }
   }, extra));
@@ -1789,17 +1789,17 @@ function TechnicalSignals({
   }), /*#__PURE__*/React.createElement(Sig, {
     label: "vs 50-day SMA",
     val: ok(vs50) ? fmt.chg(vs50) : '—',
-    color: ok(vs50) ? vs50 > 0 ? '#22c55e' : '#f87171' : '#475569',
+    color: ok(vs50) ? vs50 > 0 ? '#5ac576' : '#eb6459' : '#787a83',
     extra: ok(sma50) ? `SMA $${sma50.toFixed(2)}` : 'insufficient data'
   }), /*#__PURE__*/React.createElement(Sig, {
     label: "vs 200-day SMA",
     val: ok(vs200) ? fmt.chg(vs200) : '—',
-    color: ok(vs200) ? vs200 > 0 ? '#22c55e' : '#f87171' : '#475569',
+    color: ok(vs200) ? vs200 > 0 ? '#5ac576' : '#eb6459' : '#787a83',
     extra: ok(sma200) ? `SMA $${sma200.toFixed(2)}` : 'insufficient data'
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 13px',
       flex: 2,
@@ -1808,19 +1808,19 @@ function TechnicalSignals({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.5px',
       marginBottom: 5
     }
   }, "52-Week Range  ", /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: '#edeef4',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, "$", lo52.toFixed(0), " \u2014 $", hi52.toFixed(0))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#1e2430',
+      background: '#24262f',
       borderRadius: 3,
       height: 6,
       overflow: 'hidden',
@@ -1830,21 +1830,21 @@ function TechnicalSignals({
     style: {
       width: `${rangePct * 100}%`,
       height: '100%',
-      background: '#3b82f6',
+      background: '#968ff7',
       borderRadius: 3,
       transition: 'width 0.5s ease'
     }
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       marginTop: 3
     }
   }, (rangePct * 100).toFixed(0), "% of range \xB7 Current $", ok(cur) ? cur.toFixed(2) : '—'))), (macdData || rsData) && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 8,
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       overflow: 'hidden'
     }
@@ -1854,12 +1854,12 @@ function TechnicalSignals({
       justifyContent: 'space-between',
       alignItems: 'center',
       padding: '10px 13px',
-      borderBottom: rsData ? '1px solid #1e2430' : 'none'
+      borderBottom: rsData ? '1px solid #24262f' : 'none'
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.5px'
     }
@@ -1869,13 +1869,13 @@ function TechnicalSignals({
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: macdData.crossover === 'bullish_cross' ? '#10b981' : macdData.crossover === 'bearish_cross' ? '#ef4444' : macdData.crossover === 'bullish' ? '#34d399' : macdData.crossover === 'bearish' ? '#f87171' : '#475569',
+      color: macdData.crossover === 'bullish_cross' ? '#5ac576' : macdData.crossover === 'bearish_cross' ? '#eb6459' : macdData.crossover === 'bullish' ? '#5ac576' : macdData.crossover === 'bearish' ? '#eb6459' : '#787a83',
       fontSize: 13,
       fontWeight: 700
     }
   }, macdData.crossover === 'bullish_cross' ? '⬆ Bullish Crossover' : macdData.crossover === 'bearish_cross' ? '⬇ Bearish Crossover' : macdData.crossover === 'bullish' ? '▲ Trending Up' : macdData.crossover === 'bearish' ? '▼ Trending Down' : '→ Neutral'), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#334155',
+      color: '#33353f',
       fontSize: 10,
       marginTop: 2
     }
@@ -1889,7 +1889,7 @@ function TechnicalSignals({
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.5px'
     }
@@ -1899,13 +1899,13 @@ function TechnicalSignals({
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: rsData.outperforming ? '#10b981' : '#ef4444',
+      color: rsData.outperforming ? '#5ac576' : '#eb6459',
       fontSize: 13,
       fontWeight: 700
     }
   }, rsData.outperforming ? '▲ Outperforming' : '▼ Underperforming', ' ', rsData.alpha >= 0 ? '+' : '', (rsData.alpha * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#334155',
+      color: '#33353f',
       fontSize: 10,
       marginTop: 2
     }
@@ -1936,7 +1936,7 @@ function AnalystPanel({
   const buyPct = total > 0 ? (sb + b) / total : null;
   const holdPct = total > 0 ? h / total : null;
   const sellPct = total > 0 ? (s + ss) / total : null;
-  const ratingColor = rating === 'Strong Buy' ? '#22c55e' : rating === 'Buy' ? '#4ade80' : rating === 'Hold' ? '#fbbf24' : '#f87171';
+  const ratingColor = rating === 'Strong Buy' ? '#5ac576' : rating === 'Buy' ? '#5ac576' : rating === 'Hold' ? '#eca851' : '#eb6459';
   const fwdEps = ae?.estimatedEpsAvg;
   const fwdPE = ok(fwdEps) && fwdEps > 0 && ok(currentPrice) ? currentPrice / fwdEps : null;
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Analyst Consensus"), /*#__PURE__*/React.createElement("div", {
@@ -1971,38 +1971,38 @@ function AnalystPanel({
   }, rating.toUpperCase()), total > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: '#475569'
+      color: '#787a83'
     }
   }, total, " analysts")), ok(targetMed) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       marginBottom: 3
     }
   }, "Consensus Price Target"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 20,
       fontWeight: 800,
-      color: '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace',
+      color: '#edeef4',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1
     }
   }, fmt.price(targetMed), ok(upside) && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12,
       fontWeight: 600,
-      color: upside > 0 ? '#22c55e' : '#f87171',
+      color: upside > 0 ? '#5ac576' : '#eb6459',
       marginLeft: 8
     }
   }, upside > 0 ? '▲' : '▼', " ", Math.abs(upside * 100).toFixed(1), "% upside")), ok(pt?.targetHigh) && ok(pt?.targetLow) && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 2
     }
   }, "Range: ", fmt.price(pt.targetLow), " \u2014 ", fmt.price(pt.targetHigh))), ok(fwdPE) && /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
+      background: '#1c1d26',
       borderRadius: 6,
       padding: '8px 12px',
       display: 'inline-block'
@@ -2010,19 +2010,19 @@ function AnalystPanel({
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10,
-      color: '#475569'
+      color: '#787a83'
     }
   }, "Fwd P/E "), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 14,
       fontWeight: 700,
-      color: '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: '#edeef4',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, fwdPE.toFixed(1), "x"))), total > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       marginBottom: 8
     }
   }, "Analyst Distribution (", total, ")"), /*#__PURE__*/React.createElement("div", {
@@ -2034,17 +2034,17 @@ function AnalystPanel({
   }, [{
     label: 'Buy / Strong Buy',
     pct: buyPct,
-    color: '#22c55e',
+    color: '#5ac576',
     cnt: sb + b
   }, {
     label: 'Hold',
     pct: holdPct,
-    color: '#fbbf24',
+    color: '#eca851',
     cnt: h
   }, {
     label: 'Sell / Strong Sell',
     pct: sellPct,
-    color: '#f87171',
+    color: '#eb6459',
     cnt: s + ss
   }].map(({
     label,
@@ -2059,17 +2059,17 @@ function AnalystPanel({
       justifyContent: 'space-between',
       marginBottom: 3,
       fontSize: 10,
-      color: '#64748b'
+      color: '#787a83'
     }
   }, /*#__PURE__*/React.createElement("span", null, label), /*#__PURE__*/React.createElement("span", {
     style: {
       color,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       fontWeight: 600
     }
   }, cnt, " (", ok(pct) ? (pct * 100).toFixed(0) : 0, "%)")), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#1e2430',
+      background: '#24262f',
       borderRadius: 3,
       height: 5
     }
@@ -2088,7 +2088,7 @@ function AnalystPanel({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '1px',
       marginBottom: 8
@@ -2103,33 +2103,33 @@ function AnalystPanel({
     }
   }, ptList.slice(0, 8).map((pt, i) => {
     const upPt = ok(pt.priceTarget) && ok(currentPrice) ? (pt.priceTarget - currentPrice) / currentPrice : null;
-    const ptColor = !ok(upPt) ? '#475569' : upPt > 0.1 ? '#22c55e' : upPt < -0.1 ? '#f87171' : '#fbbf24';
+    const ptColor = !ok(upPt) ? '#787a83' : upPt > 0.1 ? '#5ac576' : upPt < -0.1 ? '#eb6459' : '#eca851';
     return /*#__PURE__*/React.createElement("div", {
       key: i,
       style: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: '#141720',
+        background: '#1c1d26',
         borderRadius: 5,
         padding: '6px 12px',
         fontSize: 11
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
-        color: '#64748b',
+        color: '#787a83',
         flex: 1
       }
     }, pt.analystCompany || pt.analystName), /*#__PURE__*/React.createElement("span", {
       style: {
-        color: '#475569',
+        color: '#787a83',
         marginRight: 12
       }
     }, pt.publishedDate?.substring(0, 10)), /*#__PURE__*/React.createElement("span", {
       style: {
         fontWeight: 700,
         color: ptColor,
-        fontFamily: 'JetBrains Mono,monospace'
+        fontFamily: 'Geist Mono,monospace'
       }
     }, fmt.price(pt.priceTarget), ok(upPt) && /*#__PURE__*/React.createElement("span", {
       style: {
@@ -2168,7 +2168,7 @@ function GrowthPanel({
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: '10px 0',
-        borderBottom: '1px solid #161b26'
+        borderBottom: '1px solid #1c1d26'
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -2180,7 +2180,7 @@ function GrowthPanel({
       style: {
         width: 130,
         fontSize: 11,
-        color: '#94a3b8',
+        color: '#a6a7b1',
         flexShrink: 0
       }
     }, label), /*#__PURE__*/React.createElement("div", {
@@ -2203,12 +2203,12 @@ function GrowthPanel({
     }, /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 9,
-        color: '#334155'
+        color: '#33353f'
       }
     }, firstLabel), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 9,
-        color: '#334155'
+        color: '#33353f'
       }
     }, lastLabel))), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -2218,21 +2218,21 @@ function GrowthPanel({
     }, ok(latestVal) && /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11,
-        color: '#e2e8f0',
-        fontFamily: 'JetBrains Mono,monospace',
+        color: '#edeef4',
+        fontFamily: 'Geist Mono,monospace',
         fontWeight: 700
       }
     }, type === 'line' ? fmt.pct(latestVal) : fmt.usd(latestVal)), ok(cagrVal) && /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 10,
-        color: cagrVal > 0 ? '#22c55e' : '#f87171',
-        fontFamily: 'JetBrains Mono,monospace',
+        color: cagrVal > 0 ? '#5ac576' : '#eb6459',
+        fontFamily: 'Geist Mono,monospace',
         fontWeight: 700
       }
     }, "CAGR ", fmt.chg(cagrVal)), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 9,
-        color: '#334155',
+        color: '#33353f',
         marginTop: 1
       }
     }, data.length, " qtrs"))));
@@ -2241,28 +2241,28 @@ function GrowthPanel({
     label: "Revenue",
     data: revs,
     type: "bar",
-    color: "#3b82f6",
+    color: "#968ff7",
     cagrVal: revCagr,
     stmtsData: rows
   }), /*#__PURE__*/React.createElement(Row, {
     label: "Net Income",
     data: netI,
     type: "bar",
-    color: "#22c55e",
+    color: "#5ac576",
     cagrVal: null,
     stmtsData: rows
   }), /*#__PURE__*/React.createElement(Row, {
     label: "Gross Margin %",
     data: gms,
     type: "line",
-    color: "#a78bfa",
+    color: "#968ff7",
     cagrVal: null,
     stmtsData: rows
   }), /*#__PURE__*/React.createElement(Row, {
     label: "EPS",
     data: eps,
     type: "line",
-    color: "#fbbf24",
+    color: "#eca851",
     cagrVal: null,
     stmtsData: rows
   }));
@@ -2289,8 +2289,8 @@ function QuarterlyTable({
     style: {
       padding: '6px 10px',
       textAlign: 'left',
-      color: '#475569',
-      borderBottom: '1px solid #1e2430',
+      color: '#787a83',
+      borderBottom: '1px solid #24262f',
       fontWeight: 600,
       whiteSpace: 'nowrap',
       fontSize: 10
@@ -2302,44 +2302,44 @@ function QuarterlyTable({
     return /*#__PURE__*/React.createElement("tr", {
       key: q.date || q.period + q.calendarYear,
       style: {
-        borderBottom: '1px solid #141720'
+        borderBottom: '1px solid #1c1d26'
       }
     }, /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '8px 10px',
-        color: '#64748b',
-        fontFamily: 'JetBrains Mono,monospace',
+        color: '#787a83',
+        fontFamily: 'Geist Mono,monospace',
         fontSize: 10
       }
     }, q.period, " ", q.calendarYear), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '8px 10px',
-        color: '#e2e8f0',
-        fontFamily: 'JetBrains Mono,monospace'
+        color: '#edeef4',
+        fontFamily: 'Geist Mono,monospace'
       }
     }, fmt.usd(q.revenue)), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '8px 10px',
-        fontFamily: 'JetBrains Mono,monospace',
-        color: ok(yoy) ? yoy >= 0 ? '#22c55e' : '#f87171' : '#334155'
+        fontFamily: 'Geist Mono,monospace',
+        color: ok(yoy) ? yoy >= 0 ? '#5ac576' : '#eb6459' : '#33353f'
       }
     }, ok(yoy) ? fmt.chg(yoy) : '—'), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '8px 10px',
-        fontFamily: 'JetBrains Mono,monospace',
-        color: ok(gm) ? gm >= 0.4 ? '#22c55e' : gm >= 0.2 ? '#fbbf24' : '#f87171' : '#334155'
+        fontFamily: 'Geist Mono,monospace',
+        color: ok(gm) ? gm >= 0.4 ? '#5ac576' : gm >= 0.2 ? '#eca851' : '#eb6459' : '#33353f'
       }
     }, fmt.pct(gm)), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '8px 10px',
-        fontFamily: 'JetBrains Mono,monospace',
-        color: q.netIncome >= 0 ? '#4ade80' : '#f87171'
+        fontFamily: 'Geist Mono,monospace',
+        color: q.netIncome >= 0 ? '#5ac576' : '#eb6459'
       }
     }, fmt.usd(q.netIncome)), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '8px 10px',
-        fontFamily: 'JetBrains Mono,monospace',
-        color: q.eps >= 0 ? '#4ade80' : '#f87171'
+        fontFamily: 'Geist Mono,monospace',
+        color: q.eps >= 0 ? '#5ac576' : '#eb6459'
       }
     }, ok(q.eps) ? `$${q.eps.toFixed(2)}` : '—'));
   })))));
@@ -2366,8 +2366,8 @@ function NewsCard({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 13px',
       transition: 'border-color 0.15s'
@@ -2375,7 +2375,7 @@ function NewsCard({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
-      color: '#cbd5e1',
+      color: '#a6a7b1',
       lineHeight: 1.45,
       marginBottom: 5
     }
@@ -2384,7 +2384,7 @@ function NewsCard({
       display: 'flex',
       gap: 8,
       fontSize: 10,
-      color: '#334155'
+      color: '#33353f'
     }
   }, /*#__PURE__*/React.createElement("span", null, n.site), /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, n.publishedDate?.substring(0, 10))))))));
 }
@@ -2398,15 +2398,15 @@ function EarningsCalendarBadge({
   const est = earn.epsEstimate;
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 14px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.5px',
       marginBottom: 4
@@ -2415,13 +2415,13 @@ function EarningsCalendarBadge({
     style: {
       fontSize: 15,
       fontWeight: 700,
-      color: '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: '#edeef4',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, date || '—'), est != null && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#64748b',
+      color: '#787a83',
       marginTop: 3
     }
   }, "Est. EPS: ", est.toFixed(2)));
@@ -2453,21 +2453,21 @@ function EarningsSurpriseChart({
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 9,
-        color: isPos ? '#22c55e' : '#f87171',
+        color: isPos ? '#5ac576' : '#eb6459',
         fontWeight: 700
       }
     }, isPos ? '+' : '', surprise.toFixed(1), "%"), /*#__PURE__*/React.createElement("div", {
       style: {
         width: '100%',
         height: h,
-        background: isPos ? '#22c55e33' : '#f8717133',
-        border: `1px solid ${isPos ? '#22c55e' : '#f87171'}`,
+        background: isPos ? '#5ac57633' : '#eb645933',
+        border: `1px solid ${isPos ? '#5ac576' : '#eb6459'}`,
         borderRadius: 3
       }
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 8,
-        color: '#334155'
+        color: '#33353f'
       }
     }, q.period));
   })));
@@ -2487,8 +2487,8 @@ function InsiderTable({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0d2e1a',
-      border: '1px solid #166534',
+      background: '#194224',
+      border: '1px solid #194224',
       borderRadius: 6,
       padding: '10px 14px',
       textAlign: 'center'
@@ -2497,17 +2497,17 @@ function InsiderTable({
     style: {
       fontSize: 20,
       fontWeight: 800,
-      color: '#22c55e'
+      color: '#5ac576'
     }
   }, buys.length), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#4ade80'
+      color: '#5ac576'
     }
   }, "Insider Buys")), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#2a0d0d',
-      border: '1px solid #7f1d1d',
+      background: '#602a25',
+      border: '1px solid #602a25',
       borderRadius: 6,
       padding: '10px 14px',
       textAlign: 'center'
@@ -2516,12 +2516,12 @@ function InsiderTable({
     style: {
       fontSize: 20,
       fontWeight: 800,
-      color: '#f87171'
+      color: '#eb6459'
     }
   }, sells.length), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#fca5a5'
+      color: '#eb6459'
     }
   }, "Insider Sells"))), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2537,26 +2537,26 @@ function InsiderTable({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: '#141720',
+        background: '#1c1d26',
         borderRadius: 5,
         padding: '7px 12px',
         fontSize: 11
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
-        color: '#64748b',
+        color: '#787a83',
         flex: 1
       }
     }, t.name), /*#__PURE__*/React.createElement("span", {
       style: {
-        color: '#94a3b8',
+        color: '#a6a7b1',
         marginRight: 12
       }
     }, t.filingDate?.substring(0, 10)), /*#__PURE__*/React.createElement("span", {
       style: {
         fontWeight: 700,
-        color: isBuy ? '#22c55e' : '#f87171',
-        fontFamily: 'JetBrains Mono,monospace'
+        color: isBuy ? '#5ac576' : '#eb6459',
+        fontFamily: 'Geist Mono,monospace'
       }
     }, isBuy ? '▲ Buy' : '▼ Sell', " ", Math.abs(t.change || 0).toLocaleString(), " shares"));
   })));
@@ -2577,33 +2577,33 @@ function QualityMoatCard({
     desc: 'Price-insensitive customers',
     score: moat.demand,
     max: 25,
-    color: '#10b981'
+    color: '#5ac576'
   }, {
     key: 'supply',
     label: 'Supply Barriers',
     desc: 'Difficult to replicate',
     score: moat.supply,
     max: 25,
-    color: '#3b82f6'
+    color: '#968ff7'
   }, {
     key: 'pricing',
     label: 'Pricing Power',
     desc: 'Margin expansion capacity',
     score: moat.pricing,
     max: 25,
-    color: '#8b5cf6'
+    color: '#968ff7'
   }, {
     key: 'capEff',
     label: 'Capital Efficiency',
     desc: 'High returns on reinvestment',
     score: moat.capEff,
     max: 25,
-    color: '#f59e0b'
+    color: '#eca851'
   }];
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#111827',
-      border: '1px solid #1f2937',
+      background: '#24262f',
+      border: '1px solid #24262f',
       borderRadius: 12,
       padding: '20px 24px',
       marginBottom: 16
@@ -2617,13 +2617,13 @@ function QualityMoatCard({
     }
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#f9fafb',
+      color: '#edeef4',
       fontWeight: 700,
       fontSize: 15
     }
   }, "Quality Moat Scorecard"), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#6b7280',
+      color: '#787a83',
       fontSize: 12,
       marginTop: 2
     }
@@ -2639,7 +2639,7 @@ function QualityMoatCard({
     }
   }, moat.moatRating), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#6b7280',
+      color: '#787a83',
       fontSize: 12
     }
   }, moat.total, "/100"))), /*#__PURE__*/React.createElement("div", {
@@ -2660,25 +2660,25 @@ function QualityMoatCard({
       }
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
       style: {
-        color: '#e5e7eb',
+        color: '#edeef4',
         fontSize: 13,
         fontWeight: 600
       }
     }, d.label), /*#__PURE__*/React.createElement("span", {
       style: {
-        color: '#6b7280',
+        color: '#787a83',
         fontSize: 11,
         marginLeft: 8
       }
     }, d.desc)), /*#__PURE__*/React.createElement("span", {
       style: {
-        color: d.score >= 18 ? d.color : d.score <= 8 ? '#ef4444' : '#9ca3af',
+        color: d.score >= 18 ? d.color : d.score <= 8 ? '#eb6459' : '#a6a7b1',
         fontSize: 13,
         fontWeight: 700
       }
     }, d.score, "/", d.max)), /*#__PURE__*/React.createElement("div", {
       style: {
-        background: '#1f2937',
+        background: '#24262f',
         borderRadius: 4,
         height: 6,
         overflow: 'hidden'
@@ -2688,7 +2688,7 @@ function QualityMoatCard({
         height: '100%',
         width: `${pct}%`,
         borderRadius: 4,
-        background: d.score >= 18 ? d.color : d.score <= 8 ? '#ef4444' : '#4b5563',
+        background: d.score >= 18 ? d.color : d.score <= 8 ? '#eb6459' : '#4b4c58',
         transition: 'width 0.4s ease'
       }
     })));
@@ -2696,13 +2696,13 @@ function QualityMoatCard({
     style: {
       marginTop: 16,
       padding: '10px 14px',
-      background: '#0d1117',
+      background: '#15151c',
       borderRadius: 8,
       borderLeft: `3px solid ${moat.moatColor}`
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#9ca3af',
+      color: '#a6a7b1',
       fontSize: 11
     }
   }, /*#__PURE__*/React.createElement("strong", {
@@ -2722,25 +2722,25 @@ function OvervaluationBanner({
   if (!metrics || result.level === 'none') return null;
   const config = {
     caution: {
-      bg: '#422006',
-      border: '#92400e',
+      bg: '#54360b',
+      border: '#54360b',
       icon: '⚠️',
       title: 'Valuation Caution',
-      color: '#fbbf24'
+      color: '#eca851'
     },
     risk: {
-      bg: '#450a0a',
-      border: '#991b1b',
+      bg: '#602a25',
+      border: '#602a25',
       icon: '🔴',
       title: 'Overvaluation Risk Detected',
-      color: '#f87171'
+      color: '#eb6459'
     },
     bubble: {
-      bg: '#1c1917',
-      border: '#57534e',
+      bg: '#33353f',
+      border: '#33353f',
       icon: '⚫',
       title: 'BUBBLE TERRITORY — Extreme Overvaluation',
-      color: '#d1d5db'
+      color: '#a6a7b1'
     }
   };
   const c = config[result.level];
@@ -2772,7 +2772,7 @@ function OvervaluationBanner({
   }, c.title), result.peg && /*#__PURE__*/React.createElement("span", {
     style: {
       marginLeft: 'auto',
-      background: '#1f2937',
+      background: '#24262f',
       borderRadius: 6,
       padding: '2px 8px',
       color: c.color,
@@ -2788,14 +2788,14 @@ function OvervaluationBanner({
   }, result.reasons.map((r, i) => /*#__PURE__*/React.createElement("li", {
     key: i,
     style: {
-      color: '#9ca3af',
+      color: '#a6a7b1',
       fontSize: 12,
       marginBottom: 2
     }
   }, r))), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 10,
-      color: '#6b7280',
+      color: '#787a83',
       fontSize: 11,
       fontStyle: 'italic'
     }
@@ -2815,33 +2815,33 @@ function FactorTiltCard({
   const factors = [{
     key: 'value',
     label: 'Value',
-    color: '#10b981',
+    color: '#5ac576',
     icon: '💰'
   }, {
     key: 'growth',
     label: 'Growth',
-    color: '#6366f1',
+    color: '#968ff7',
     icon: '📈'
   }, {
     key: 'momentum',
     label: 'Momentum',
-    color: '#f59e0b',
+    color: '#eca851',
     icon: '⚡'
   }, {
     key: 'quality',
     label: 'Quality',
-    color: '#3b82f6',
+    color: '#968ff7',
     icon: '🏆'
   }, {
     key: 'size',
     label: 'Size',
-    color: '#8b5cf6',
+    color: '#968ff7',
     icon: '📊'
   }];
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#111827',
-      border: '1px solid #1f2937',
+      background: '#24262f',
+      border: '1px solid #24262f',
       borderRadius: 12,
       padding: '20px 24px',
       marginBottom: 16
@@ -2855,22 +2855,22 @@ function FactorTiltCard({
     }
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#f9fafb',
+      color: '#edeef4',
       fontWeight: 700,
       fontSize: 15
     }
   }, "Factor Tilt Analysis"), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#6b7280',
+      color: '#787a83',
       fontSize: 12,
       marginTop: 2
     }
   }, "Quant factor exposure across 5 dimensions (0\u201320 each)")), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#1f2937',
+      background: '#24262f',
       borderRadius: 8,
       padding: '4px 12px',
-      color: '#a78bfa',
+      color: '#968ff7',
       fontSize: 12,
       fontWeight: 600
     }
@@ -2894,14 +2894,14 @@ function FactorTiltCard({
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         width: 80,
-        color: '#9ca3af',
+        color: '#a6a7b1',
         fontSize: 12,
         textAlign: 'right'
       }
     }, f.icon, " ", f.label), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
-        background: '#1f2937',
+        background: '#24262f',
         borderRadius: 4,
         height: 8,
         overflow: 'hidden',
@@ -2914,7 +2914,7 @@ function FactorTiltCard({
         top: 0,
         height: '100%',
         width: `${pct}%`,
-        background: neutral ? '#374151' : f.color,
+        background: neutral ? '#33353f' : f.color,
         borderRadius: 4,
         transition: 'width 0.4s ease'
       }
@@ -2925,13 +2925,13 @@ function FactorTiltCard({
         top: -2,
         bottom: -2,
         width: 1,
-        background: '#374151'
+        background: '#33353f'
       }
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         width: 28,
         textAlign: 'right',
-        color: score >= 14 ? f.color : score <= 6 ? '#ef4444' : '#6b7280',
+        color: score >= 14 ? f.color : score <= 6 ? '#eb6459' : '#787a83',
         fontSize: 13,
         fontWeight: 700
       }
@@ -2955,11 +2955,11 @@ function FactorTiltCard({
       width: 8,
       height: 8,
       borderRadius: 2,
-      background: i === 0 ? '#ef4444' : i === 1 ? '#374151' : '#10b981'
+      background: i === 0 ? '#eb6459' : i === 1 ? '#33353f' : '#5ac576'
     }
   }), /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#6b7280',
+      color: '#787a83',
       fontSize: 10
     }
   }, l)))));
@@ -3013,8 +3013,8 @@ function VerdictSection({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0d2e1a',
-      border: '1px solid #166534',
+      background: '#194224',
+      border: '1px solid #194224',
       borderRadius: 6,
       padding: '13px 15px'
     }
@@ -3022,7 +3022,7 @@ function VerdictSection({
     style: {
       fontSize: 10,
       fontWeight: 700,
-      color: '#22c55e',
+      color: '#5ac576',
       marginBottom: 8,
       textTransform: 'uppercase',
       letterSpacing: '1px'
@@ -3031,14 +3031,14 @@ function VerdictSection({
     key: i,
     style: {
       fontSize: 11,
-      color: '#86efac',
+      color: '#5ac576',
       marginBottom: 5,
       lineHeight: 1.5
     }
   }, "\xB7 ", m)) : /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: '#334155'
+      color: '#33353f'
     }
   }, "No strong moat signals at current levels")), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3058,26 +3058,26 @@ function VerdictSection({
     label: "Valuation",
     value: scores.val,
     max: 25,
-    color: "#60a5fa"
+    color: "#968ff7"
   }), /*#__PURE__*/React.createElement(ScoreBar, {
     label: "Financial Health",
     value: scores.hlth,
     max: 30,
-    color: "#22c55e"
+    color: "#5ac576"
   }), /*#__PURE__*/React.createElement(ScoreBar, {
     label: "Momentum",
     value: scores.mom,
     max: 25,
-    color: "#fbbf24"
+    color: "#eca851"
   }), /*#__PURE__*/React.createElement(ScoreBar, {
     label: "Growth",
     value: scores.growth,
     max: 20,
-    color: "#a78bfa"
+    color: "#968ff7"
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#2a0d0d',
-      border: '1px solid #7f1d1d',
+      background: '#602a25',
+      border: '1px solid #602a25',
       borderRadius: 6,
       padding: '13px 15px'
     }
@@ -3085,7 +3085,7 @@ function VerdictSection({
     style: {
       fontSize: 10,
       fontWeight: 700,
-      color: '#f87171',
+      color: '#eb6459',
       marginBottom: 8,
       textTransform: 'uppercase',
       letterSpacing: '1px'
@@ -3094,14 +3094,14 @@ function VerdictSection({
     key: i,
     style: {
       fontSize: 11,
-      color: '#fca5a5',
+      color: '#eb6459',
       marginBottom: 5,
       lineHeight: 1.5
     }
   }, "\xB7 ", rk)) : /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: '#334155'
+      color: '#33353f'
     }
   }, "No major risk flags detected"))), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3121,14 +3121,14 @@ function VerdictSection({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '1px',
       marginBottom: 5
     }
   }, "Bottom Line ", aiVerdict && /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#a78bfa',
+      color: '#968ff7',
       fontWeight: 400,
       textTransform: 'none',
       letterSpacing: 0
@@ -3136,12 +3136,12 @@ function VerdictSection({
   }, "\u2728 AI")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
-      color: '#cbd5e1',
+      color: '#a6a7b1',
       lineHeight: 1.65
     }
   }, aiLoading ? /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#475569',
+      color: '#787a83',
       fontStyle: 'italic'
     }
   }, "\u2728 Generating AI analysis...") : aiVerdict ? /*#__PURE__*/React.createElement("span", null, aiVerdict) : verdictText)), /*#__PURE__*/React.createElement("div", {
@@ -3217,7 +3217,7 @@ function DCFCalculator({
   const result = runDCF(inputs);
   const iv = result?.intrinsicValue;
   const mos = ok(iv) && ok(currentPrice) && currentPrice > 0 ? (iv - currentPrice) / iv : null;
-  const mosColor = !ok(mos) ? '#475569' : mos > 0.15 ? '#22c55e' : mos > -0.15 ? '#fbbf24' : '#f87171';
+  const mosColor = !ok(mos) ? '#787a83' : mos > 0.15 ? '#5ac576' : mos > -0.15 ? '#eca851' : '#eb6459';
   const set = (key, val) => setInputs(p => ({
     ...p,
     [key]: val
@@ -3243,13 +3243,13 @@ function DCFCalculator({
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10,
-      color: '#64748b'
+      color: '#787a83'
     }
   }, label), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
-      color: '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace',
+      color: '#edeef4',
+      fontFamily: 'Geist Mono,monospace',
       fontWeight: 700
     }
   }, inputs[stateKey], unit)), /*#__PURE__*/React.createElement("input", {
@@ -3261,13 +3261,13 @@ function DCFCalculator({
     onChange: e => set(stateKey, parseFloat(e.target.value)),
     style: {
       width: '100%',
-      accentColor: '#3b82f6',
+      accentColor: '#968ff7',
       cursor: 'pointer'
     }
   }), note && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#334155'
+      color: '#33353f'
     }
   }, note));
   const sensRows = [-2, -1, 0, 1, 2].map(dr => {
@@ -3285,15 +3285,15 @@ function DCFCalculator({
   });
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0c0e14',
-      border: '1px solid #161b26',
+      background: '#15151c',
+      border: '1px solid #1c1d26',
       borderRadius: 10,
       overflow: 'hidden'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      borderBottom: '1px solid #161b26',
+      background: '#1c1d26',
+      borderBottom: '1px solid #1c1d26',
       padding: '12px 20px',
       display: 'flex',
       justifyContent: 'space-between',
@@ -3303,14 +3303,14 @@ function DCFCalculator({
     style: {
       fontSize: 11,
       fontWeight: 700,
-      color: '#e2e8f0',
+      color: '#edeef4',
       textTransform: 'uppercase',
       letterSpacing: '1px'
     }
   }, "\uD83D\uDCD0 Interactive DCF Model"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569'
+      color: '#787a83'
     }
   }, profile?.companyName, " \xB7 All values auto-recalculate")), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3321,13 +3321,13 @@ function DCFCalculator({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '16px 20px',
-      borderRight: '1px solid #161b26'
+      borderRight: '1px solid #1c1d26'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
       fontWeight: 700,
-      color: '#3b82f6',
+      color: '#968ff7',
       textTransform: 'uppercase',
       letterSpacing: '1px',
       marginBottom: 12
@@ -3359,13 +3359,13 @@ function DCFCalculator({
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '16px 20px',
-      borderRight: '1px solid #161b26'
+      borderRight: '1px solid #1c1d26'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
       fontWeight: 700,
-      color: '#a78bfa',
+      color: '#968ff7',
       textTransform: 'uppercase',
       letterSpacing: '1px',
       marginBottom: 12
@@ -3401,7 +3401,7 @@ function DCFCalculator({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 4
     }
   }, "Net Debt: ", fmt.usd(inputs.netDebt), " \xB7 Shares: ", ok(inputs.shares) ? (inputs.shares / 1e6).toFixed(0) + 'M' : '—')), /*#__PURE__*/React.createElement("div", {
@@ -3415,7 +3415,7 @@ function DCFCalculator({
     style: {
       fontSize: 10,
       fontWeight: 700,
-      color: '#fbbf24',
+      color: '#eca851',
       textTransform: 'uppercase',
       letterSpacing: '1px',
       marginBottom: 4
@@ -3424,22 +3424,22 @@ function DCFCalculator({
     style: {
       textAlign: 'center',
       padding: '16px',
-      background: '#0a0b10',
+      background: '#15151c',
       borderRadius: 8,
-      border: '1px solid #1e2430'
+      border: '1px solid #24262f'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       marginBottom: 4
     }
   }, "Intrinsic Value / Share"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 28,
       fontWeight: 800,
-      color: ok(iv) ? mosColor : '#475569',
-      fontFamily: 'JetBrains Mono,monospace',
+      color: ok(iv) ? mosColor : '#787a83',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1
     }
   }, ok(iv) ? fmt.price(iv) : '—'), ok(mos) && /*#__PURE__*/React.createElement("div", {
@@ -3452,13 +3452,13 @@ function DCFCalculator({
   }, mos > 0 ? `+${(mos * 100).toFixed(1)}% upside` : `${(mos * 100).toFixed(1)}% overvalued`), ok(currentPrice) && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       marginTop: 3
     }
   }, "vs. current ", fmt.price(currentPrice))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       marginBottom: 4
     }
   }, "Sensitivity: Discount Rate (rows) \xD7 Terminal Growth (cols)"), /*#__PURE__*/React.createElement("table", {
@@ -3469,14 +3469,14 @@ function DCFCalculator({
     }
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     style: {
-      color: '#334155',
+      color: '#33353f',
       padding: '2px 4px',
       textAlign: 'center'
     }
   }, "WACC\\TG"), [inputs.terminalGrowth - 1, inputs.terminalGrowth, inputs.terminalGrowth + 1].map(tg => /*#__PURE__*/React.createElement("th", {
     key: tg,
     style: {
-      color: '#475569',
+      color: '#787a83',
       padding: '2px 4px',
       textAlign: 'center'
     }
@@ -3484,23 +3484,23 @@ function DCFCalculator({
     key: dr
   }, /*#__PURE__*/React.createElement("td", {
     style: {
-      color: '#475569',
+      color: '#787a83',
       padding: '2px 4px',
       textAlign: 'center',
-      fontFamily: 'JetBrains Mono,monospace'
+      fontFamily: 'Geist Mono,monospace'
     }
   }, inputs.discountRate + dr, "%"), sensRows[ri].map((v, ci) => {
     const mos2 = ok(v) && ok(currentPrice) && currentPrice > 0 ? (v - currentPrice) / v : null;
-    const c = !ok(v) ? '#334155' : mos2 > 0.15 ? '#22c55e' : mos2 > -0.15 ? '#fbbf24' : '#f87171';
+    const c = !ok(v) ? '#33353f' : mos2 > 0.15 ? '#5ac576' : mos2 > -0.15 ? '#eca851' : '#eb6459';
     return /*#__PURE__*/React.createElement("td", {
       key: ci,
       style: {
         color: c,
         padding: '3px 4px',
         textAlign: 'center',
-        fontFamily: 'JetBrains Mono,monospace',
+        fontFamily: 'Geist Mono,monospace',
         fontWeight: dr === 0 && ci === 1 ? 800 : 400,
-        background: dr === 0 && ci === 1 ? '#141720' : 'transparent',
+        background: dr === 0 && ci === 1 ? '#1c1d26' : 'transparent',
         borderRadius: 3
       }
     }, ok(v) ? `$${v.toFixed(0)}` : '—');
@@ -3570,15 +3570,15 @@ function EVEBITDAHistory({
   }, [stmts, balanceSheets, history, shares]);
   if (!series || series.length < 3) return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
   }, /*#__PURE__*/React.createElement(SectionTitle, null, "EV/EBITDA \u2014 Hist\xF3rico"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: '#475569',
+      color: '#787a83',
       padding: '6px 0'
     }
   }, "Hist\xF3rico no disponible (faltan datos de balance o EBITDA)."));
@@ -3601,11 +3601,11 @@ function EVEBITDAHistory({
   const py = v => pt + (1 - (v - minV) / rng) * ch;
   const linePts = vals.map((v, i) => `${px(i)},${py(v)}`).join(' ');
   const medY = py(median);
-  const curColor = current > median * 1.1 ? '#f87171' : current < median * 0.9 ? '#22c55e' : '#fbbf24';
+  const curColor = current > median * 1.1 ? '#eb6459' : current < median * 0.9 ? '#5ac576' : '#eca851';
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -3619,7 +3619,7 @@ function EVEBITDAHistory({
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px'
     }
@@ -3628,13 +3628,13 @@ function EVEBITDAHistory({
       fontSize: 20,
       fontWeight: 800,
       color: curColor,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1.1
     }
   }, current.toFixed(1), "x")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px'
     }
@@ -3642,15 +3642,15 @@ function EVEBITDAHistory({
     style: {
       fontSize: 20,
       fontWeight: 800,
-      color: '#94a3b8',
-      fontFamily: 'JetBrains Mono,monospace',
+      color: '#a6a7b1',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1.1
     }
   }, median.toFixed(1), "x")), /*#__PURE__*/React.createElement("div", {
     style: {
       alignSelf: 'flex-end',
       fontSize: 10,
-      color: current > median ? '#f87171' : '#22c55e'
+      color: current > median ? '#eb6459' : '#5ac576'
     }
   }, current > median ? '▲ prima' : '▼ descuento', " ", Math.abs((current / median - 1) * 100).toFixed(0), "% vs mediana")), /*#__PURE__*/React.createElement("svg", {
     viewBox: `0 0 ${W} ${H}`,
@@ -3666,25 +3666,25 @@ function EVEBITDAHistory({
     x2: W - pr,
     y1: pt + f * ch,
     y2: pt + f * ch,
-    stroke: "#161b26",
+    stroke: "#1c1d26",
     strokeWidth: "1"
   })), /*#__PURE__*/React.createElement("line", {
     x1: pl,
     x2: W - pr,
     y1: medY,
     y2: medY,
-    stroke: "#94a3b8",
+    stroke: "#a6a7b1",
     strokeWidth: "0.9",
     strokeDasharray: "5 4"
   }), /*#__PURE__*/React.createElement("text", {
     x: W - pr + 3,
     y: medY + 3,
     fontSize: "8.5",
-    fill: "#94a3b8"
+    fill: "#a6a7b1"
   }, "med ", median.toFixed(1), "x"), /*#__PURE__*/React.createElement("polyline", {
     points: linePts,
     fill: "none",
-    stroke: "#60a5fa",
+    stroke: "#968ff7",
     strokeWidth: "1.8",
     strokeLinejoin: "round"
   }), /*#__PURE__*/React.createElement("circle", {
@@ -3692,18 +3692,18 @@ function EVEBITDAHistory({
     cy: py(current),
     r: "3.5",
     fill: curColor,
-    stroke: "#0c0e14",
+    stroke: "#15151c",
     strokeWidth: "1.5"
   }), /*#__PURE__*/React.createElement("text", {
     x: pl + 2,
     y: pt + 8,
     fontSize: "8",
-    fill: "#334155"
+    fill: "#33353f"
   }, maxV.toFixed(0), "x"), /*#__PURE__*/React.createElement("text", {
     x: pl + 2,
     y: H - pb + 8,
     fontSize: "8",
-    fill: "#334155"
+    fill: "#33353f"
   }, minV.toFixed(0), "x"), series.filter((_, i) => i % Math.ceil(series.length / 6) === 0).map((s, k) => {
     const idx = series.indexOf(s);
     return /*#__PURE__*/React.createElement("text", {
@@ -3711,13 +3711,13 @@ function EVEBITDAHistory({
       x: px(idx),
       y: H - 6,
       fontSize: "7.5",
-      fill: "#334155",
+      fill: "#33353f",
       textAnchor: "middle"
     }, s.label);
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 6
     }
   }, "EV \u2248 precio\xB7acciones + deuda total \u2212 caja \xB7 EBITDA TTM (4Q) \xB7 EV aproximado con acciones actuales."));
@@ -3757,7 +3757,7 @@ function MultiModelValuation({
   if (!models.length) return null;
   const avg = models.reduce((s, m) => s + m.value, 0) / models.length;
   const avgMos = (avg - currentPrice) / avg;
-  const avgColor = avgMos > 0.15 ? '#22c55e' : avgMos > -0.15 ? '#fbbf24' : '#f87171';
+  const avgColor = avgMos > 0.15 ? '#5ac576' : avgMos > -0.15 ? '#eca851' : '#eb6459';
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Valuation Models Summary"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
@@ -3766,19 +3766,19 @@ function MultiModelValuation({
     }
   }, models.map((m, i) => {
     const mos = (m.value - currentPrice) / m.value;
-    const c = mos > 0.15 ? '#22c55e' : mos > -0.15 ? '#fbbf24' : '#f87171';
+    const c = mos > 0.15 ? '#5ac576' : mos > -0.15 ? '#eca851' : '#eb6459';
     return /*#__PURE__*/React.createElement("div", {
       key: i,
       style: {
-        background: '#141720',
-        border: '1px solid #1e2430',
+        background: '#1c1d26',
+        border: '1px solid #24262f',
         borderRadius: 8,
         padding: '14px 16px'
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 10,
-        color: '#475569',
+        color: '#787a83',
         marginBottom: 4
       }
     }, m.name), /*#__PURE__*/React.createElement("div", {
@@ -3786,7 +3786,7 @@ function MultiModelValuation({
         fontSize: 20,
         fontWeight: 800,
         color: c,
-        fontFamily: 'JetBrains Mono,monospace',
+        fontFamily: 'Geist Mono,monospace',
         lineHeight: 1
       }
     }, fmt.price(m.value)), /*#__PURE__*/React.createElement("div", {
@@ -3798,13 +3798,13 @@ function MultiModelValuation({
     }, mos > 0 ? `+${(mos * 100).toFixed(1)}% upside` : `${(mos * 100).toFixed(1)}% overvalued`), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 9,
-        color: '#334155',
+        color: '#33353f',
         marginTop: 4
       }
     }, m.note));
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0a0b10',
+      background: '#15151c',
       border: `2px solid ${avgColor}44`,
       borderRadius: 8,
       padding: '14px 16px'
@@ -3812,7 +3812,7 @@ function MultiModelValuation({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       marginBottom: 4
     }
   }, "Model Average (", models.length, " models)"), /*#__PURE__*/React.createElement("div", {
@@ -3820,7 +3820,7 @@ function MultiModelValuation({
       fontSize: 20,
       fontWeight: 800,
       color: avgColor,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1
     }
   }, fmt.price(avg)), /*#__PURE__*/React.createElement("div", {
@@ -3832,7 +3832,7 @@ function MultiModelValuation({
   }, avgMos > 0 ? `+${(avgMos * 100).toFixed(1)}% upside` : `${(avgMos * 100).toFixed(1)}% overvalued`), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 4
     }
   }, "avg of ", models.length, " methods"))));
@@ -3899,11 +3899,11 @@ function HealthScorePanel({
     note: 'Leverage, coverage, balance sheet'
   }];
   const overall = dims.reduce((a, d) => a + d.score, 0) / dims.length;
-  const overallColor = overall >= 4 ? '#22c55e' : overall >= 3 ? '#fbbf24' : '#f87171';
+  const overallColor = overall >= 4 ? '#5ac576' : overall >= 3 ? '#eca851' : '#eb6459';
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -3918,7 +3918,7 @@ function HealthScorePanel({
     style: {
       fontSize: 10,
       fontWeight: 700,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '1px'
     }
@@ -3927,12 +3927,12 @@ function HealthScorePanel({
       fontSize: 22,
       fontWeight: 800,
       color: overallColor,
-      fontFamily: 'JetBrains Mono,monospace'
+      fontFamily: 'Geist Mono,monospace'
     }
   }, overall.toFixed(1), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12,
-      color: '#475569'
+      color: '#787a83'
     }
   }, "/5"))), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3941,7 +3941,7 @@ function HealthScorePanel({
       gap: 8
     }
   }, dims.map((d, i) => {
-    const c = d.score >= 4 ? '#22c55e' : d.score >= 3 ? '#fbbf24' : '#f87171';
+    const c = d.score >= 4 ? '#5ac576' : d.score >= 3 ? '#eca851' : '#eb6459';
     return /*#__PURE__*/React.createElement("div", {
       key: i,
       style: {
@@ -3955,7 +3955,7 @@ function HealthScorePanel({
     }, d.icon), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 10,
-        color: '#64748b',
+        color: '#787a83',
         marginBottom: 6
       }
     }, d.name), /*#__PURE__*/React.createElement("div", {
@@ -3971,7 +3971,7 @@ function HealthScorePanel({
         width: 8,
         height: 8,
         borderRadius: 2,
-        background: n <= d.score ? c : '#1e2430',
+        background: n <= d.score ? c : '#24262f',
         transition: 'background 0.3s'
       }
     }))), /*#__PURE__*/React.createElement("div", {
@@ -3983,7 +3983,7 @@ function HealthScorePanel({
     }, d.score, "/5"), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 9,
-        color: '#334155',
+        color: '#33353f',
         marginTop: 2,
         lineHeight: 1.3
       }
@@ -4047,13 +4047,13 @@ function PeerComparison({
     }
   }];
   const colorVal = (col, s) => {
-    if (col.label === 'Ticker') return s === currentProf?.symbol ? '#60a5fa' : '#e2e8f0';
+    if (col.label === 'Ticker') return s === currentProf?.symbol ? '#968ff7' : '#edeef4';
     const raw = col.label === 'P/E' ? getM(s)?.priceToEarningsRatioTTM ?? getM(s)?.peRatioTTM : col.label === 'EV/EBITDA' ? getM(s)?.evToEBITDATTM : col.label === 'Gross Margin' ? getR(s)?.grossProfitMarginTTM : col.label === 'ROIC' ? getM(s)?.returnOnInvestedCapitalTTM ?? getM(s)?.roicTTM : col.label === 'Net Debt/EBITDA' ? getM(s)?.netDebtToEBITDATTM : null;
-    if (!ok(raw)) return '#475569';
-    if (col.label === 'Gross Margin') return raw >= 0.4 ? '#22c55e' : raw >= 0.2 ? '#fbbf24' : '#f87171';
-    if (col.label === 'ROIC') return raw >= 0.15 ? '#22c55e' : raw >= 0.06 ? '#fbbf24' : '#f87171';
-    if (col.label === 'Net Debt/EBITDA') return raw < 0.5 ? '#22c55e' : raw < 2.5 ? '#fbbf24' : '#f87171';
-    return '#e2e8f0';
+    if (!ok(raw)) return '#787a83';
+    if (col.label === 'Gross Margin') return raw >= 0.4 ? '#5ac576' : raw >= 0.2 ? '#eca851' : '#eb6459';
+    if (col.label === 'ROIC') return raw >= 0.15 ? '#5ac576' : raw >= 0.06 ? '#eca851' : '#eb6459';
+    if (col.label === 'Net Debt/EBITDA') return raw < 0.5 ? '#5ac576' : raw < 2.5 ? '#eca851' : '#eb6459';
+    return '#edeef4';
   };
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Peer Comparison"), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4070,12 +4070,12 @@ function PeerComparison({
     style: {
       padding: '6px 10px',
       textAlign: c.label === 'Ticker' ? 'left' : 'right',
-      color: '#334155',
+      color: '#33353f',
       fontSize: 9,
       fontWeight: 700,
       textTransform: 'uppercase',
       letterSpacing: '0.8px',
-      borderBottom: '1px solid #1e2430',
+      borderBottom: '1px solid #24262f',
       whiteSpace: 'nowrap'
     }
   }, c.label)))), /*#__PURE__*/React.createElement("tbody", null, allSymbols.map((s, ri) => {
@@ -4083,15 +4083,15 @@ function PeerComparison({
     return /*#__PURE__*/React.createElement("tr", {
       key: s,
       style: {
-        borderBottom: '1px solid #141720',
-        background: isMain ? '#1e2430' : ri % 2 === 0 ? 'transparent' : '#0f1117'
+        borderBottom: '1px solid #1c1d26',
+        background: isMain ? '#24262f' : ri % 2 === 0 ? 'transparent' : '#15151c'
       }
     }, cols.map(col => /*#__PURE__*/React.createElement("td", {
       key: col.label,
       style: {
         padding: '8px 10px',
         textAlign: col.label === 'Ticker' ? 'left' : 'right',
-        fontFamily: 'JetBrains Mono,monospace',
+        fontFamily: 'Geist Mono,monospace',
         color: colorVal(col, s),
         fontWeight: isMain ? 700 : 400,
         cursor: col.label === 'Ticker' && !isMain ? 'pointer' : 'default',
@@ -4102,7 +4102,7 @@ function PeerComparison({
     }, col.label === 'Ticker' ? /*#__PURE__*/React.createElement("span", null, s, isMain && /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 8,
-        color: '#3b82f6',
+        color: '#968ff7',
         marginLeft: 4,
         fontWeight: 700
       }
@@ -4110,7 +4110,7 @@ function PeerComparison({
   })))), peers.some(s => !peerMetrics[s]) && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 6
     }
   }, "Loading peer metrics\u2026"));
@@ -4137,37 +4137,37 @@ function BalanceSheetPanel({
     label: 'Cash & Equivalents',
     value: fmt.usd(cash),
     note: 'liquidity cushion',
-    color: ok(cash) && cash > 0 ? '#22c55e' : '#f87171'
+    color: ok(cash) && cash > 0 ? '#5ac576' : '#eb6459'
   }, {
     label: 'Total Debt',
     value: fmt.usd(totalDebt),
     note: 'short + long term',
-    color: ok(totalDebt) && totalDebt < cash ? '#22c55e' : '#fbbf24'
+    color: ok(totalDebt) && totalDebt < cash ? '#5ac576' : '#eca851'
   }, {
     label: 'Net Debt',
     value: ok(netDebt) ? netDebt < 0 ? `${fmt.usd(-netDebt)} net cash` : fmt.usd(netDebt) : '—',
     note: ok(netDebt) && netDebt < 0 ? 'net cash position' : 'debt in excess of cash',
-    color: ok(netDebt) ? netDebt < 0 ? '#22c55e' : netDebt < 1e9 ? '#fbbf24' : '#f87171' : '#475569'
+    color: ok(netDebt) ? netDebt < 0 ? '#5ac576' : netDebt < 1e9 ? '#eca851' : '#eb6459' : '#787a83'
   }, {
     label: "Shareholders' Equity",
     value: fmt.usd(equity),
     note: 'book value',
-    color: '#94a3b8'
+    color: '#a6a7b1'
   }, {
     label: 'Total Assets',
     value: fmt.usd(totalA),
     note: 'as of last period',
-    color: '#94a3b8'
+    color: '#a6a7b1'
   }, {
     label: 'Current Ratio',
     value: ok(currentR) ? currentR.toFixed(2) + 'x' : '—',
     note: 'current assets / liabilities',
-    color: ok(currentR) ? currentR >= 2 ? '#22c55e' : currentR >= 1 ? '#fbbf24' : '#f87171' : '#475569'
+    color: ok(currentR) ? currentR >= 2 ? '#5ac576' : currentR >= 1 ? '#eca851' : '#eb6459' : '#787a83'
   }, {
     label: 'Intangibles / Assets',
     value: ok(intangibles) && ok(totalA) && totalA > 0 ? fmt.pct(intangibles / totalA) : '—',
     note: 'goodwill + intangibles share',
-    color: '#94a3b8'
+    color: '#a6a7b1'
   }];
 
   // Debt trend over 4 periods
@@ -4186,15 +4186,15 @@ function BalanceSheetPanel({
   }, rows.map(r => /*#__PURE__*/React.createElement("div", {
     key: r.label,
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 14px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 4
@@ -4203,19 +4203,19 @@ function BalanceSheetPanel({
     style: {
       fontSize: 14,
       fontWeight: 700,
-      fontFamily: 'JetBrains Mono,monospace',
-      color: r.color || '#e2e8f0'
+      fontFamily: 'Geist Mono,monospace',
+      color: r.color || '#edeef4'
     }
   }, r.value), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 2
     }
   }, r.note)))), debtTrend.length >= 2 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 8
@@ -4247,7 +4247,7 @@ function BalanceSheetPanel({
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         width: 12,
-        background: '#f87171',
+        background: '#eb6459',
         borderRadius: '2px 2px 0 0',
         height: `${dPct}%`,
         minHeight: 2,
@@ -4256,7 +4256,7 @@ function BalanceSheetPanel({
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         width: 12,
-        background: '#22c55e',
+        background: '#5ac576',
         borderRadius: '2px 2px 0 0',
         height: `${cPct}%`,
         minHeight: 2,
@@ -4265,7 +4265,7 @@ function BalanceSheetPanel({
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 8,
-        color: '#475569',
+        color: '#787a83',
         lineHeight: 1.3
       }
     }, p.label));
@@ -4278,12 +4278,12 @@ function BalanceSheetPanel({
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 8,
-      color: '#f87171'
+      color: '#eb6459'
     }
   }, "\u25A0 Total Debt"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 8,
-      color: '#22c55e'
+      color: '#5ac576'
     }
   }, "\u25A0 Cash"))));
 }
@@ -4331,27 +4331,27 @@ function FCFPanel({
   }, [{
     label: 'TTM FCF',
     value: fmt.usd(ttmFCF),
-    color: ttmFCF > 0 ? '#22c55e' : '#f87171'
+    color: ttmFCF > 0 ? '#5ac576' : '#eb6459'
   }, {
     label: 'TTM FCF Margin',
     value: fmt.pct(ttmFCFM),
-    color: ok(ttmFCFM) ? ttmFCFM >= 0.15 ? '#22c55e' : ttmFCFM >= 0.05 ? '#fbbf24' : '#f87171' : '#475569'
+    color: ok(ttmFCFM) ? ttmFCFM >= 0.15 ? '#5ac576' : ttmFCFM >= 0.05 ? '#eca851' : '#eb6459' : '#787a83'
   }, {
     label: 'FCF Conversion',
     value: ok(recent4[recent4.length - 1]?.fcfConv) ? recent4[recent4.length - 1].fcfConv.toFixed(2) + 'x' : '—',
-    color: '#94a3b8'
+    color: '#a6a7b1'
   }].map(r => /*#__PURE__*/React.createElement("div", {
     key: r.label,
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 14px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 4
@@ -4360,7 +4360,7 @@ function FCFPanel({
     style: {
       fontSize: 16,
       fontWeight: 700,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       color: r.color
     }
   }, r.value)))), /*#__PURE__*/React.createElement("div", {
@@ -4386,15 +4386,15 @@ function FCFPanel({
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 8,
-        color: '#475569',
-        fontFamily: 'JetBrains Mono,monospace'
+        color: '#787a83',
+        fontFamily: 'Geist Mono,monospace'
       }
     }, fmt.usd(q.fcf)), /*#__PURE__*/React.createElement("div", {
       style: {
         width: '100%',
         height: h + 4,
         minHeight: 4,
-        background: isPos ? '#22c55e' : '#f87171',
+        background: isPos ? '#5ac576' : '#eb6459',
         borderRadius: '2px 2px 0 0',
         opacity: 0.85
       }
@@ -4410,7 +4410,7 @@ function FCFPanel({
       flex: 1,
       textAlign: 'center',
       fontSize: 8,
-      color: '#334155'
+      color: '#33353f'
     }
   }, q.label.split(' ')[0], /*#__PURE__*/React.createElement("br", null), q.label.split(' ')[1]))), /*#__PURE__*/React.createElement("table", {
     style: {
@@ -4424,60 +4424,60 @@ function FCFPanel({
     style: {
       padding: '5px 8px',
       textAlign: h === 'Period' ? 'left' : 'right',
-      color: '#334155',
+      color: '#33353f',
       fontSize: 8,
       fontWeight: 700,
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
-      borderBottom: '1px solid #1e2430'
+      borderBottom: '1px solid #24262f'
     }
   }, h)))), /*#__PURE__*/React.createElement("tbody", null, enriched.slice().reverse().slice(0, 6).map((q, i) => /*#__PURE__*/React.createElement("tr", {
     key: i,
     style: {
-      borderBottom: '1px solid #0f1117'
+      borderBottom: '1px solid #15151c'
     }
   }, /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '6px 8px',
-      color: '#64748b',
-      fontFamily: 'JetBrains Mono,monospace',
+      color: '#787a83',
+      fontFamily: 'Geist Mono,monospace',
       fontSize: 9
     }
   }, q.label), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '6px 8px',
       textAlign: 'right',
-      fontFamily: 'JetBrains Mono,monospace',
-      color: '#94a3b8'
+      fontFamily: 'Geist Mono,monospace',
+      color: '#a6a7b1'
     }
   }, fmt.usd(q.ocf)), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '6px 8px',
       textAlign: 'right',
-      fontFamily: 'JetBrains Mono,monospace',
-      color: '#f87171'
+      fontFamily: 'Geist Mono,monospace',
+      color: '#eb6459'
     }
   }, ok(q.capex) ? `(${fmt.usd(q.capex)})` : '—'), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '6px 8px',
       textAlign: 'right',
-      fontFamily: 'JetBrains Mono,monospace',
-      color: ok(q.fcf) ? q.fcf >= 0 ? '#22c55e' : '#f87171' : '#475569',
+      fontFamily: 'Geist Mono,monospace',
+      color: ok(q.fcf) ? q.fcf >= 0 ? '#5ac576' : '#eb6459' : '#787a83',
       fontWeight: 700
     }
   }, fmt.usd(q.fcf)), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '6px 8px',
       textAlign: 'right',
-      fontFamily: 'JetBrains Mono,monospace',
-      color: '#94a3b8'
+      fontFamily: 'Geist Mono,monospace',
+      color: '#a6a7b1'
     }
   }, fmt.pct(q.fcfM)), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '6px 8px',
       textAlign: 'right',
-      fontFamily: 'JetBrains Mono,monospace',
-      color: '#94a3b8'
+      fontFamily: 'Geist Mono,monospace',
+      color: '#a6a7b1'
     }
   }, ok(q.fcfConv) ? q.fcfConv.toFixed(2) + 'x' : '—'))))));
 }
@@ -4527,31 +4527,31 @@ function DividendsPanel({
   }, [{
     label: 'Dividend Yield',
     value: fmt.pct(divYield),
-    color: ok(divYield) && divYield > 0 ? '#22c55e' : '#475569'
+    color: ok(divYield) && divYield > 0 ? '#5ac576' : '#787a83'
   }, {
     label: 'Payout Ratio',
     value: fmt.pct(payoutR),
-    color: ok(payoutR) ? payoutR < 0.6 ? '#22c55e' : payoutR < 0.9 ? '#fbbf24' : '#f87171' : '#475569'
+    color: ok(payoutR) ? payoutR < 0.6 ? '#5ac576' : payoutR < 0.9 ? '#eca851' : '#eb6459' : '#787a83'
   }, {
     label: 'Consec. Years Paid',
     value: consec > 0 ? `${consec} yrs` : '—',
-    color: consec >= 10 ? '#22c55e' : consec >= 5 ? '#fbbf24' : '#94a3b8'
+    color: consec >= 10 ? '#5ac576' : consec >= 5 ? '#eca851' : '#a6a7b1'
   }, {
     label: 'Div. CAGR',
     value: fmt.pct(divCAGR),
-    color: ok(divCAGR) && divCAGR > 0 ? '#22c55e' : '#f87171'
+    color: ok(divCAGR) && divCAGR > 0 ? '#5ac576' : '#eb6459'
   }].map(r => /*#__PURE__*/React.createElement("div", {
     key: r.label,
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 14px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 4
@@ -4560,13 +4560,13 @@ function DividendsPanel({
     style: {
       fontSize: 15,
       fontWeight: 700,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       color: r.color
     }
   }, r.value)))), years.length >= 2 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 8
@@ -4592,22 +4592,22 @@ function DividendsPanel({
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 8,
-        color: '#94a3b8',
-        fontFamily: 'JetBrains Mono,monospace'
+        color: '#a6a7b1',
+        fontFamily: 'Geist Mono,monospace'
       }
     }, "$", annualVals[i].toFixed(2)), /*#__PURE__*/React.createElement("div", {
       style: {
         width: '70%',
         height: h + 4,
         minHeight: 4,
-        background: '#3b82f6',
+        background: '#968ff7',
         borderRadius: '2px 2px 0 0',
         opacity: 0.8
       }
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 8,
-        color: '#475569'
+        color: '#787a83'
       }
     }, yr));
   }))), /*#__PURE__*/React.createElement("div", {
@@ -4617,7 +4617,7 @@ function DividendsPanel({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 8
@@ -4631,8 +4631,8 @@ function DividendsPanel({
   }, sorted.slice(0, 8).map((d, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 4,
       padding: '5px 10px',
       textAlign: 'center'
@@ -4640,14 +4640,14 @@ function DividendsPanel({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#64748b'
+      color: '#787a83'
     }
   }, d.date?.substring(0, 10)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       fontWeight: 700,
-      color: '#22c55e',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: '#5ac576',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, "$", (d.dividend || d.adjDividend || 0).toFixed(3)))))));
 }
@@ -4681,7 +4681,7 @@ function DilutionPanel({
 
   // Trend classification on YoY share count
   const trend = yoyDelta == null ? 'flat' : yoyDelta > 0.005 ? 'dilution' : yoyDelta < -0.005 ? 'buyback' : 'flat';
-  const trendColor = trend === 'buyback' ? '#22c55e' : trend === 'dilution' ? '#f87171' : '#fbbf24';
+  const trendColor = trend === 'buyback' ? '#5ac576' : trend === 'dilution' ? '#eb6459' : '#eca851';
   const trendLabel = trend === 'buyback' ? 'Recompra neta' : trend === 'dilution' ? 'Dilución' : 'Estable';
 
   // Bar chart scaled within min..max so small % changes are visible
@@ -4705,7 +4705,7 @@ function DilutionPanel({
   }, {
     label: `Δ Shares (${series.length}T)`,
     value: ok(totDelta) ? (totDelta >= 0 ? '+' : '') + (totDelta * 100).toFixed(2) + '%' : '—',
-    color: ok(totDelta) ? totDelta <= 0 ? '#22c55e' : '#f87171' : '#475569'
+    color: ok(totDelta) ? totDelta <= 0 ? '#5ac576' : '#eb6459' : '#787a83'
   }, {
     label: 'Tendencia',
     value: trendLabel,
@@ -4713,15 +4713,15 @@ function DilutionPanel({
   }].map(r => /*#__PURE__*/React.createElement("div", {
     key: r.label,
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 14px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 4
@@ -4730,13 +4730,13 @@ function DilutionPanel({
     style: {
       fontSize: 15,
       fontWeight: 700,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       color: r.color
     }
   }, r.value)))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 8
@@ -4763,15 +4763,15 @@ function DilutionPanel({
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 8,
-        color: '#475569',
-        fontFamily: 'JetBrains Mono,monospace'
+        color: '#787a83',
+        fontFamily: 'Geist Mono,monospace'
       }
     }, fmtShares(q.shares)), /*#__PURE__*/React.createElement("div", {
       style: {
         width: '100%',
         height: h,
         minHeight: 4,
-        background: trend === 'buyback' ? '#22c55e' : trend === 'dilution' ? '#f87171' : '#60a5fa',
+        background: trend === 'buyback' ? '#5ac576' : trend === 'dilution' ? '#eb6459' : '#968ff7',
         borderRadius: '2px 2px 0 0',
         opacity: 0.82
       }
@@ -4788,7 +4788,7 @@ function DilutionPanel({
       flex: 1,
       textAlign: 'center',
       fontSize: 8,
-      color: '#334155'
+      color: '#33353f'
     }
   }, q.label.split(' ')[0], /*#__PURE__*/React.createElement("br", null), q.label.split(' ')[1]))), hasCF && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4800,27 +4800,27 @@ function DilutionPanel({
   }, [{
     label: 'Buybacks (TTM)',
     value: fmt.usd(ttmRepurch),
-    color: ttmRepurch > 0 ? '#22c55e' : '#475569'
+    color: ttmRepurch > 0 ? '#5ac576' : '#787a83'
   }, {
     label: 'Issuance (TTM)',
     value: fmt.usd(ttmIssued),
-    color: ttmIssued > 0 ? '#f87171' : '#475569'
+    color: ttmIssued > 0 ? '#eb6459' : '#787a83'
   }, {
     label: 'Neto (TTM)',
     value: (netBuyback >= 0 ? '+' : '-') + fmt.usd(Math.abs(netBuyback)),
-    color: netBuyback >= 0 ? '#22c55e' : '#f87171'
+    color: netBuyback >= 0 ? '#5ac576' : '#eb6459'
   }].map(r => /*#__PURE__*/React.createElement("div", {
     key: r.label,
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 14px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 4
@@ -4829,16 +4829,16 @@ function DilutionPanel({
     style: {
       fontSize: 14,
       fontWeight: 700,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       color: r.color
     }
   }, r.value)))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#64748b',
+      color: '#787a83',
       lineHeight: 1.6,
-      background: '#0c0e14',
-      border: '1px solid #1e2430',
+      background: '#15151c',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '8px 12px'
     }
@@ -4859,9 +4859,9 @@ function ShortInterestPanel({
     return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Short Interest"), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11,
-        color: '#475569',
-        background: '#0c0e14',
-        border: '1px solid #1e2430',
+        color: '#787a83',
+        background: '#15151c',
+        border: '1px solid #24262f',
         borderRadius: 6,
         padding: '10px 14px'
       }
@@ -4881,17 +4881,17 @@ function ShortInterestPanel({
     label: 'Short Interest',
     value: fmtShares(latest.si),
     sub: latest.date,
-    color: '#e2e8f0'
+    color: '#edeef4'
   }, {
     label: '% Shares Out',
     value: ok(pctOut) ? (pctOut * 100).toFixed(2) + '%' : '—',
     sub: 'aprox. float',
-    color: ok(pctOut) ? pctOut > 0.10 ? '#f87171' : pctOut > 0.05 ? '#fbbf24' : '#22c55e' : '#475569'
+    color: ok(pctOut) ? pctOut > 0.10 ? '#eb6459' : pctOut > 0.05 ? '#eca851' : '#5ac576' : '#787a83'
   }, {
     label: 'Days to Cover',
     value: ok(daysCover) ? daysCover.toFixed(1) : '—',
     sub: 'SI / avg vol',
-    color: ok(daysCover) ? daysCover > 5 ? '#f87171' : daysCover > 2 ? '#fbbf24' : '#22c55e' : '#475569'
+    color: ok(daysCover) ? daysCover > 5 ? '#eb6459' : daysCover > 2 ? '#eca851' : '#5ac576' : '#787a83'
   }];
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Short Interest"), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4903,15 +4903,15 @@ function ShortInterestPanel({
   }, cards.map(c => /*#__PURE__*/React.createElement("div", {
     key: c.label,
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 14px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       marginBottom: 4
@@ -4920,13 +4920,13 @@ function ShortInterestPanel({
     style: {
       fontSize: 15,
       fontWeight: 700,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       color: c.color
     }
   }, c.value), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 8,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 2
     }
   }, c.sub)))), view.length >= 2 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -4939,15 +4939,15 @@ function ShortInterestPanel({
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px'
     }
   }, "Tendencia (short interest)"), ok(deltaPct) && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10,
-      fontFamily: 'JetBrains Mono,monospace',
-      color: deltaPct > 0 ? '#f87171' : '#22c55e'
+      fontFamily: 'Geist Mono,monospace',
+      color: deltaPct > 0 ? '#eb6459' : '#5ac576'
     }
   }, deltaPct >= 0 ? '▲' : '▼', " ", Math.abs(deltaPct * 100).toFixed(1), "% vs anterior")), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4965,7 +4965,7 @@ function ShortInterestPanel({
         flex: 1,
         height: h,
         minHeight: 3,
-        background: i === view.length - 1 ? '#fbbf24' : '#475569',
+        background: i === view.length - 1 ? '#eca851' : '#787a83',
         borderRadius: '2px 2px 0 0',
         opacity: 0.85
       }
@@ -4973,7 +4973,7 @@ function ShortInterestPanel({
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 8,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 6
     }
   }, "% Shares Out usa acciones en circulaci\xF3n como aproximaci\xF3n al float. Fuente: Finnhub."));
@@ -4987,7 +4987,7 @@ function AboutText({
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
-      color: '#94a3b8',
+      color: '#a6a7b1',
       lineHeight: 1.75
     }
   }, display), long && /*#__PURE__*/React.createElement("button", {
@@ -4996,7 +4996,7 @@ function AboutText({
       marginTop: 6,
       background: 'none',
       border: 'none',
-      color: '#3b82f6',
+      color: '#968ff7',
       fontSize: 11,
       cursor: 'pointer',
       padding: 0
@@ -5015,32 +5015,32 @@ function CarteraKMatrix({
     sectors: ['Oro', 'Energía'],
     x: 80,
     y: 50,
-    color: '#D89B26',
-    fill: '#F0E0B8'
+    color: '#eca851',
+    fill: '#eca851'
   }, {
     id: 'inflacion',
     label: 'Inflación',
     sectors: ['Energía', 'Real estate'],
     x: 240,
     y: 50,
-    color: '#B85A1E',
-    fill: '#E8C3A7'
+    color: '#54360b',
+    fill: '#eca851'
   }, {
     id: 'defensivo',
     label: 'Defensivo',
     sectors: ['Salud', 'Utilities', 'C. básico', 'Renta fija'],
     x: 80,
     y: 200,
-    color: '#5C9156',
-    fill: '#CFDDC8'
+    color: '#5ac576',
+    fill: '#5ac576'
   }, {
     id: 'crecimiento',
     label: 'Crecimiento',
     sectors: ['Tecnología'],
     x: 240,
     y: 200,
-    color: '#C0392B',
-    fill: '#F0C4BD'
+    color: '#eb6459',
+    fill: '#eb6459'
   }];
   const QW = 140,
     QH = 140,
@@ -5059,31 +5059,31 @@ function CarteraKMatrix({
     textAnchor: "middle",
     fontSize: 14,
     fontWeight: "bold",
-    fill: "#e2e8f0"
+    fill: "#edeef4"
   }, "Cartera K \u2014 Macro Playbook"), /*#__PURE__*/React.createElement("text", {
     x: 32,
     y: 110,
     textAnchor: "middle",
     fontSize: 10,
-    fill: "#64748b"
+    fill: "#787a83"
   }, "Infl. alta"), /*#__PURE__*/React.createElement("text", {
     x: 32,
     y: 270,
     textAnchor: "middle",
     fontSize: 10,
-    fill: "#64748b"
+    fill: "#787a83"
   }, "Infl. baja"), /*#__PURE__*/React.createElement("text", {
     x: 150,
     y: H - 12,
     textAnchor: "middle",
     fontSize: 10,
-    fill: "#64748b"
+    fill: "#787a83"
   }, "Crec. bajo"), /*#__PURE__*/React.createElement("text", {
     x: 310,
     y: H - 12,
     textAnchor: "middle",
     fontSize: 10,
-    fill: "#64748b"
+    fill: "#787a83"
   }, "Crec. alto"), quads.map(q => {
     const active = q.id === activeQuadrant;
     return /*#__PURE__*/React.createElement("g", {
@@ -5148,7 +5148,7 @@ function Funds13FPanel({
   }, [supabase]);
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "13F Tracker \u2014 Smart Money Funds"), loading ? /*#__PURE__*/React.createElement(LoadingSkeleton, null) : Object.keys(data).length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#64748b',
+      color: '#787a83',
       padding: 16,
       textAlign: 'center'
     }
@@ -5157,33 +5157,33 @@ function Funds13FPanel({
     style: {
       marginBottom: 20,
       padding: 12,
-      background: '#141720',
+      background: '#1c1d26',
       borderRadius: 8,
-      border: '1px solid #1e2430'
+      border: '1px solid #24262f'
     }
   }, /*#__PURE__*/React.createElement("h4", {
     style: {
-      color: '#e2e8f0',
+      color: '#edeef4',
       margin: '0 0 4px 0',
       fontSize: 13
     }
   }, fund), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#64748b',
+      color: '#787a83',
       marginBottom: 8
     }
   }, "Last filing: ", rows[0]?.filing_date), /*#__PURE__*/React.createElement("table", {
     style: {
       width: '100%',
       fontSize: 11,
-      fontFamily: 'JetBrains Mono,monospace'
+      fontFamily: 'Geist Mono,monospace'
     }
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
     style: {
-      color: '#64748b',
+      color: '#787a83',
       textAlign: 'left',
-      borderBottom: '1px solid #1e2430'
+      borderBottom: '1px solid #24262f'
     }
   }, /*#__PURE__*/React.createElement("th", {
     style: {
@@ -5204,7 +5204,7 @@ function Funds13FPanel({
   }, "Action"))), /*#__PURE__*/React.createElement("tbody", null, rows.slice(0, 10).map(r => /*#__PURE__*/React.createElement("tr", {
     key: r.id,
     style: {
-      borderBottom: '1px solid #0d1117'
+      borderBottom: '1px solid #15151c'
     }
   }, /*#__PURE__*/React.createElement("td", {
     style: {
@@ -5225,7 +5225,7 @@ function Funds13FPanel({
   }, r.market_value_usd ? '$' + (r.market_value_usd / 1e6).toFixed(1) + 'M' : '—'), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '4px 6px',
-      color: '#94a3b8'
+      color: '#a6a7b1'
     }
   }, r.action))))))));
 }
@@ -5259,7 +5259,7 @@ function ConsensusPanel({
   }, [supabase]);
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Consensus \u2014 Held by \u22653 Smart Money Funds"), loading ? /*#__PURE__*/React.createElement(LoadingSkeleton, null) : consensus.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#64748b',
+      color: '#787a83',
       padding: 16,
       textAlign: 'center'
     }
@@ -5273,9 +5273,9 @@ function ConsensusPanel({
     key: c.ticker,
     style: {
       padding: '8px 12px',
-      background: '#141720',
+      background: '#1c1d26',
       borderRadius: 6,
-      border: '1px solid #1e2430',
+      border: '1px solid #24262f',
       display: 'flex',
       alignItems: 'center',
       gap: 12
@@ -5283,19 +5283,19 @@ function ConsensusPanel({
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontWeight: 700,
-      color: '#3b82f6',
-      fontFamily: 'JetBrains Mono,monospace',
+      color: '#968ff7',
+      fontFamily: 'Geist Mono,monospace',
       minWidth: 60
     }
   }, c.ticker), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
-      color: '#94a3b8'
+      color: '#a6a7b1'
     }
   }, c.fund_count, " fondos:"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
-      color: '#64748b'
+      color: '#787a83'
     }
   }, c.funds.join(' · '))))));
 }
@@ -5404,25 +5404,25 @@ function JensenPatternPanel({
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Jensen Pattern \u2014 Nvidia-Adjacent Companies"), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: 10,
-      background: '#1a1407',
-      border: '1px solid #D89B26',
+      background: '#54360b',
+      border: '1px solid #eca851',
       borderRadius: 6,
       marginBottom: 14,
       fontSize: 11,
-      color: '#e8c87a',
+      color: '#eca851',
       lineHeight: 1.5
     }
   }, "Empresas mencionadas en keynotes de Jensen Huang o en las que NVIDIA ha invertido directamente. Patr\xF3n hist\xF3rico observado, no causalidad confirmada. Past performance does not predict future returns."), loading ? /*#__PURE__*/React.createElement(LoadingSkeleton, null) : /*#__PURE__*/React.createElement("table", {
     style: {
       width: '100%',
       fontSize: 11,
-      fontFamily: 'JetBrains Mono,monospace'
+      fontFamily: 'Geist Mono,monospace'
     }
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
     style: {
-      color: '#64748b',
+      color: '#787a83',
       textAlign: 'left',
-      borderBottom: '1px solid #1e2430'
+      borderBottom: '1px solid #24262f'
     }
   }, /*#__PURE__*/React.createElement("th", {
     style: {
@@ -5456,18 +5456,18 @@ function JensenPatternPanel({
   }, "Source"))), /*#__PURE__*/React.createElement("tbody", null, enriched.sort((a, b) => (b.returnPct || 0) - (a.returnPct || 0)).map(j => /*#__PURE__*/React.createElement("tr", {
     key: j.ticker,
     style: {
-      borderBottom: '1px solid #141720'
+      borderBottom: '1px solid #1c1d26'
     }
   }, /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '4px 6px',
       fontWeight: 700,
-      color: '#3b82f6'
+      color: '#968ff7'
     }
   }, j.ticker), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '4px 6px',
-      color: '#94a3b8'
+      color: '#a6a7b1'
     }
   }, j.name), /*#__PURE__*/React.createElement("td", {
     style: {
@@ -5485,13 +5485,13 @@ function JensenPatternPanel({
     style: {
       padding: '4px 6px',
       fontWeight: 700,
-      color: (j.returnPct || 0) > 0 ? '#22c55e' : '#ef4444'
+      color: (j.returnPct || 0) > 0 ? '#5ac576' : '#eb6459'
     }
   }, j.returnPct != null ? (j.returnPct > 0 ? '+' : '') + j.returnPct.toFixed(0) + '%' : '—'), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: '4px 6px',
       fontSize: 9,
-      color: '#475569'
+      color: '#787a83'
     }
   }, j.source))))));
 }
@@ -5570,16 +5570,16 @@ function WatchlistManager({
     style: {
       flex: 1,
       padding: '8px 12px',
-      background: '#141720',
-      border: '1px solid #1e2430',
-      color: '#e2e8f0',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
+      color: '#edeef4',
       borderRadius: 6
     }
   }), /*#__PURE__*/React.createElement("button", {
     onClick: addTicker,
     style: {
       padding: '8px 16px',
-      background: '#3b82f6',
+      background: '#968ff7',
       border: 'none',
       color: '#fff',
       borderRadius: 6,
@@ -5590,9 +5590,9 @@ function WatchlistManager({
     onClick: load,
     style: {
       padding: '8px 16px',
-      background: '#1e2430',
-      border: '1px solid #2d3748',
-      color: '#e2e8f0',
+      background: '#24262f',
+      border: '1px solid #33353f',
+      color: '#edeef4',
       borderRadius: 6,
       cursor: 'pointer'
     }
@@ -5604,9 +5604,9 @@ function WatchlistManager({
     }
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
     style: {
-      color: '#64748b',
+      color: '#787a83',
       textAlign: 'left',
-      borderBottom: '1px solid #1e2430'
+      borderBottom: '1px solid #24262f'
     }
   }, /*#__PURE__*/React.createElement("th", {
     style: {
@@ -5646,13 +5646,13 @@ function WatchlistManager({
   }))), /*#__PURE__*/React.createElement("tbody", null, sorted.map(it => /*#__PURE__*/React.createElement("tr", {
     key: it.id,
     style: {
-      borderBottom: '1px solid #141720'
+      borderBottom: '1px solid #1c1d26'
     }
   }, /*#__PURE__*/React.createElement("td", {
     style: {
       padding: 8,
       fontWeight: 600,
-      color: '#3b82f6',
+      color: '#968ff7',
       cursor: 'pointer'
     },
     onClick: () => onAnalyze && onAnalyze(it.ticker)
@@ -5663,13 +5663,13 @@ function WatchlistManager({
   }, it.analysis?.score_total ?? '—'), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: 8,
-      color: it.analysis?.macro_tilt ? it.analysis.macro_tilt > 0 ? '#22c55e' : '#f87171' : '#64748b'
+      color: it.analysis?.macro_tilt ? it.analysis.macro_tilt > 0 ? '#5ac576' : '#eb6459' : '#787a83'
     }
   }, it.analysis?.macro_tilt ? (it.analysis.macro_tilt > 0 ? '+' : '') + it.analysis.macro_tilt : '—'), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: 8,
       fontWeight: 700,
-      color: it.analysis ? getRating(icScore(it.analysis.score_total, it.analysis.macro_tilt)).color : '#64748b'
+      color: it.analysis ? getRating(icScore(it.analysis.score_total, it.analysis.macro_tilt)).color : '#787a83'
     }
   }, it.analysis ? icScore(it.analysis.score_total, it.analysis.macro_tilt) : '—'), /*#__PURE__*/React.createElement("td", {
     style: {
@@ -5678,7 +5678,7 @@ function WatchlistManager({
   }, it.analysis?.rating ?? '—'), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: 8,
-      color: '#94a3b8'
+      color: '#a6a7b1'
     }
   }, it.analysis?.sector ?? '—'), /*#__PURE__*/React.createElement("td", {
     style: {
@@ -5689,7 +5689,7 @@ function WatchlistManager({
     style: {
       background: 'none',
       border: 'none',
-      color: '#ef4444',
+      color: '#eb6459',
       cursor: 'pointer'
     }
   }, "\u2715")))), !sorted.length && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
@@ -5697,7 +5697,7 @@ function WatchlistManager({
     style: {
       padding: 16,
       textAlign: 'center',
-      color: '#64748b'
+      color: '#787a83'
     }
   }, "Watchlist vac\xEDa. A\xF1ade tickers arriba, anal\xEDzalos en Overview, y aparecer\xE1n aqu\xED con su score.")))));
 }
@@ -5785,7 +5785,7 @@ function CompareView({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
-      color: '#94a3b8',
+      color: '#a6a7b1',
       marginBottom: 8
     }
   }, "Selecciona 2\u20133 tickers de tu watchlist para compararlos lado a lado (datos ya guardados, $0)."), /*#__PURE__*/React.createElement("div", {
@@ -5809,9 +5809,9 @@ function CompareView({
         padding: '6px 12px',
         borderRadius: 6,
         cursor: blocked ? 'not-allowed' : 'pointer',
-        background: on ? '#3b82f6' : '#141720',
-        border: `1px solid ${on ? '#3b82f6' : '#1e2430'}`,
-        color: on ? '#fff' : has ? '#e2e8f0' : '#64748b',
+        background: on ? '#968ff7' : '#1c1d26',
+        border: `1px solid ${on ? '#968ff7' : '#24262f'}`,
+        color: on ? '#fff' : has ? '#edeef4' : '#787a83',
         fontWeight: 600,
         fontSize: 12,
         opacity: blocked ? 0.5 : 1
@@ -5821,9 +5821,9 @@ function CompareView({
     onClick: load,
     style: {
       padding: '6px 12px',
-      background: '#1e2430',
-      border: '1px solid #2d3748',
-      color: '#e2e8f0',
+      background: '#24262f',
+      border: '1px solid #33353f',
+      color: '#edeef4',
       borderRadius: 6,
       cursor: 'pointer',
       fontSize: 12
@@ -5832,14 +5832,14 @@ function CompareView({
     style: {
       padding: '40px 20px',
       textAlign: 'center',
-      color: '#64748b',
+      color: '#787a83',
       fontSize: 13
     }
   }, "Watchlist vac\xEDa. A\xF1ade tickers en la pesta\xF1a Screener y anal\xEDzalos."), rows.length > 0 && chosen.length < 2 && /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '40px 20px',
       textAlign: 'center',
-      color: '#64748b',
+      color: '#787a83',
       fontSize: 13
     }
   }, "Elige al menos 2 tickers para comparar."), chosen.length >= 2 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("table", {
@@ -5850,9 +5850,9 @@ function CompareView({
     }
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
     style: {
-      color: '#64748b',
+      color: '#787a83',
       textAlign: 'left',
-      borderBottom: '1px solid #1e2430'
+      borderBottom: '1px solid #24262f'
     }
   }, /*#__PURE__*/React.createElement("th", {
     style: {
@@ -5862,7 +5862,7 @@ function CompareView({
     key: c.ticker,
     style: {
       padding: 8,
-      color: '#3b82f6',
+      color: '#968ff7',
       cursor: 'pointer'
     },
     title: "Analizar este ticker",
@@ -5875,12 +5875,12 @@ function CompareView({
     return /*#__PURE__*/React.createElement("tr", {
       key: mr.k,
       style: {
-        borderBottom: '1px solid #141720'
+        borderBottom: '1px solid #1c1d26'
       }
     }, /*#__PURE__*/React.createElement("td", {
       style: {
         padding: 8,
-        color: '#94a3b8'
+        color: '#a6a7b1'
       }
     }, mr.k), chosen.map((c, i) => {
       const v = cells[i];
@@ -5891,7 +5891,7 @@ function CompareView({
         style: {
           padding: 8,
           fontWeight: isBest ? 800 : 500,
-          color: isBest ? '#22c55e' : c.analysis ? '#e2e8f0' : '#64748b'
+          color: isBest ? '#5ac576' : c.analysis ? '#edeef4' : '#787a83'
         }
       }, display);
     }));
@@ -5899,13 +5899,13 @@ function CompareView({
     style: {
       marginTop: 12,
       fontSize: 11,
-      color: '#64748b'
+      color: '#787a83'
     }
   }, "Sin an\xE1lisis guardado: ", noAnalysis.map((t, i) => /*#__PURE__*/React.createElement("span", {
     key: t
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#3b82f6',
+      color: '#968ff7',
       cursor: 'pointer',
       fontWeight: 600
     },
@@ -5914,7 +5914,7 @@ function CompareView({
     style: {
       marginTop: 10,
       fontSize: 9,
-      color: '#334155'
+      color: '#33353f'
     }
   }, "Verde = mejor valor de la fila. Comparativa de an\xE1lisis ya guardados; no dispara nuevos an\xE1lisis.")));
 }
@@ -5940,7 +5940,7 @@ function LoginScreen() {
     style: {
       padding: 40,
       textAlign: 'center',
-      color: '#e2e8f0'
+      color: '#edeef4'
     }
   }, /*#__PURE__*/React.createElement("h2", null, "Check your email"), /*#__PURE__*/React.createElement("p", null, "We sent a magic link to ", email, "."));
   return /*#__PURE__*/React.createElement("div", {
@@ -5948,18 +5948,18 @@ function LoginScreen() {
       maxWidth: 380,
       margin: '80px auto',
       padding: 32,
-      background: '#0c0e14',
+      background: '#15151c',
       borderRadius: 12,
-      border: '1px solid #1e2430'
+      border: '1px solid #24262f'
     }
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
-      color: '#e2e8f0',
+      color: '#edeef4',
       marginBottom: 8
     }
   }, "StockLens \u2014 Login"), /*#__PURE__*/React.createElement("p", {
     style: {
-      color: '#64748b',
+      color: '#787a83',
       fontSize: 13,
       marginBottom: 20
     }
@@ -5971,9 +5971,9 @@ function LoginScreen() {
     style: {
       width: '100%',
       padding: '10px 12px',
-      background: '#141720',
-      border: '1px solid #1e2430',
-      color: '#e2e8f0',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
+      color: '#edeef4',
       borderRadius: 6,
       fontSize: 14,
       marginBottom: 12
@@ -5983,7 +5983,7 @@ function LoginScreen() {
     style: {
       width: '100%',
       padding: '10px',
-      background: '#3b82f6',
+      background: '#968ff7',
       border: 'none',
       color: '#fff',
       borderRadius: 6,
@@ -5992,7 +5992,7 @@ function LoginScreen() {
     }
   }, "Send magic link"), err && /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#f87171',
+      color: '#eb6459',
       fontSize: 12,
       marginTop: 10
     }
@@ -6901,7 +6901,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   };
   const dcfVal = dcf?.dcf;
   const mosFrac = ok(dcfVal) && ok(priceNow) && dcfVal > 0 ? (dcfVal - priceNow) / dcfVal : null;
-  const mosColor = !ok(mosFrac) ? '#475569' : mosFrac > 0.15 ? '#22c55e' : mosFrac > -0.15 ? '#fbbf24' : '#f87171';
+  const mosColor = !ok(mosFrac) ? '#787a83' : mosFrac > 0.15 ? '#5ac576' : mosFrac > -0.15 ? '#eca851' : '#eb6459';
   const healthCards = useMemo(() => {
     if (!met || !rat) return [];
     const pe = met.peRatioTTM ?? met.priceToEarningsRatioTTM,
@@ -6948,9 +6948,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: '100vh',
-      background: '#07080c',
-      color: '#e2e8f0',
-      fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif",
+      background: '#15151c',
+      color: '#edeef4',
+      fontFamily: "'Hanken Grotesk',-apple-system,BlinkMacSystemFont,sans-serif",
       paddingBottom: 60
     }
   }, /*#__PURE__*/React.createElement("style", null, `
@@ -6958,9 +6958,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:5px;height:5px}
-        ::-webkit-scrollbar-track{background:#07080c}
-        ::-webkit-scrollbar-thumb{background:#1e2430;border-radius:3px}
-        input::placeholder{color:#334155}
+        ::-webkit-scrollbar-track{background:#15151c}
+        ::-webkit-scrollbar-thumb{background:#24262f;border-radius:3px}
+        input::placeholder{color:#33353f}
         a{color:inherit;text-decoration:none}
         button:hover{opacity:0.88}
       `), scrolled && hasData && ticker && /*#__PURE__*/React.createElement("div", {
@@ -6970,9 +6970,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       left: 0,
       right: 0,
       zIndex: 190,
-      background: '#0a0b10ee',
+      background: '#15151cee',
       backdropFilter: 'blur(8px)',
-      borderBottom: '1px solid #161b26',
+      borderBottom: '1px solid #1c1d26',
       padding: '8px 24px',
       display: 'flex',
       alignItems: 'center',
@@ -6994,26 +6994,26 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontSize: 14,
       fontWeight: 800,
       color: '#fff',
-      fontFamily: 'JetBrains Mono,monospace'
+      fontFamily: 'Geist Mono,monospace'
     }
   }, ticker), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12,
-      color: '#64748b'
+      color: '#787a83'
     }
   }, prof?.companyName), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 14,
       fontWeight: 700,
-      color: '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace',
+      color: '#edeef4',
+      fontFamily: 'Geist Mono,monospace',
       marginLeft: 'auto'
     }
   }, fmt.price(priceNow)), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12,
       fontWeight: 600,
-      color: isUpDay ? '#22c55e' : '#f87171'
+      color: isUpDay ? '#5ac576' : '#eb6459'
     }
   }, isUpDay ? '▲' : '▼', Math.abs(chg1d || 0).toFixed(2), "%"), r && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -7035,16 +7035,16 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       padding: "3px 8px",
       marginLeft: 8,
       borderRadius: 4,
-      background: macroTilt.tilt > 0 ? "#22c55e22" : "#ef444422",
-      border: `1px solid ${macroTilt.tilt > 0 ? "#22c55e" : "#ef4444"}`,
+      background: macroTilt.tilt > 0 ? "#5ac57622" : "#eb645922",
+      border: `1px solid ${macroTilt.tilt > 0 ? "#5ac576" : "#eb6459"}`,
       fontSize: 11,
-      fontFamily: "JetBrains Mono,monospace",
+      fontFamily: "Geist Mono,monospace",
       cursor: "help"
     }
   }, "Macro Tilt: ", macroTilt.tilt > 0 ? "+" : "", macroTilt.tilt)), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0a0b10',
-      borderBottom: '1px solid #161b26',
+      background: '#15151c',
+      borderBottom: '1px solid #1c1d26',
       padding: '0 24px',
       display: 'flex',
       flexDirection: 'column',
@@ -7079,7 +7079,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     title: "Ver r\xE9gimen macro completo (IC DataLayer)",
     style: {
       fontSize: 11,
-      color: '#60a5fa',
+      color: '#968ff7',
       textDecoration: 'none'
     }
   }, "\uD83C\uDF10 Macro \u2197")), /*#__PURE__*/React.createElement("div", {
@@ -7095,8 +7095,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     placeholder: "TICKER",
     maxLength: 10,
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       color: '#fff',
       padding: '7px 13px',
       borderRadius: 6,
@@ -7104,7 +7104,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontWeight: 700,
       width: 110,
       outline: 'none',
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       letterSpacing: '1.5px',
       textTransform: 'uppercase'
     }
@@ -7112,7 +7112,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     onClick: handleSearch,
     disabled: loading || !inputTicker.trim(),
     style: {
-      background: loading ? '#1e2430' : '#3b82f6',
+      background: loading ? '#24262f' : '#968ff7',
       color: '#fff',
       border: 'none',
       padding: '7px 18px',
@@ -7126,9 +7126,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     onClick: () => setAutoLoaded(true),
     title: "Activar Screener y Smart Money",
     style: {
-      background: '#1e2430',
-      color: '#94a3b8',
-      border: '1px solid #2d3748',
+      background: '#24262f',
+      color: '#a6a7b1',
+      border: '1px solid #33353f',
       padding: '7px 13px',
       borderRadius: 6,
       cursor: 'pointer',
@@ -7139,9 +7139,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     onClick: () => sb && sb.auth.signOut(),
     title: "Sign out",
     style: {
-      background: '#141720',
-      color: '#475569',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      color: '#787a83',
+      border: '1px solid #24262f',
       padding: '7px 11px',
       borderRadius: 6,
       cursor: 'pointer',
@@ -7157,7 +7157,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       textTransform: 'uppercase',
       letterSpacing: '0.5px',
       marginRight: 2
@@ -7169,14 +7169,14 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       analyze(t);
     },
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
-      color: '#64748b',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
+      color: '#787a83',
       padding: '2px 10px',
       borderRadius: 4,
       cursor: 'pointer',
       fontSize: 11,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       fontWeight: 600
     }
   }, t)))), /*#__PURE__*/React.createElement("div", {
@@ -7205,7 +7205,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, "StockLens"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
-      color: '#334155',
+      color: '#33353f',
       maxWidth: 400,
       margin: '0 auto 32px',
       lineHeight: 1.7
@@ -7224,34 +7224,34 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       analyze(t);
     },
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
-      color: '#94a3b8',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
+      color: '#a6a7b1',
       padding: '6px 14px',
       borderRadius: 6,
       cursor: 'pointer',
       fontSize: 12,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       fontWeight: 600
     }
   }, t)))), loading && /*#__PURE__*/React.createElement(LoadingSkeleton, null), !loading && error && /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#2a0d0d',
-      border: '1px solid #7f1d1d',
+      background: '#602a25',
+      border: '1px solid #602a25',
       borderRadius: 8,
       padding: '16px 20px',
       margin: '24px 0'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      color: '#f87171',
+      color: '#eb6459',
       fontSize: 13,
       marginBottom: error.includes('limit') ? 12 : 0
     }
   }, "\u26A0 ", error), error.includes('limit') && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: '#64748b',
+      color: '#787a83',
       marginTop: 8
     }
   }, "Try again in about a minute.")), !loading && hasData && /*#__PURE__*/React.createElement("div", {
@@ -7305,7 +7305,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
-      color: '#334155'
+      color: '#33353f'
     }
   }, [prof?.exchange, prof?.sector, prof?.industry].filter(Boolean).join(' · ')), prof?.exchange && /*#__PURE__*/React.createElement("span", {
     style: {
@@ -7313,8 +7313,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       padding: '1px 6px',
       borderRadius: 3,
       fontWeight: 700,
-      background: prof.exchange.includes('NASDAQ') ? '#1e3a5f' : prof.exchange.includes('NYSE') ? '#1a3a1a' : '#2a2a1a',
-      color: prof.exchange.includes('NASDAQ') ? '#60a5fa' : prof.exchange.includes('NYSE') ? '#4ade80' : '#fbbf24'
+      background: prof.exchange.includes('NASDAQ') ? '#34315f' : prof.exchange.includes('NYSE') ? '#194224' : '#54360b',
+      color: prof.exchange.includes('NASDAQ') ? '#968ff7' : prof.exchange.includes('NYSE') ? '#5ac576' : '#eca851'
     }
   }, prof.exchange)), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -7328,12 +7328,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontSize: 28,
       fontWeight: 800,
       color: '#fff',
-      fontFamily: 'JetBrains Mono,monospace'
+      fontFamily: 'Geist Mono,monospace'
     }
   }, ticker), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 16,
-      color: '#94a3b8',
+      color: '#a6a7b1',
       fontWeight: 500
     }
   }, prof?.companyName)), /*#__PURE__*/React.createElement("div", {
@@ -7342,7 +7342,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       gap: 14,
       marginTop: 6,
       fontSize: 11,
-      color: '#475569',
+      color: '#787a83',
       flexWrap: 'wrap'
     }
   }, prof?.ceo && /*#__PURE__*/React.createElement("span", null, "CEO: ", prof.ceo), prof?.fullTimeEmployees && /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC65 ", Number(prof.fullTimeEmployees).toLocaleString(), " employees"), prof?.ipoDate && /*#__PURE__*/React.createElement("span", null, "Est. ", prof.ipoDate?.substring(0, 4)), prof?.website && /*#__PURE__*/React.createElement("a", {
@@ -7350,7 +7350,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     target: "_blank",
     rel: "noopener noreferrer",
     style: {
-      color: '#3b82f6'
+      color: '#968ff7'
     }
   }, prof.website?.replace(/^https?:\/\//, ''))))), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -7361,25 +7361,25 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontSize: 32,
       fontWeight: 800,
       color: '#fff',
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1
     }
   }, fmt.price(priceNow)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 14,
       fontWeight: 600,
-      color: isUpDay ? '#22c55e' : '#f87171',
+      color: isUpDay ? '#5ac576' : '#eb6459',
       marginTop: 3
     }
   }, isUpDay ? '▲' : '▼', " ", Math.abs(chg1d || 0).toFixed(2), "% today"), ok(ret12m) && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: ret12m >= 0 ? '#4ade80' : '#f87171'
+      color: ret12m >= 0 ? '#5ac576' : '#eb6459'
     }
   }, ret12m >= 0 ? '▲' : '▼', " ", Math.abs(ret12m * 100).toFixed(1), "% past 12m"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 3
     }
   }, "Mkt Cap ", fmt.usd(quote?.marketCap), " \xB7 Avg Vol ", fmt.usd(quote?.averageVolume ?? quote?.avgVolume ?? quote?.volAvg)), /*#__PURE__*/React.createElement("div", {
@@ -7392,11 +7392,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('Valuation'),
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 5,
       padding: '5px 12px',
-      color: '#3b82f6',
+      color: '#968ff7',
       fontSize: 11,
       cursor: 'pointer'
     }
@@ -7404,11 +7404,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     onClick: exportPDF,
     title: "Descargar informe en PDF",
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 5,
       padding: '5px 12px',
-      color: '#94a3b8',
+      color: '#a6a7b1',
       fontSize: 11,
       cursor: 'pointer'
     }
@@ -7416,19 +7416,19 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     onClick: exportFullPDF,
     title: "Informe completo: IC Score + macro + AI Verdict + earnings (si ya se gener\xF3)",
     style: {
-      background: '#141720',
-      border: '1px solid #2d3a5f',
+      background: '#1c1d26',
+      border: '1px solid #34315f',
       borderRadius: 5,
       padding: '5px 12px',
-      color: '#60a5fa',
+      color: '#968ff7',
       fontSize: 11,
       cursor: 'pointer'
     }
   }, "\uD83D\uDCC4 Full Report"))))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0c0e14',
-      borderLeft: '1px solid #161b26',
-      borderRight: '1px solid #161b26',
+      background: '#15151c',
+      borderLeft: '1px solid #1c1d26',
+      borderRight: '1px solid #1c1d26',
       display: 'flex',
       gap: 0,
       position: 'sticky',
@@ -7441,8 +7441,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     style: {
       background: 'none',
       border: 'none',
-      borderBottom: activeTab === tab ? '2px solid #3b82f6' : '2px solid transparent',
-      color: activeTab === tab ? '#e2e8f0' : '#475569',
+      borderBottom: activeTab === tab ? '2px solid #968ff7' : '2px solid transparent',
+      color: activeTab === tab ? '#edeef4' : '#787a83',
       padding: '10px 20px',
       cursor: 'pointer',
       fontSize: 12,
@@ -7453,8 +7453,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     }
   }, tab))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#0c0e14',
-      border: '1px solid #161b26',
+      background: '#15151c',
+      border: '1px solid #1c1d26',
       borderTop: 'none',
       borderBottomLeftRadius: 10,
       borderBottomRightRadius: 10,
@@ -7493,22 +7493,22 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     label: "Valuation",
     value: scores.val,
     max: 25,
-    color: "#60a5fa"
+    color: "#968ff7"
   }), /*#__PURE__*/React.createElement(ScoreBar, {
     label: "Financial Health",
     value: scores.hlth,
     max: 30,
-    color: "#22c55e"
+    color: "#5ac576"
   }), /*#__PURE__*/React.createElement(ScoreBar, {
     label: "Momentum",
     value: scores.mom,
     max: 25,
-    color: "#fbbf24"
+    color: "#eca851"
   }), /*#__PURE__*/React.createElement(ScoreBar, {
     label: "Growth",
     value: scores.growth,
     max: 20,
-    color: "#a78bfa"
+    color: "#968ff7"
   })), macroTilt && macroTilt.updatedAt && (() => {
     const fr = macroFreshness(macroTilt.updatedAt);
     if (!fr) return null;
@@ -7526,7 +7526,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         fontSize: 9,
         fontWeight: 700,
         color: fr.color,
-        fontFamily: 'JetBrains Mono,monospace',
+        fontFamily: 'Geist Mono,monospace',
         cursor: 'help'
       }
     }, /*#__PURE__*/React.createElement("span", {
@@ -7540,8 +7540,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   })(), macroTilt && tiltN !== 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       width: '100%',
-      background: '#0c0e14',
-      border: `1px solid ${tiltN > 0 ? '#166534' : '#7f1d1d'}`,
+      background: '#15151c',
+      border: `1px solid ${tiltN > 0 ? '#194224' : '#602a25'}`,
       borderRadius: 8,
       padding: '10px 12px',
       display: 'flex',
@@ -7551,7 +7551,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '0.7px',
       fontWeight: 700
@@ -7567,15 +7567,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontSize: 28,
       fontWeight: 800,
       color: adjRating?.color,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       lineHeight: 1
     }
   }, macroAdj), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12,
       fontWeight: 700,
-      color: tiltN > 0 ? '#22c55e' : '#f87171',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: tiltN > 0 ? '#5ac576' : '#eb6459',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, tiltN > 0 ? '+' : '', tiltN), /*#__PURE__*/React.createElement("span", {
     style: {
@@ -7589,31 +7589,31 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     style: {
       fontSize: 10,
       fontWeight: 700,
-      color: tiltN > 0 ? '#22c55e' : '#f87171'
+      color: tiltN > 0 ? '#5ac576' : '#eb6459'
     }
   }, baseRating.label, " \u2192 ", adjRating.label, " por macro"), (macroTilt.regime || macroTilt.quadrant) && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#64748b',
+      color: '#787a83',
       lineHeight: 1.4
     }
   }, macroTilt.regime ? `Régimen: ${macroTilt.regime}` : '', macroTilt.quadrant ? ` · ${macroTilt.quadrant}` : ''), (macroTilt.reasons || []).length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#475569',
+      color: '#787a83',
       lineHeight: 1.4
     },
     title: (macroTilt.reasons || []).join(' · ')
   }, (macroTilt.reasons || []).join(' · ')), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 8,
-      color: '#334155'
+      color: '#33353f'
     }
   }, "Titular = score micro (", scores.total, "). IC Score = micro + tilt macro, acotado 0\u2013100.")) : macroTilt ? /*#__PURE__*/React.createElement("div", {
     style: {
       width: '100%',
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       textAlign: 'center'
     }
   }, "Sin ajuste macro para este perfil") : null, scoreHistory.length >= 1 && /*#__PURE__*/React.createElement(ScoreHistorySparkline, {
@@ -7627,7 +7627,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       marginBottom: 6,
       textTransform: 'uppercase',
       letterSpacing: '0.5px'
@@ -7636,7 +7636,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     style: {
       position: 'relative',
       height: 6,
-      background: '#1e2430',
+      background: '#24262f',
       borderRadius: 3
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -7645,7 +7645,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       left: 0,
       width: `${Math.min(100, Math.max(0, (priceNow - quote.yearLow) / (quote.yearHigh - quote.yearLow) * 100))}%`,
       height: '100%',
-      background: '#3b82f6',
+      background: '#968ff7',
       borderRadius: 3,
       transition: 'width 0.8s ease'
     }
@@ -7659,7 +7659,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       height: 12,
       background: '#fff',
       borderRadius: '50%',
-      border: '2px solid #3b82f6'
+      border: '2px solid #968ff7'
     }
   })), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -7667,21 +7667,21 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       justifyContent: 'space-between',
       marginTop: 4,
       fontSize: 10,
-      color: '#475569',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: '#787a83',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, /*#__PURE__*/React.createElement("span", null, fmt.price(quote.yearLow), " ", /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#334155'
+      color: '#33353f'
     }
   }, "52W Low")), /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#e2e8f0',
+      color: '#edeef4',
       fontWeight: 700
     }
   }, fmt.price(priceNow)), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#334155'
+      color: '#33353f'
     }
   }, "52W High"), " ", fmt.price(quote.yearHigh)))), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -7709,21 +7709,21 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     label: "Gross Margin",
     value: fmt.pct(rat?.grossProfitMarginTTM),
     sub: "TTM",
-    highlight: ok(rat?.grossProfitMarginTTM) ? rat.grossProfitMarginTTM >= 0.4 ? '#22c55e' : rat.grossProfitMarginTTM >= 0.2 ? '#fbbf24' : '#f87171' : undefined,
+    highlight: ok(rat?.grossProfitMarginTTM) ? rat.grossProfitMarginTTM >= 0.4 ? '#5ac576' : rat.grossProfitMarginTTM >= 0.2 ? '#eca851' : '#eb6459' : undefined,
     bmVal: bm?.gm,
     bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "ROIC",
     value: fmt.pct(met?.returnOnInvestedCapitalTTM ?? met?.roicTTM),
     sub: "return on inv. capital",
-    highlight: ok(met?.returnOnInvestedCapitalTTM ?? met?.roicTTM) ? (met?.returnOnInvestedCapitalTTM ?? met?.roicTTM) >= 0.15 ? '#22c55e' : (met?.returnOnInvestedCapitalTTM ?? met?.roicTTM) >= 0.06 ? '#fbbf24' : '#f87171' : undefined,
+    highlight: ok(met?.returnOnInvestedCapitalTTM ?? met?.roicTTM) ? (met?.returnOnInvestedCapitalTTM ?? met?.roicTTM) >= 0.15 ? '#5ac576' : (met?.returnOnInvestedCapitalTTM ?? met?.roicTTM) >= 0.06 ? '#eca851' : '#eb6459' : undefined,
     bmVal: bm?.roic,
     bmLabel: "sector avg"
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "Net Debt/EBITDA",
     value: fmt.ndx(met?.netDebtToEBITDATTM),
     sub: ok(met?.netDebtToEBITDATTM) && met.netDebtToEBITDATTM < 0 ? 'net cash position' : 'leverage',
-    highlight: ok(met?.netDebtToEBITDATTM) ? met.netDebtToEBITDATTM < 0 ? '#22c55e' : met.netDebtToEBITDATTM < 2 ? '#fbbf24' : '#f87171' : undefined
+    highlight: ok(met?.netDebtToEBITDATTM) ? met.netDebtToEBITDATTM < 0 ? '#5ac576' : met.netDebtToEBITDATTM < 2 ? '#eca851' : '#eb6459' : undefined
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "FCF Yield",
     value: fmt.pct(met?.freeCashFlowYieldTTM),
@@ -7736,7 +7736,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     label: "Interest Coverage",
     value: fmt.mult(met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM),
     sub: "EBIT / interest expense",
-    highlight: ok(met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM) ? (met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM) >= 10 ? '#22c55e' : (met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM) >= 3 ? '#fbbf24' : '#f87171' : undefined
+    highlight: ok(met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM) ? (met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM) >= 10 ? '#5ac576' : (met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM) >= 3 ? '#eca851' : '#eb6459' : undefined
   }), /*#__PURE__*/React.createElement(KPIBadge, {
     label: "P/Book",
     value: fmt.mult(rat?.priceToBookRatioTTM ?? met?.pbRatioTTM),
@@ -7761,8 +7761,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     scores: scores
   }), (ptC || udC) && /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -7774,8 +7774,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     ptList: ptList
   })), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -7787,8 +7787,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: 16,
-      background: '#0c0e14',
-      border: '1px solid #1e2430',
+      background: '#15151c',
+      border: '1px solid #24262f',
       borderRadius: 8,
       marginTop: 16
     }
@@ -7814,8 +7814,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     stmts: stmts
   }), peers.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -7831,8 +7831,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     }
   })), balanceSheets.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -7840,8 +7840,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     bsData: balanceSheets
   })), cfStmts.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -7850,8 +7850,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     incomeData: stmts
   })), stmts.length >= 2 && /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -7860,8 +7860,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     cfData: cfStmts
   })), historicalDivs.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -7908,21 +7908,21 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10,
-      color: '#475569',
+      color: '#787a83',
       marginRight: 4
     }
   }, "PERIOD:"), ['1M', '3M', '6M', '1Y', '5Y'].map(p => /*#__PURE__*/React.createElement("button", {
     key: p,
     onClick: () => setChartPeriod(p),
     style: {
-      background: chartPeriod === p ? '#1e3a5f' : '#141720',
-      color: chartPeriod === p ? '#60a5fa' : '#475569',
-      border: `1px solid ${chartPeriod === p ? '#3b82f6' : '#1e2430'}`,
+      background: chartPeriod === p ? '#34315f' : '#1c1d26',
+      color: chartPeriod === p ? '#968ff7' : '#787a83',
+      border: `1px solid ${chartPeriod === p ? '#968ff7' : '#24262f'}`,
       padding: '3px 12px',
       borderRadius: 4,
       cursor: 'pointer',
       fontSize: 11,
-      fontFamily: 'JetBrains Mono,monospace',
+      fontFamily: 'Geist Mono,monospace',
       fontWeight: 600
     }
   }, p))), hist.length > 0 ? /*#__PURE__*/React.createElement(PriceChart, {
@@ -7935,7 +7935,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: '#334155',
+      color: '#33353f',
       fontSize: 12
     }
   }, "No price data")), /*#__PURE__*/React.createElement(TechnicalSignals, {
@@ -7957,29 +7957,29 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Historical P/E \u2014 1 Year"), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11,
-        color: '#64748b',
+        color: '#787a83',
         marginBottom: 8
       }
     }, "Current P/E: ", /*#__PURE__*/React.createElement("span", {
       style: {
-        color: '#e2e8f0',
+        color: '#edeef4',
         fontWeight: 700,
-        fontFamily: 'JetBrains Mono,monospace'
+        fontFamily: 'Geist Mono,monospace'
       }
     }, peCurrent, "x"), "\xA0\xB7\xA0 Range: ", /*#__PURE__*/React.createElement("span", {
       style: {
-        fontFamily: 'JetBrains Mono,monospace'
+        fontFamily: 'Geist Mono,monospace'
       }
     }, peMin, "x \u2013 ", peMax, "x")), /*#__PURE__*/React.createElement(Sparkline, {
       data: peHistory.map(d => d.pe),
       type: "line",
-      color: "#a78bfa",
+      color: "#968ff7",
       h: 60,
       w: 760
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 9,
-        color: '#334155',
+        color: '#33353f',
         marginTop: 4
       }
     }, "Based on trailing quarterly EPS \xD7 4 (annualized)"));
@@ -7998,13 +7998,13 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
-      color: '#475569',
+      color: '#787a83',
       marginBottom: 20
     }
   }, "Activa el contexto para cargar el screener."), /*#__PURE__*/React.createElement("button", {
     onClick: () => setAutoLoaded(true),
     style: {
-      background: '#3b82f6',
+      background: '#968ff7',
       color: '#fff',
       border: 'none',
       padding: '10px 24px',
@@ -8040,13 +8040,13 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
-      color: '#475569',
+      color: '#787a83',
       marginBottom: 20
     }
   }, "Activa el contexto para cargar los datos Smart Money."), /*#__PURE__*/React.createElement("button", {
     onClick: () => setAutoLoaded(true),
     style: {
-      background: '#3b82f6',
+      background: '#968ff7',
       color: '#fff',
       border: 'none',
       padding: '10px 24px',
@@ -8085,8 +8085,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     aiLoading: aiLoading
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '16px 20px'
     }
@@ -8104,13 +8104,13 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontWeight: 700,
       textTransform: 'uppercase',
       letterSpacing: '1px',
-      color: '#334155'
+      color: '#33353f'
     }
   }, "AI Earnings Analysis"), /*#__PURE__*/React.createElement("button", {
     onClick: summarizeEarnings,
     disabled: transcriptLoading,
     style: {
-      background: transcriptLoading ? '#1e2430' : '#3b82f6',
+      background: transcriptLoading ? '#24262f' : '#968ff7',
       color: '#fff',
       border: 'none',
       padding: '7px 14px',
@@ -8124,15 +8124,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     style: {
       marginTop: 14,
       fontSize: 12,
-      color: '#64748b'
+      color: '#787a83'
     }
   }, "Analizando earnings con Claude Sonnet\u2026"), !transcriptLoading && transcriptError === 'empty' && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14,
       fontSize: 11,
-      color: '#475569',
-      background: '#0c0e14',
-      border: '1px solid #1e2430',
+      color: '#787a83',
+      background: '#15151c',
+      border: '1px solid #24262f',
       borderRadius: 6,
       padding: '10px 14px'
     }
@@ -8140,9 +8140,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     style: {
       marginTop: 14,
       fontSize: 11,
-      color: '#f87171',
-      background: '#2a0d0d',
-      border: '1px solid #7f1d1d',
+      color: '#eb6459',
+      background: '#602a25',
+      border: '1px solid #602a25',
       borderRadius: 6,
       padding: '10px 14px'
     }
@@ -8162,25 +8162,25 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     style: {
       fontSize: 12,
       fontWeight: 700,
-      color: '#e2e8f0',
-      fontFamily: 'JetBrains Mono,monospace'
+      color: '#edeef4',
+      fontFamily: 'Geist Mono,monospace'
     }
   }, transcriptSum.label), transcriptSum.date && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10,
-      color: '#475569'
+      color: '#787a83'
     }
   }, transcriptSum.date)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12.5,
-      color: '#cbd5e1',
+      color: '#a6a7b1',
       lineHeight: 1.7,
       whiteSpace: 'pre-wrap'
     }
   }, transcriptSum.summary), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      color: '#334155',
+      color: '#33353f',
       marginTop: 12,
       fontStyle: 'italic'
     }
@@ -8192,8 +8192,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     data: insiderTxns
   })), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#141720',
-      border: '1px solid #1e2430',
+      background: '#1c1d26',
+      border: '1px solid #24262f',
       borderRadius: 8,
       padding: '14px 18px'
     }
@@ -8201,7 +8201,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     style: {
       fontSize: 10,
       fontWeight: 700,
-      color: '#475569',
+      color: '#787a83',
       textTransform: 'uppercase',
       letterSpacing: '1px',
       marginBottom: 8
@@ -8218,9 +8218,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     rel: "noopener noreferrer",
     style: {
       fontSize: 11,
-      color: '#60a5fa',
-      background: '#1e3a5f22',
-      border: '1px solid #1e3a5f',
+      color: '#968ff7',
+      background: '#34315f22',
+      border: '1px solid #34315f',
       padding: '5px 12px',
       borderRadius: 5
     }
@@ -8230,9 +8230,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     rel: "noopener noreferrer",
     style: {
       fontSize: 11,
-      color: '#60a5fa',
-      background: '#1e3a5f22',
-      border: '1px solid #1e3a5f',
+      color: '#968ff7',
+      background: '#34315f22',
+      border: '1px solid #34315f',
       padding: '5px 12px',
       borderRadius: 5
     }
@@ -8242,9 +8242,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     rel: "noopener noreferrer",
     style: {
       fontSize: 11,
-      color: '#60a5fa',
-      background: '#1e3a5f22',
-      border: '1px solid #1e3a5f',
+      color: '#968ff7',
+      background: '#34315f22',
+      border: '1px solid #34315f',
       padding: '5px 12px',
       borderRadius: 5
     }
@@ -8253,7 +8253,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       textAlign: 'center',
       marginTop: 48,
       fontSize: 10,
-      color: '#1e2430',
+      color: '#24262f',
       lineHeight: 1.8
     }
   }, "StockLens v5.0 \xB7 Data: Financial Modeling Prep \xB7 Not financial advice \xB7 ", new Date().getFullYear(), ticker && quote && /*#__PURE__*/React.createElement("span", null, " \xB7 Last updated: ", new Date().toLocaleTimeString())));

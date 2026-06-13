@@ -168,8 +168,8 @@ function computeMoatScore(metrics, ratios, stmts, profile) {
     total >= 55 ? 'Moderate Moat' :
     total >= 40 ? 'Narrow Moat' : 'No Moat';
   const moatColor =
-    total >= 85 ? '#10b981' : total >= 70 ? '#3b82f6' :
-    total >= 55 ? '#8b5cf6' : total >= 40 ? '#f59e0b' : '#6b7280';
+    total >= 85 ? '#5ac576' : total >= 70 ? '#968ff7' :
+    total >= 55 ? '#968ff7' : total >= 40 ? '#eca851' : '#787a83';
   return { demand, supply, pricing, capEff, total, moatRating, moatColor };
 }
 
@@ -341,11 +341,11 @@ function calcScores(metrics, ratios, history, stmts) {
 }
 
 function getRating(s) {
-  if(s>=80) return {label:'STRONG BUY',color:'#22c55e',bg:'#0d2e1a',border:'#166534'};
-  if(s>=65) return {label:'BUY',       color:'#4ade80',bg:'#0d2318',border:'#14532d'};
-  if(s>=50) return {label:'HOLD',      color:'#fbbf24',bg:'#2a1f00',border:'#78350f'};
-  if(s>=35) return {label:'CAUTION',   color:'#f97316',bg:'#2a1200',border:'#7c2d12'};
-  return          {label:'AVOID',      color:'#f87171',bg:'#2a0d0d',border:'#7f1d1d'};
+  if(s>=80) return {label:'STRONG BUY',color:'#5ac576',bg:'#194224',border:'#194224'};
+  if(s>=65) return {label:'BUY',       color:'#5ac576',bg:'#194224',border:'#194224'};
+  if(s>=50) return {label:'HOLD',      color:'#eca851',bg:'#54360b',border:'#54360b'};
+  if(s>=35) return {label:'CAUTION',   color:'#eca851',bg:'#54360b',border:'#54360b'};
+  return          {label:'AVOID',      color:'#eb6459',bg:'#602a25',border:'#602a25'};
 }
 
 // ─── IC SCORE — métrica canónica unificada (macro × micro) ───
@@ -391,9 +391,9 @@ function macroFreshness(updatedAt) {
   else if (h < 48) age = `hace ${Math.round(h)}h`;
   else age = `hace ${Math.round(d)}d`;
   let color, warn = null;
-  if (h <= 48) color = "#22c55e";
-  else if (d <= 5) { color = "#fbbf24"; warn = "el cron macro-refresh puede estar fallando"; }
-  else { color = "#ef4444"; warn = "el cron macro-refresh puede estar fallando"; }
+  if (h <= 48) color = "#5ac576";
+  else if (d <= 5) { color = "#eca851"; warn = "el cron macro-refresh puede estar fallando"; }
+  else { color = "#eb6459"; warn = "el cron macro-refresh puede estar fallando"; }
   return { age, color, warn };
 }
 
@@ -401,7 +401,7 @@ function macroFreshness(updatedAt) {
 function Sk({w='100%', h=16, s={}}) {
   return (
     <div style={{
-      background:'linear-gradient(90deg,#0c0e14 25%,#141720 50%,#0c0e14 75%)',
+      background:'linear-gradient(90deg,#15151c 25%,#1c1d26 50%,#15151c 75%)',
       backgroundSize:'200% 100%',animation:'shimmer 1.5s infinite',
       borderRadius:4,width:w,height:h,...s
     }}/>
@@ -410,22 +410,22 @@ function Sk({w='100%', h=16, s={}}) {
 function LoadingSkeleton() {
   return (
     <div style={{paddingTop:20,display:'flex',flexDirection:'column',gap:14}}>
-      <div style={{background:'#0c0e14',border:'1px solid #161b26',borderRadius:10,padding:'20px 24px'}}>
+      <div style={{background:'#15151c',border:'1px solid #1c1d26',borderRadius:10,padding:'20px 24px'}}>
         <Sk h={11} w="25%" s={{marginBottom:8}}/>
         <Sk h={30} w="55%" s={{marginBottom:8}}/>
         <Sk h={10} w="70%" s={{marginBottom:6}}/>
         <Sk h={10} w="45%"/>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'220px 1fr',gap:14}}>
-        <div style={{background:'#0c0e14',border:'1px solid #161b26',borderRadius:10,padding:'20px 24px',display:'flex',flexDirection:'column',alignItems:'center',gap:12}}>
+        <div style={{background:'#15151c',border:'1px solid #1c1d26',borderRadius:10,padding:'20px 24px',display:'flex',flexDirection:'column',alignItems:'center',gap:12}}>
           <Sk w={136} h={136} s={{borderRadius:'50%'}}/>
           {[80,90,70].map((w,i)=><Sk key={i} w={w} h={8} s={{marginBottom:2}}/>)}
         </div>
-        <div style={{background:'#0c0e14',border:'1px solid #161b26',borderRadius:10,padding:'20px 24px'}}>
+        <div style={{background:'#15151c',border:'1px solid #1c1d26',borderRadius:10,padding:'20px 24px'}}>
           <Sk h={11} w="30%" s={{marginBottom:14}}/>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:9}}>
             {[...Array(9)].map((_,i)=>(
-              <div key={i} style={{background:'#141720',borderRadius:6,padding:'10px 14px'}}>
+              <div key={i} style={{background:'#1c1d26',borderRadius:6,padding:'10px 14px'}}>
                 <Sk h={9} w="55%" s={{marginBottom:7}}/>
                 <Sk h={18} w="70%"/>
               </div>
@@ -433,7 +433,7 @@ function LoadingSkeleton() {
           </div>
         </div>
       </div>
-      <div style={{background:'#0c0e14',border:'1px solid #161b26',borderRadius:10,padding:'20px 24px'}}>
+      <div style={{background:'#15151c',border:'1px solid #1c1d26',borderRadius:10,padding:'20px 24px'}}>
         <Sk h={200}/>
       </div>
     </div>
@@ -444,7 +444,7 @@ function LoadingSkeleton() {
 function Panel({children, style={}}) {
   return (
     <div style={{
-      background:'#0c0e14',border:'1px solid #161b26',
+      background:'#15151c',border:'1px solid #1c1d26',
       borderRadius:10,padding:'20px 24px',...style
     }}>{children}</div>
   );
@@ -453,7 +453,7 @@ function SectionTitle({children}) {
   return (
     <div style={{
       fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',
-      color:'#334155',marginBottom:14,paddingBottom:8,borderBottom:'1px solid #141720'
+      color:'#33353f',marginBottom:14,paddingBottom:8,borderBottom:'1px solid #1c1d26'
     }}>{children}</div>
   );
 }
@@ -465,17 +465,17 @@ function KPIBadge({label, value, sub, highlight, sector, bmVal, bmLabel}) {
     const v=parseFloat(value.replace('x','').replace('%',''));
     const diff=(v-bmVal)/Math.abs(bmVal);
     if (Math.abs(diff)<0.15) return null;
-    return diff>0 ? {t:`↑ vs ${bmLabel||'sector'}`,c:'#22c55e'} : {t:`↓ vs ${bmLabel||'sector'}`,c:'#f87171'};
+    return diff>0 ? {t:`↑ vs ${bmLabel||'sector'}`,c:'#5ac576'} : {t:`↓ vs ${bmLabel||'sector'}`,c:'#eb6459'};
   },[bmVal,value,bmLabel]);
   return (
     <div style={{
-      background:'#141720',border:'1px solid #1e2430',borderRadius:6,
+      background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,
       padding:'10px 14px',display:'flex',flexDirection:'column',gap:3
     }}>
-      <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'0.5px'}}>{label}</div>
-      <div style={{fontSize:17,fontWeight:700,color:highlight||'#e2e8f0',fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>{value}</div>
+      <div style={{fontSize:10,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.5px'}}>{label}</div>
+      <div style={{fontSize:17,fontWeight:700,color:highlight||'#edeef4',fontFamily:'Geist Mono,monospace',lineHeight:1}}>{value}</div>
       <div style={{display:'flex',gap:6,alignItems:'center'}}>
-        {sub&&<div style={{fontSize:10,color:'#334155'}}>{sub}</div>}
+        {sub&&<div style={{fontSize:10,color:'#33353f'}}>{sub}</div>}
         {vsStr&&<div style={{fontSize:9,color:vsStr.c,fontWeight:700}}>{vsStr.t}</div>}
       </div>
     </div>
@@ -485,19 +485,19 @@ function KPIBadge({label, value, sub, highlight, sector, bmVal, bmLabel}) {
 // ─── HEALTH CARD ────────────────────────────────────────────
 function HealthCard({label, value, status, note}) {
   const C={
-    green:  {bg:'#0d2e1a',border:'#166534',badge:'#22c55e',icon:'✓ BEAT'},
-    amber:  {bg:'#2a1f00',border:'#78350f',badge:'#fbbf24',icon:'⚠ WATCH'},
-    red:    {bg:'#2a0d0d',border:'#7f1d1d',badge:'#f87171',icon:'✗ MISS'},
-    neutral:{bg:'#141720',border:'#1e2430',badge:'#475569',icon:'— N/A'},
+    green:  {bg:'#194224',border:'#194224',badge:'#5ac576',icon:'✓ BEAT'},
+    amber:  {bg:'#54360b',border:'#54360b',badge:'#eca851',icon:'⚠ WATCH'},
+    red:    {bg:'#602a25',border:'#602a25',badge:'#eb6459',icon:'✗ MISS'},
+    neutral:{bg:'#1c1d26',border:'#24262f',badge:'#787a83',icon:'— N/A'},
   }[status||'neutral'];
   return (
     <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:'12px 14px',display:'flex',flexDirection:'column',gap:4}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-        <div style={{fontSize:10,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.5px'}}>{label}</div>
+        <div style={{fontSize:10,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.5px'}}>{label}</div>
         <div style={{fontSize:10,fontWeight:700,color:C.badge}}>{C.icon}</div>
       </div>
-      <div style={{fontSize:19,fontWeight:800,color:C.badge,fontFamily:'JetBrains Mono,monospace',lineHeight:1.1}}>{value}</div>
-      {note&&<div style={{fontSize:10,color:'#475569'}}>{note}</div>}
+      <div style={{fontSize:19,fontWeight:800,color:C.badge,fontFamily:'Geist Mono,monospace',lineHeight:1.1}}>{value}</div>
+      {note&&<div style={{fontSize:10,color:'#787a83'}}>{note}</div>}
     </div>
   );
 }
@@ -507,7 +507,7 @@ function ScoreGauge({score}) {
   const r=getRating(score);
   const cir=2*Math.PI*52;
   const prog=(score/100)*cir;
-  const col=score>=65?'#22c55e':score>=50?'#fbbf24':'#f87171';
+  const col=score>=65?'#5ac576':score>=50?'#eca851':'#eb6459';
   return (
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
       <div style={{position:'relative',width:136,height:136}}>
@@ -518,14 +518,14 @@ function ScoreGauge({score}) {
               <stop offset="100%" stopColor={col}/>
             </linearGradient>
           </defs>
-          <circle cx="68" cy="68" r="52" fill="none" stroke="#1e2430" strokeWidth="10"/>
+          <circle cx="68" cy="68" r="52" fill="none" stroke="#24262f" strokeWidth="10"/>
           <circle cx="68" cy="68" r="52" fill="none" stroke="url(#ggrad)" strokeWidth="10"
             strokeDasharray={`${prog} ${cir}`} strokeLinecap="round"
             style={{transition:'stroke-dasharray 1.2s ease-in-out'}}/>
         </svg>
         <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <div style={{fontSize:34,fontWeight:800,color:col,fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>{score}</div>
-          <div style={{fontSize:9,color:'#475569',letterSpacing:'1px'}}>/100</div>
+          <div style={{fontSize:34,fontWeight:800,color:col,fontFamily:'Geist Mono,monospace',lineHeight:1}}>{score}</div>
+          <div style={{fontSize:9,color:'#787a83',letterSpacing:'1px'}}>/100</div>
         </div>
       </div>
       <div style={{padding:'4px 18px',borderRadius:20,background:r.bg,border:`1px solid ${r.border}`,fontSize:11,fontWeight:700,color:r.color,letterSpacing:'1.5px'}}>{r.label}</div>
@@ -538,10 +538,10 @@ function ScoreBar({label, value, max, color}) {
   return (
     <div style={{marginBottom:9}}>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-        <div style={{fontSize:11,color:'#94a3b8'}}>{label}</div>
-        <div style={{fontSize:11,fontWeight:700,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace'}}>{value}<span style={{color:'#334155'}}>/{max}</span></div>
+        <div style={{fontSize:11,color:'#a6a7b1'}}>{label}</div>
+        <div style={{fontSize:11,fontWeight:700,color:'#edeef4',fontFamily:'Geist Mono,monospace'}}>{value}<span style={{color:'#33353f'}}>/{max}</span></div>
       </div>
-      <div style={{background:'#1e2430',borderRadius:4,height:5,overflow:'hidden'}}>
+      <div style={{background:'#24262f',borderRadius:4,height:5,overflow:'hidden'}}>
         <div style={{width:`${pct}%`,height:'100%',background:color,borderRadius:4,transition:'width 1s ease'}}/>
       </div>
     </div>
@@ -549,9 +549,9 @@ function ScoreBar({label, value, max, color}) {
 }
 
 // ─── SPARKLINE ──────────────────────────────────────────────
-function Sparkline({data, type='bar', color='#3b82f6', h=48, w=120}) {
+function Sparkline({data, type='bar', color='#968ff7', h=48, w=120}) {
   const vals=data.map(v=>ok(v)?v:0);
-  if (!vals.length) return <div style={{width:w,height:h,background:'#141720',borderRadius:3}}/>;
+  if (!vals.length) return <div style={{width:w,height:h,background:'#1c1d26',borderRadius:3}}/>;
   const mn=Math.min(...vals), mx=Math.max(...vals), rng=mx-mn||1;
   if (type==='bar') {
     const bw=w/vals.length;
@@ -559,7 +559,7 @@ function Sparkline({data, type='bar', color='#3b82f6', h=48, w=120}) {
       <svg width={w} height={h} style={{display:'block'}}>
         {vals.map((v,i)=>{
           const bh=((v-mn)/rng)*h;
-          return <rect key={i} x={i*bw+0.5} y={h-bh} width={Math.max(1,bw-1)} height={bh} fill={v<0?'#f87171':color} rx={1}/>;
+          return <rect key={i} x={i*bw+0.5} y={h-bh} width={Math.max(1,bw-1)} height={bh} fill={v<0?'#eb6459':color} rx={1}/>;
         })}
       </svg>
     );
@@ -582,9 +582,9 @@ function ScoreHistorySparkline({ data }) {
   const n = data ? data.length : 0;
   if (n < 2) {
     return (
-      <div style={{width:'100%',background:'#0c0e14',border:'1px solid #161b26',borderRadius:8,padding:'10px 12px'}}>
-        <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',fontWeight:700,marginBottom:4}}>Histórico IC Score</div>
-        <div style={{fontSize:9,color:'#334155',lineHeight:1.4}}>El histórico se construye con cada análisis (aún {n} punto{n===1?'':'s'}).</div>
+      <div style={{width:'100%',background:'#15151c',border:'1px solid #1c1d26',borderRadius:8,padding:'10px 12px'}}>
+        <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',fontWeight:700,marginBottom:4}}>Histórico IC Score</div>
+        <div style={{fontSize:9,color:'#33353f',lineHeight:1.4}}>El histórico se construye con cada análisis (aún {n} punto{n===1?'':'s'}).</div>
       </div>
     );
   }
@@ -596,20 +596,20 @@ function ScoreHistorySparkline({ data }) {
   const pts=data.map((d,i)=>`${xAt(i)},${yAt(d.ic)}`).join(' ');
   const last=data[n-1], first=data[0], delta=last.ic-first.ic;
   return (
-    <div style={{width:'100%',background:'#0c0e14',border:'1px solid #161b26',borderRadius:8,padding:'10px 12px'}}>
+    <div style={{width:'100%',background:'#15151c',border:'1px solid #1c1d26',borderRadius:8,padding:'10px 12px'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:6}}>
-        <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',fontWeight:700}}>Histórico IC Score</div>
-        <div style={{fontSize:10,fontWeight:700,color:delta>=0?'#22c55e':'#f87171',fontFamily:'JetBrains Mono,monospace'}}>{delta>=0?'+':''}{delta} · {n}p</div>
+        <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',fontWeight:700}}>Histórico IC Score</div>
+        <div style={{fontSize:10,fontWeight:700,color:delta>=0?'#5ac576':'#eb6459',fontFamily:'Geist Mono,monospace'}}>{delta>=0?'+':''}{delta} · {n}p</div>
       </div>
       <svg width={w} height={h} style={{display:'block',maxWidth:'100%'}} onMouseLeave={()=>setHover(null)}>
-        <polyline points={pts} fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinejoin="round"/>
+        <polyline points={pts} fill="none" stroke="#968ff7" strokeWidth="1.5" strokeLinejoin="round"/>
         {data.map((d,i)=>(
           <circle key={i} cx={xAt(i)} cy={yAt(d.ic)} r={hover===i?3.5:2.2}
-            fill={hover===i?'#60a5fa':'#3b82f6'} style={{cursor:'pointer'}}
+            fill={hover===i?'#968ff7':'#968ff7'} style={{cursor:'pointer'}}
             onMouseEnter={()=>setHover(i)}/>
         ))}
       </svg>
-      <div style={{fontSize:9,color:'#64748b',fontFamily:'JetBrains Mono,monospace',marginTop:4,minHeight:12}}>
+      <div style={{fontSize:9,color:'#787a83',fontFamily:'Geist Mono,monospace',marginTop:4,minHeight:12}}>
         {hover!=null ? `${data[hover].date} · IC ${data[hover].ic}` : `Último: ${last.date} · IC ${last.ic}`}
       </div>
     </div>
@@ -696,7 +696,7 @@ function PriceChart({history, ticker, period}) {
   },[fredOn,fredObs,sorted]);
 
   if (!view.length || view.length < 2) return (
-    <div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'#334155',fontSize:12}}>No price data</div>
+    <div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'#33353f',fontSize:12}}>No price data</div>
   );
 
   const prices=view.map(d=>d.close);
@@ -729,7 +729,7 @@ function PriceChart({history, ticker, period}) {
   const fredPts = fredSamples ? fredSamples.map(s=>`${px(s.i)},${fy(s.val)}`).join(' ') : null;
 
   const isUp=prices[prices.length-1]>=prices[0];
-  const stroke=isUp?'#22c55e':'#f87171';
+  const stroke=isUp?'#5ac576':'#eb6459';
 
   const pts=prices.map((p,i)=>`${px(i)},${py(p)}`).join(' ');
   const fillPts=`${pl},${priceBottom} ${pts} ${W-pr},${priceBottom}`;
@@ -769,21 +769,21 @@ function PriceChart({history, ticker, period}) {
     <div style={{position:'relative'}}>
       <div style={{position:'absolute',top:6,left:8,zIndex:11,display:'flex',gap:6,alignItems:'center'}}>
         <button onClick={toggleFred} style={{
-          background:fredOn?'#3a2e14':'#141720',
-          border:`1px solid ${fredOn?'#f59e0b':'#1e2430'}`,
-          color:fredOn?'#f59e0b':'#475569',
+          background:fredOn?'#54360b':'#1c1d26',
+          border:`1px solid ${fredOn?'#eca851':'#24262f'}`,
+          color:fredOn?'#eca851':'#787a83',
           padding:'2px 9px',borderRadius:4,cursor:'pointer',fontSize:9,
-          fontFamily:'JetBrains Mono,monospace',fontWeight:600
+          fontFamily:'Geist Mono,monospace',fontWeight:600
         }}>{fredOn?'● ':'○ '}Fed Funds</button>
-        {fredStatus==='loading'&&<span style={{fontSize:9,color:'#475569'}}>cargando…</span>}
-        {fredStatus==='error'&&<span style={{fontSize:9,color:'#f87171'}}>FRED no disponible</span>}
+        {fredStatus==='loading'&&<span style={{fontSize:9,color:'#787a83'}}>cargando…</span>}
+        {fredStatus==='error'&&<span style={{fontSize:9,color:'#eb6459'}}>FRED no disponible</span>}
       </div>
       {zoom&&(
         <button onClick={()=>setZoom(null)} style={{
           position:'absolute',top:6,right:8,zIndex:11,
-          background:'#141720',border:'1px solid #1e3a5f',color:'#60a5fa',
+          background:'#1c1d26',border:'1px solid #34315f',color:'#968ff7',
           padding:'2px 9px',borderRadius:4,cursor:'pointer',fontSize:9,
-          fontFamily:'JetBrains Mono,monospace',fontWeight:600
+          fontFamily:'Geist Mono,monospace',fontWeight:600
         }}>⤢ reset zoom</button>
       )}
       <svg
@@ -801,20 +801,20 @@ function PriceChart({history, ticker, period}) {
           </linearGradient>
         </defs>
         {[0.25,0.5,0.75].map(f=>(
-          <line key={f} x1={pl} x2={W-pr} y1={pt+f*priceH} y2={pt+f*priceH} stroke="#161b26" strokeWidth="1"/>
+          <line key={f} x1={pl} x2={W-pr} y1={pt+f*priceH} y2={pt+f*priceH} stroke="#1c1d26" strokeWidth="1"/>
         ))}
-        <line x1={pl} x2={W-pr} y1={py(hi52)} y2={py(hi52)} stroke="#334155" strokeWidth="0.8" strokeDasharray="4 4"/>
-        <line x1={pl} x2={W-pr} y1={py(lo52)} y2={py(lo52)} stroke="#334155" strokeWidth="0.8" strokeDasharray="4 4"/>
+        <line x1={pl} x2={W-pr} y1={py(hi52)} y2={py(hi52)} stroke="#33353f" strokeWidth="0.8" strokeDasharray="4 4"/>
+        <line x1={pl} x2={W-pr} y1={py(lo52)} y2={py(lo52)} stroke="#33353f" strokeWidth="0.8" strokeDasharray="4 4"/>
         <polygon points={fillPts} fill="url(#sg2)"/>
         <polyline points={pts} fill="none" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round"/>
-        {sma50pts && <polyline points={sma50pts} fill="none" stroke="#60a5fa" strokeWidth="1" strokeOpacity="0.7" strokeDasharray="3 2"/>}
-        {fredPts && <polyline points={fredPts} fill="none" stroke="#f59e0b" strokeWidth="1.4" strokeOpacity="0.9"/>}
+        {sma50pts && <polyline points={sma50pts} fill="none" stroke="#968ff7" strokeWidth="1" strokeOpacity="0.7" strokeDasharray="3 2"/>}
+        {fredPts && <polyline points={fredPts} fill="none" stroke="#eca851" strokeWidth="1.4" strokeOpacity="0.9"/>}
         {fredPts && (
           <g>
-            <text x={W-pr-2} y={fy(fMax)+(fy(fMax)<pt+12?12:-2)} fontSize="7.5" fill="#f59e0b" textAnchor="end">{fMax.toFixed(2)}%</text>
-            <text x={W-pr-2} y={fy(fMin)-2} fontSize="7.5" fill="#f59e0b" textAnchor="end">{fMin.toFixed(2)}%</text>
-            <line x1={W-80} x2={W-68} y1={pt+22} y2={pt+22} stroke="#f59e0b" strokeWidth="1.4"/>
-            <text x={W-65} y={pt+25} fontSize="7.5" fill="#f59e0b">Fed Funds</text>
+            <text x={W-pr-2} y={fy(fMax)+(fy(fMax)<pt+12?12:-2)} fontSize="7.5" fill="#eca851" textAnchor="end">{fMax.toFixed(2)}%</text>
+            <text x={W-pr-2} y={fy(fMin)-2} fontSize="7.5" fill="#eca851" textAnchor="end">{fMin.toFixed(2)}%</text>
+            <line x1={W-80} x2={W-68} y1={pt+22} y2={pt+22} stroke="#eca851" strokeWidth="1.4"/>
+            <text x={W-65} y={pt+25} fontSize="7.5" fill="#eca851">Fed Funds</text>
           </g>
         )}
         {volumes.map((v,i)=>(
@@ -823,27 +823,27 @@ function PriceChart({history, ticker, period}) {
             y={vy(v)}
             width={Math.max(1,cw/view.length-0.5)}
             height={volBottom-vy(v)}
-            fill={i>0 ? (prices[i] >= prices[i-1] ? '#22c55e' : '#f87171') : '#475569'}
+            fill={i>0 ? (prices[i] >= prices[i-1] ? '#5ac576' : '#eb6459') : '#787a83'}
             opacity="0.3"
           />
         ))}
         {ticks.filter((_,i)=>i%2===0).map(({i,m})=>(
-          <text key={m} x={px(i)} y={H-8} fontSize="8" fill="#334155" textAnchor="middle">{mLbls[m]}</text>
+          <text key={m} x={px(i)} y={H-8} fontSize="8" fill="#33353f" textAnchor="middle">{mLbls[m]}</text>
         ))}
-        <text x={pl+2} y={pt+10} fontSize="8" fill="#334155">${maxP.toFixed(0)}</text>
-        <text x={pl+2} y={priceBottom-4} fontSize="8" fill="#334155">${minP.toFixed(0)}</text>
-        <text x={W-pr-2} y={py(hi52)-3} fontSize="7.5" fill="#475569" textAnchor="end">52W H</text>
-        <text x={W-pr-2} y={py(lo52)+8} fontSize="7.5" fill="#475569" textAnchor="end">52W L</text>
+        <text x={pl+2} y={pt+10} fontSize="8" fill="#33353f">${maxP.toFixed(0)}</text>
+        <text x={pl+2} y={priceBottom-4} fontSize="8" fill="#33353f">${minP.toFixed(0)}</text>
+        <text x={W-pr-2} y={py(hi52)-3} fontSize="7.5" fill="#787a83" textAnchor="end">52W H</text>
+        <text x={W-pr-2} y={py(lo52)+8} fontSize="7.5" fill="#787a83" textAnchor="end">52W L</text>
         {hx!=null&&(
           <g>
-            <line x1={hx} x2={hx} y1={pt} y2={priceBottom} stroke="#475569" strokeWidth="0.8" strokeDasharray="3 2"/>
-            <circle cx={hx} cy={py(prices[hoverIdx])} r="3.5" fill={stroke} stroke="#0c0e14" strokeWidth="1.5"/>
+            <line x1={hx} x2={hx} y1={pt} y2={priceBottom} stroke="#787a83" strokeWidth="0.8" strokeDasharray="3 2"/>
+            <circle cx={hx} cy={py(prices[hoverIdx])} r="3.5" fill={stroke} stroke="#15151c" strokeWidth="1.5"/>
           </g>
         )}
         {sma50pts&&(
           <g>
-            <line x1={W-80} x2={W-68} y1={pt+10} y2={pt+10} stroke="#60a5fa" strokeWidth="1.2" strokeDasharray="3 2"/>
-            <text x={W-65} y={pt+13} fontSize="7.5" fill="#60a5fa">50 SMA</text>
+            <line x1={W-80} x2={W-68} y1={pt+10} y2={pt+10} stroke="#968ff7" strokeWidth="1.2" strokeDasharray="3 2"/>
+            <text x={W-65} y={pt+13} fontSize="7.5" fill="#968ff7">50 SMA</text>
           </g>
         )}
       </svg>
@@ -851,18 +851,18 @@ function PriceChart({history, ticker, period}) {
         <div style={{
           position:'absolute',top:8,
           left:Math.min(hx/800*100, 72)+'%',
-          background:'#141720',border:'1px solid #1e2430',
+          background:'#1c1d26',border:'1px solid #24262f',
           borderRadius:6,padding:'8px 11px',fontSize:11,
-          fontFamily:'JetBrains Mono,monospace',
+          fontFamily:'Geist Mono,monospace',
           pointerEvents:'none',minWidth:130,zIndex:10,
           boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
         }}>
-          <div style={{color:'#64748b',fontSize:9,marginBottom:5}}>{hd.date?.substring(0,10)}</div>
-          <div style={{color:'#e2e8f0',marginBottom:2}}>C: <span style={{color:stroke}}>${hd.close?.toFixed(2)}</span></div>
-          {hd.open&&<div style={{color:'#94a3b8'}}>O: ${hd.open?.toFixed(2)}</div>}
-          {hd.high&&<div style={{color:'#94a3b8'}}>H: ${hd.high?.toFixed(2)}</div>}
-          {hd.low &&<div style={{color:'#94a3b8'}}>L: ${hd.low?.toFixed(2)}</div>}
-          {hd.volume&&<div style={{color:'#475569',fontSize:9,marginTop:3}}>Vol: {fmt.usd(hd.volume)}</div>}
+          <div style={{color:'#787a83',fontSize:9,marginBottom:5}}>{hd.date?.substring(0,10)}</div>
+          <div style={{color:'#edeef4',marginBottom:2}}>C: <span style={{color:stroke}}>${hd.close?.toFixed(2)}</span></div>
+          {hd.open&&<div style={{color:'#a6a7b1'}}>O: ${hd.open?.toFixed(2)}</div>}
+          {hd.high&&<div style={{color:'#a6a7b1'}}>H: ${hd.high?.toFixed(2)}</div>}
+          {hd.low &&<div style={{color:'#a6a7b1'}}>L: ${hd.low?.toFixed(2)}</div>}
+          {hd.volume&&<div style={{color:'#787a83',fontSize:9,marginTop:3}}>Vol: {fmt.usd(hd.volume)}</div>}
         </div>
       )}
     </div>
@@ -891,19 +891,19 @@ function TechnicalSignals({history, spyHistory}) {
   if (!data) return null;
   const {cur,rsi,sma50,sma200,hi52,lo52,rangePct}=data;
 
-  const rsiColor=!ok(rsi)?'#475569':rsi>70?'#f87171':rsi<30?'#22c55e':'#fbbf24';
+  const rsiColor=!ok(rsi)?'#787a83':rsi>70?'#eb6459':rsi<30?'#5ac576':'#eca851';
   const rsiLabel=!ok(rsi)?'—':rsi>70?'OVERBOUGHT':rsi<30?'OVERSOLD':'NEUTRAL';
   const vs50=sma50?((cur-sma50)/sma50):null;
   const vs200=sma200?((cur-sma200)/sma200):null;
 
   const Sig=({label,val,color,extra})=>(
     <div style={{
-      background:'#141720',border:`1px solid #1e2430`,borderRadius:6,
+      background:'#1c1d26',border:`1px solid #24262f`,borderRadius:6,
       padding:'10px 13px',flex:1,minWidth:120
     }}>
-      <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:5}}>{label}</div>
-      <div style={{fontSize:14,fontWeight:700,color:color||'#e2e8f0',fontFamily:'JetBrains Mono,monospace'}}>{val}</div>
-      {extra&&<div style={{fontSize:9,color:'#334155',marginTop:3}}>{extra}</div>}
+      <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:5}}>{label}</div>
+      <div style={{fontSize:14,fontWeight:700,color:color||'#edeef4',fontFamily:'Geist Mono,monospace'}}>{val}</div>
+      {extra&&<div style={{fontSize:9,color:'#33353f',marginTop:3}}>{extra}</div>}
     </div>
   );
 
@@ -912,30 +912,30 @@ function TechnicalSignals({history, spyHistory}) {
       <SectionTitle>Technical Signals</SectionTitle>
       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
         <Sig label="RSI 14" val={ok(rsi)?rsi.toFixed(1):'—'} color={rsiColor} extra={rsiLabel}/>
-        <Sig label="vs 50-day SMA" val={ok(vs50)?fmt.chg(vs50):'—'} color={ok(vs50)?(vs50>0?'#22c55e':'#f87171'):'#475569'} extra={ok(sma50)?`SMA $${sma50.toFixed(2)}`:'insufficient data'}/>
-        <Sig label="vs 200-day SMA" val={ok(vs200)?fmt.chg(vs200):'—'} color={ok(vs200)?(vs200>0?'#22c55e':'#f87171'):'#475569'} extra={ok(sma200)?`SMA $${sma200.toFixed(2)}`:'insufficient data'}/>
-        <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 13px',flex:2,minWidth:160}}>
-          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:5}}>
-            52-Week Range  <span style={{color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace'}}>${lo52.toFixed(0)} — ${hi52.toFixed(0)}</span>
+        <Sig label="vs 50-day SMA" val={ok(vs50)?fmt.chg(vs50):'—'} color={ok(vs50)?(vs50>0?'#5ac576':'#eb6459'):'#787a83'} extra={ok(sma50)?`SMA $${sma50.toFixed(2)}`:'insufficient data'}/>
+        <Sig label="vs 200-day SMA" val={ok(vs200)?fmt.chg(vs200):'—'} color={ok(vs200)?(vs200>0?'#5ac576':'#eb6459'):'#787a83'} extra={ok(sma200)?`SMA $${sma200.toFixed(2)}`:'insufficient data'}/>
+        <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'10px 13px',flex:2,minWidth:160}}>
+          <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:5}}>
+            52-Week Range  <span style={{color:'#edeef4',fontFamily:'Geist Mono,monospace'}}>${lo52.toFixed(0)} — ${hi52.toFixed(0)}</span>
           </div>
-          <div style={{background:'#1e2430',borderRadius:3,height:6,overflow:'hidden',position:'relative'}}>
-            <div style={{width:`${rangePct*100}%`,height:'100%',background:'#3b82f6',borderRadius:3,transition:'width 0.5s ease'}}/>
+          <div style={{background:'#24262f',borderRadius:3,height:6,overflow:'hidden',position:'relative'}}>
+            <div style={{width:`${rangePct*100}%`,height:'100%',background:'#968ff7',borderRadius:3,transition:'width 0.5s ease'}}/>
           </div>
-          <div style={{fontSize:9,color:'#475569',marginTop:3}}>{(rangePct*100).toFixed(0)}% of range · Current ${ok(cur)?cur.toFixed(2):'—'}</div>
+          <div style={{fontSize:9,color:'#787a83',marginTop:3}}>{(rangePct*100).toFixed(0)}% of range · Current ${ok(cur)?cur.toFixed(2):'—'}</div>
         </div>
       </div>
       {(macdData||rsData)&&(
-        <div style={{marginTop:8,background:'#141720',border:'1px solid #1e2430',borderRadius:6,overflow:'hidden'}}>
+        <div style={{marginTop:8,background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,overflow:'hidden'}}>
           {macdData&&(
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 13px',borderBottom:rsData?'1px solid #1e2430':'none'}}>
-              <span style={{fontSize:11,color:'#475569',textTransform:'uppercase',letterSpacing:'0.5px'}}>MACD</span>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 13px',borderBottom:rsData?'1px solid #24262f':'none'}}>
+              <span style={{fontSize:11,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.5px'}}>MACD</span>
               <div style={{textAlign:'right'}}>
                 <span style={{
                   color:
-                    macdData.crossover==='bullish_cross' ? '#10b981' :
-                    macdData.crossover==='bearish_cross' ? '#ef4444' :
-                    macdData.crossover==='bullish'       ? '#34d399' :
-                    macdData.crossover==='bearish'       ? '#f87171' : '#475569',
+                    macdData.crossover==='bullish_cross' ? '#5ac576' :
+                    macdData.crossover==='bearish_cross' ? '#eb6459' :
+                    macdData.crossover==='bullish'       ? '#5ac576' :
+                    macdData.crossover==='bearish'       ? '#eb6459' : '#787a83',
                   fontSize:13,fontWeight:700
                 }}>
                   {macdData.crossover==='bullish_cross' ? '⬆ Bullish Crossover' :
@@ -943,7 +943,7 @@ function TechnicalSignals({history, spyHistory}) {
                    macdData.crossover==='bullish'       ? '▲ Trending Up' :
                    macdData.crossover==='bearish'       ? '▼ Trending Down' : '→ Neutral'}
                 </span>
-                <div style={{color:'#334155',fontSize:10,marginTop:2}}>
+                <div style={{color:'#33353f',fontSize:10,marginTop:2}}>
                   MACD {macdData.macd.toFixed(3)} · Signal {macdData.signal.toFixed(3)}
                 </div>
               </div>
@@ -951,16 +951,16 @@ function TechnicalSignals({history, spyHistory}) {
           )}
           {rsData&&(
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 13px'}}>
-              <span style={{fontSize:11,color:'#475569',textTransform:'uppercase',letterSpacing:'0.5px'}}>vs SPY (6M)</span>
+              <span style={{fontSize:11,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.5px'}}>vs SPY (6M)</span>
               <div style={{textAlign:'right'}}>
                 <span style={{
-                  color: rsData.outperforming ? '#10b981' : '#ef4444',
+                  color: rsData.outperforming ? '#5ac576' : '#eb6459',
                   fontSize:13,fontWeight:700
                 }}>
                   {rsData.outperforming ? '▲ Outperforming' : '▼ Underperforming'}
                   {' '}{rsData.alpha>=0?'+':''}{(rsData.alpha*100).toFixed(1)}%
                 </span>
-                <div style={{color:'#334155',fontSize:10,marginTop:2}}>
+                <div style={{color:'#33353f',fontSize:10,marginTop:2}}>
                   Stock {rsData.stockRet>=0?'+':''}{(rsData.stockRet*100).toFixed(1)}% · SPY {rsData.spyRet>=0?'+':''}{(rsData.spyRet*100).toFixed(1)}%
                 </div>
               </div>
@@ -990,7 +990,7 @@ function AnalystPanel({ptC, udC, analystEst, currentPrice, ptList}) {
   const holdPct=total>0?h/total:null;
   const sellPct=total>0?(s+ss)/total:null;
 
-  const ratingColor=rating==='Strong Buy'?'#22c55e':rating==='Buy'?'#4ade80':rating==='Hold'?'#fbbf24':'#f87171';
+  const ratingColor=rating==='Strong Buy'?'#5ac576':rating==='Buy'?'#5ac576':rating==='Hold'?'#eca851':'#eb6459';
 
   const fwdEps=ae?.estimatedEpsAvg;
   const fwdPE=(ok(fwdEps)&&fwdEps>0&&ok(currentPrice))?currentPrice/fwdEps:null;
@@ -1008,44 +1008,44 @@ function AnalystPanel({ptC, udC, analystEst, currentPrice, ptList}) {
                 fontSize:12,fontWeight:700,color:ratingColor,letterSpacing:'1px'
               }}>{rating.toUpperCase()}</div>
             )}
-            {total>0&&<div style={{fontSize:11,color:'#475569'}}>{total} analysts</div>}
+            {total>0&&<div style={{fontSize:11,color:'#787a83'}}>{total} analysts</div>}
           </div>
           {ok(targetMed)&&(
             <div>
-              <div style={{fontSize:10,color:'#475569',marginBottom:3}}>Consensus Price Target</div>
-              <div style={{fontSize:20,fontWeight:800,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>
+              <div style={{fontSize:10,color:'#787a83',marginBottom:3}}>Consensus Price Target</div>
+              <div style={{fontSize:20,fontWeight:800,color:'#edeef4',fontFamily:'Geist Mono,monospace',lineHeight:1}}>
                 {fmt.price(targetMed)}
-                {ok(upside)&&<span style={{fontSize:12,fontWeight:600,color:upside>0?'#22c55e':'#f87171',marginLeft:8}}>
+                {ok(upside)&&<span style={{fontSize:12,fontWeight:600,color:upside>0?'#5ac576':'#eb6459',marginLeft:8}}>
                   {upside>0?'▲':'▼'} {Math.abs(upside*100).toFixed(1)}% upside
                 </span>}
               </div>
               {ok(pt?.targetHigh)&&ok(pt?.targetLow)&&(
-                <div style={{fontSize:10,color:'#334155',marginTop:2}}>Range: {fmt.price(pt.targetLow)} — {fmt.price(pt.targetHigh)}</div>
+                <div style={{fontSize:10,color:'#33353f',marginTop:2}}>Range: {fmt.price(pt.targetLow)} — {fmt.price(pt.targetHigh)}</div>
               )}
             </div>
           )}
           {ok(fwdPE)&&(
-            <div style={{background:'#141720',borderRadius:6,padding:'8px 12px',display:'inline-block'}}>
-              <span style={{fontSize:10,color:'#475569'}}>Fwd P/E </span>
-              <span style={{fontSize:14,fontWeight:700,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace'}}>{fwdPE.toFixed(1)}x</span>
+            <div style={{background:'#1c1d26',borderRadius:6,padding:'8px 12px',display:'inline-block'}}>
+              <span style={{fontSize:10,color:'#787a83'}}>Fwd P/E </span>
+              <span style={{fontSize:14,fontWeight:700,color:'#edeef4',fontFamily:'Geist Mono,monospace'}}>{fwdPE.toFixed(1)}x</span>
             </div>
           )}
         </div>
         {total>0&&(
           <div>
-            <div style={{fontSize:10,color:'#475569',marginBottom:8}}>Analyst Distribution ({total})</div>
+            <div style={{fontSize:10,color:'#787a83',marginBottom:8}}>Analyst Distribution ({total})</div>
             <div style={{display:'flex',flexDirection:'column',gap:5}}>
               {[
-                {label:'Buy / Strong Buy',pct:buyPct,color:'#22c55e',cnt:sb+b},
-                {label:'Hold',pct:holdPct,color:'#fbbf24',cnt:h},
-                {label:'Sell / Strong Sell',pct:sellPct,color:'#f87171',cnt:s+ss},
+                {label:'Buy / Strong Buy',pct:buyPct,color:'#5ac576',cnt:sb+b},
+                {label:'Hold',pct:holdPct,color:'#eca851',cnt:h},
+                {label:'Sell / Strong Sell',pct:sellPct,color:'#eb6459',cnt:s+ss},
               ].map(({label,pct,color,cnt})=>(
                 <div key={label}>
-                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:3,fontSize:10,color:'#64748b'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:3,fontSize:10,color:'#787a83'}}>
                     <span>{label}</span>
-                    <span style={{color,fontFamily:'JetBrains Mono,monospace',fontWeight:600}}>{cnt} ({ok(pct)?(pct*100).toFixed(0):0}%)</span>
+                    <span style={{color,fontFamily:'Geist Mono,monospace',fontWeight:600}}>{cnt} ({ok(pct)?(pct*100).toFixed(0):0}%)</span>
                   </div>
-                  <div style={{background:'#1e2430',borderRadius:3,height:5}}>
+                  <div style={{background:'#24262f',borderRadius:3,height:5}}>
                     <div style={{width:`${(pct||0)*100}%`,height:'100%',background:color,borderRadius:3,transition:'width 0.8s ease'}}/>
                   </div>
                 </div>
@@ -1056,16 +1056,16 @@ function AnalystPanel({ptC, udC, analystEst, currentPrice, ptList}) {
       </div>
       {ptList&&ptList.length>0&&(
         <div style={{marginTop:14}}>
-          <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}}>Recent Analyst Price Targets</div>
+          <div style={{fontSize:10,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}}>Recent Analyst Price Targets</div>
           <div style={{display:'flex',flexDirection:'column',gap:4,maxHeight:200,overflowY:'auto'}}>
             {ptList.slice(0,8).map((pt,i)=>{
               const upPt=(ok(pt.priceTarget)&&ok(currentPrice))?(pt.priceTarget-currentPrice)/currentPrice:null;
-              const ptColor=!ok(upPt)?'#475569':upPt>0.1?'#22c55e':upPt<-0.1?'#f87171':'#fbbf24';
+              const ptColor=!ok(upPt)?'#787a83':upPt>0.1?'#5ac576':upPt<-0.1?'#eb6459':'#eca851';
               return (
-                <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#141720',borderRadius:5,padding:'6px 12px',fontSize:11}}>
-                  <span style={{color:'#64748b',flex:1}}>{pt.analystCompany||pt.analystName}</span>
-                  <span style={{color:'#475569',marginRight:12}}>{pt.publishedDate?.substring(0,10)}</span>
-                  <span style={{fontWeight:700,color:ptColor,fontFamily:'JetBrains Mono,monospace'}}>
+                <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#1c1d26',borderRadius:5,padding:'6px 12px',fontSize:11}}>
+                  <span style={{color:'#787a83',flex:1}}>{pt.analystCompany||pt.analystName}</span>
+                  <span style={{color:'#787a83',marginRight:12}}>{pt.publishedDate?.substring(0,10)}</span>
+                  <span style={{fontWeight:700,color:ptColor,fontFamily:'Geist Mono,monospace'}}>
                     {fmt.price(pt.priceTarget)}
                     {ok(upPt)&&<span style={{fontSize:10,marginLeft:5}}>({upPt>0?'+':''}{(upPt*100).toFixed(1)}%)</span>}
                   </span>
@@ -1099,28 +1099,28 @@ function GrowthPanel({stmts}) {
     const firstLabel=stmtsData?.[0]?`${stmtsData[0].period} ${stmtsData[0].calendarYear}`:'';
     const lastLabel=stmtsData?.[stmtsData.length-1]?`${stmtsData[stmtsData.length-1].period} ${stmtsData[stmtsData.length-1].calendarYear}`:'';
     return (
-      <div style={{padding:'10px 0',borderBottom:'1px solid #161b26'}}>
+      <div style={{padding:'10px 0',borderBottom:'1px solid #1c1d26'}}>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <div style={{width:130,fontSize:11,color:'#94a3b8',flexShrink:0}}>{label}</div>
+          <div style={{width:130,fontSize:11,color:'#a6a7b1',flexShrink:0}}>{label}</div>
           <div style={{flex:1,position:'relative'}}>
             <Sparkline data={data} type={type} color={color} h={44} w={180}/>
             <div style={{display:'flex',justifyContent:'space-between',marginTop:2}}>
-              <span style={{fontSize:9,color:'#334155'}}>{firstLabel}</span>
-              <span style={{fontSize:9,color:'#334155'}}>{lastLabel}</span>
+              <span style={{fontSize:9,color:'#33353f'}}>{firstLabel}</span>
+              <span style={{fontSize:9,color:'#33353f'}}>{lastLabel}</span>
             </div>
           </div>
           <div style={{textAlign:'right',minWidth:90}}>
             {ok(latestVal)&&(
-              <div style={{fontSize:11,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace',fontWeight:700}}>
+              <div style={{fontSize:11,color:'#edeef4',fontFamily:'Geist Mono,monospace',fontWeight:700}}>
                 {type==='line'?fmt.pct(latestVal):fmt.usd(latestVal)}
               </div>
             )}
             {ok(cagrVal)&&(
-              <div style={{fontSize:10,color:cagrVal>0?'#22c55e':'#f87171',fontFamily:'JetBrains Mono,monospace',fontWeight:700}}>
+              <div style={{fontSize:10,color:cagrVal>0?'#5ac576':'#eb6459',fontFamily:'Geist Mono,monospace',fontWeight:700}}>
                 CAGR {fmt.chg(cagrVal)}
               </div>
             )}
-            <div style={{fontSize:9,color:'#334155',marginTop:1}}>{data.length} qtrs</div>
+            <div style={{fontSize:9,color:'#33353f',marginTop:1}}>{data.length} qtrs</div>
           </div>
         </div>
       </div>
@@ -1130,10 +1130,10 @@ function GrowthPanel({stmts}) {
   return (
     <div>
       <SectionTitle>Growth Profile — {stmts.length} Quarters</SectionTitle>
-      <Row label="Revenue" data={revs} type="bar" color="#3b82f6" cagrVal={revCagr} stmtsData={rows}/>
-      <Row label="Net Income" data={netI} type="bar" color="#22c55e" cagrVal={null} stmtsData={rows}/>
-      <Row label="Gross Margin %" data={gms} type="line" color="#a78bfa" cagrVal={null} stmtsData={rows}/>
-      <Row label="EPS" data={eps} type="line" color="#fbbf24" cagrVal={null} stmtsData={rows}/>
+      <Row label="Revenue" data={revs} type="bar" color="#968ff7" cagrVal={revCagr} stmtsData={rows}/>
+      <Row label="Net Income" data={netI} type="bar" color="#5ac576" cagrVal={null} stmtsData={rows}/>
+      <Row label="Gross Margin %" data={gms} type="line" color="#968ff7" cagrVal={null} stmtsData={rows}/>
+      <Row label="EPS" data={eps} type="line" color="#eca851" cagrVal={null} stmtsData={rows}/>
     </div>
   );
 }
@@ -1150,7 +1150,7 @@ function QuarterlyTable({stmts}) {
           <thead>
             <tr>
               {['Period','Revenue','YoY Δ','Gross Margin','Net Income','EPS'].map(h=>(
-                <th key={h} style={{padding:'6px 10px',textAlign:'left',color:'#475569',borderBottom:'1px solid #1e2430',fontWeight:600,whiteSpace:'nowrap',fontSize:10}}>{h}</th>
+                <th key={h} style={{padding:'6px 10px',textAlign:'left',color:'#787a83',borderBottom:'1px solid #24262f',fontWeight:600,whiteSpace:'nowrap',fontSize:10}}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -1160,19 +1160,19 @@ function QuarterlyTable({stmts}) {
               const yoy=(yoyQ?.revenue>0&&ok(q.revenue))?(q.revenue-yoyQ.revenue)/yoyQ.revenue:null;
               const gm=q.revenue>0?q.grossProfit/q.revenue:null;
               return (
-                <tr key={q.date||q.period+q.calendarYear} style={{borderBottom:'1px solid #141720'}}>
-                  <td style={{padding:'8px 10px',color:'#64748b',fontFamily:'JetBrains Mono,monospace',fontSize:10}}>{q.period} {q.calendarYear}</td>
-                  <td style={{padding:'8px 10px',color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace'}}>{fmt.usd(q.revenue)}</td>
-                  <td style={{padding:'8px 10px',fontFamily:'JetBrains Mono,monospace',color:ok(yoy)?(yoy>=0?'#22c55e':'#f87171'):'#334155'}}>
+                <tr key={q.date||q.period+q.calendarYear} style={{borderBottom:'1px solid #1c1d26'}}>
+                  <td style={{padding:'8px 10px',color:'#787a83',fontFamily:'Geist Mono,monospace',fontSize:10}}>{q.period} {q.calendarYear}</td>
+                  <td style={{padding:'8px 10px',color:'#edeef4',fontFamily:'Geist Mono,monospace'}}>{fmt.usd(q.revenue)}</td>
+                  <td style={{padding:'8px 10px',fontFamily:'Geist Mono,monospace',color:ok(yoy)?(yoy>=0?'#5ac576':'#eb6459'):'#33353f'}}>
                     {ok(yoy)?fmt.chg(yoy):'—'}
                   </td>
-                  <td style={{padding:'8px 10px',fontFamily:'JetBrains Mono,monospace',color:ok(gm)?(gm>=0.4?'#22c55e':gm>=0.2?'#fbbf24':'#f87171'):'#334155'}}>
+                  <td style={{padding:'8px 10px',fontFamily:'Geist Mono,monospace',color:ok(gm)?(gm>=0.4?'#5ac576':gm>=0.2?'#eca851':'#eb6459'):'#33353f'}}>
                     {fmt.pct(gm)}
                   </td>
-                  <td style={{padding:'8px 10px',fontFamily:'JetBrains Mono,monospace',color:q.netIncome>=0?'#4ade80':'#f87171'}}>
+                  <td style={{padding:'8px 10px',fontFamily:'Geist Mono,monospace',color:q.netIncome>=0?'#5ac576':'#eb6459'}}>
                     {fmt.usd(q.netIncome)}
                   </td>
-                  <td style={{padding:'8px 10px',fontFamily:'JetBrains Mono,monospace',color:q.eps>=0?'#4ade80':'#f87171'}}>
+                  <td style={{padding:'8px 10px',fontFamily:'Geist Mono,monospace',color:q.eps>=0?'#5ac576':'#eb6459'}}>
                     {ok(q.eps)?`$${q.eps.toFixed(2)}`:'—'}
                   </td>
                 </tr>
@@ -1194,9 +1194,9 @@ function NewsCard({items}) {
       <div style={{display:'flex',flexDirection:'column',gap:7}}>
         {items.slice(0,6).map((n,i)=>(
           <a key={i} href={n.url} target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
-            <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 13px',transition:'border-color 0.15s'}}>
-              <div style={{fontSize:12,color:'#cbd5e1',lineHeight:1.45,marginBottom:5}}>{n.title}</div>
-              <div style={{display:'flex',gap:8,fontSize:10,color:'#334155'}}>
+            <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'10px 13px',transition:'border-color 0.15s'}}>
+              <div style={{fontSize:12,color:'#a6a7b1',lineHeight:1.45,marginBottom:5}}>{n.title}</div>
+              <div style={{display:'flex',gap:8,fontSize:10,color:'#33353f'}}>
                 <span>{n.site}</span><span>·</span>
                 <span>{n.publishedDate?.substring(0,10)}</span>
               </div>
@@ -1214,10 +1214,10 @@ function EarningsCalendarBadge({ earn }) {
   const date = earn.date;
   const est = earn.epsEstimate;
   return (
-    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
-      <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}}>Next Earnings</div>
-      <div style={{fontSize:15,fontWeight:700,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace'}}>{date || '—'}</div>
-      {est != null && <div style={{fontSize:10,color:'#64748b',marginTop:3}}>Est. EPS: {est.toFixed(2)}</div>}
+    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'10px 14px'}}>
+      <div style={{fontSize:10,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}}>Next Earnings</div>
+      <div style={{fontSize:15,fontWeight:700,color:'#edeef4',fontFamily:'Geist Mono,monospace'}}>{date || '—'}</div>
+      {est != null && <div style={{fontSize:10,color:'#787a83',marginTop:3}}>Est. EPS: {est.toFixed(2)}</div>}
     </div>
   );
 }
@@ -1234,16 +1234,16 @@ function EarningsSurpriseChart({ data }) {
           const h = Math.min(70, Math.abs(surprise) * 3 + 10);
           return (
             <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
-              <div style={{fontSize:9,color:isPos?'#22c55e':'#f87171',fontWeight:700}}>
+              <div style={{fontSize:9,color:isPos?'#5ac576':'#eb6459',fontWeight:700}}>
                 {isPos?'+':''}{surprise.toFixed(1)}%
               </div>
               <div style={{
                 width:'100%',height:h,
-                background:isPos?'#22c55e33':'#f8717133',
-                border:`1px solid ${isPos?'#22c55e':'#f87171'}`,
+                background:isPos?'#5ac57633':'#eb645933',
+                border:`1px solid ${isPos?'#5ac576':'#eb6459'}`,
                 borderRadius:3
               }}/>
-              <div style={{fontSize:8,color:'#334155'}}>{q.period}</div>
+              <div style={{fontSize:8,color:'#33353f'}}>{q.period}</div>
             </div>
           );
         })}
@@ -1260,13 +1260,13 @@ function InsiderTable({ data }) {
     <div>
       <SectionTitle>Insider Transactions (Last 90 Days)</SectionTitle>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
-        <div style={{background:'#0d2e1a',border:'1px solid #166534',borderRadius:6,padding:'10px 14px',textAlign:'center'}}>
-          <div style={{fontSize:20,fontWeight:800,color:'#22c55e'}}>{buys.length}</div>
-          <div style={{fontSize:10,color:'#4ade80'}}>Insider Buys</div>
+        <div style={{background:'#194224',border:'1px solid #194224',borderRadius:6,padding:'10px 14px',textAlign:'center'}}>
+          <div style={{fontSize:20,fontWeight:800,color:'#5ac576'}}>{buys.length}</div>
+          <div style={{fontSize:10,color:'#5ac576'}}>Insider Buys</div>
         </div>
-        <div style={{background:'#2a0d0d',border:'1px solid #7f1d1d',borderRadius:6,padding:'10px 14px',textAlign:'center'}}>
-          <div style={{fontSize:20,fontWeight:800,color:'#f87171'}}>{sells.length}</div>
-          <div style={{fontSize:10,color:'#fca5a5'}}>Insider Sells</div>
+        <div style={{background:'#602a25',border:'1px solid #602a25',borderRadius:6,padding:'10px 14px',textAlign:'center'}}>
+          <div style={{fontSize:20,fontWeight:800,color:'#eb6459'}}>{sells.length}</div>
+          <div style={{fontSize:10,color:'#eb6459'}}>Insider Sells</div>
         </div>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:4}}>
@@ -1275,11 +1275,11 @@ function InsiderTable({ data }) {
           return (
             <div key={i} style={{
               display:'flex',justifyContent:'space-between',alignItems:'center',
-              background:'#141720',borderRadius:5,padding:'7px 12px',fontSize:11
+              background:'#1c1d26',borderRadius:5,padding:'7px 12px',fontSize:11
             }}>
-              <span style={{color:'#64748b',flex:1}}>{t.name}</span>
-              <span style={{color:'#94a3b8',marginRight:12}}>{t.filingDate?.substring(0,10)}</span>
-              <span style={{fontWeight:700,color:isBuy?'#22c55e':'#f87171',fontFamily:'JetBrains Mono,monospace'}}>
+              <span style={{color:'#787a83',flex:1}}>{t.name}</span>
+              <span style={{color:'#a6a7b1',marginRight:12}}>{t.filingDate?.substring(0,10)}</span>
+              <span style={{fontWeight:700,color:isBuy?'#5ac576':'#eb6459',fontFamily:'Geist Mono,monospace'}}>
                 {isBuy ? '▲ Buy' : '▼ Sell'} {Math.abs(t.change || 0).toLocaleString()} shares
               </span>
             </div>
@@ -1298,21 +1298,21 @@ function QualityMoatCard({ metrics, ratios, stmts, profile }) {
   );
   if (!metrics) return null;
   const dimensions = [
-    { key:'demand',  label:'Demand Inelasticity', desc:'Price-insensitive customers',    score: moat.demand,  max:25, color:'#10b981' },
-    { key:'supply',  label:'Supply Barriers',      desc:'Difficult to replicate',          score: moat.supply,  max:25, color:'#3b82f6' },
-    { key:'pricing', label:'Pricing Power',         desc:'Margin expansion capacity',       score: moat.pricing, max:25, color:'#8b5cf6' },
-    { key:'capEff',  label:'Capital Efficiency',    desc:'High returns on reinvestment',    score: moat.capEff,  max:25, color:'#f59e0b' },
+    { key:'demand',  label:'Demand Inelasticity', desc:'Price-insensitive customers',    score: moat.demand,  max:25, color:'#5ac576' },
+    { key:'supply',  label:'Supply Barriers',      desc:'Difficult to replicate',          score: moat.supply,  max:25, color:'#968ff7' },
+    { key:'pricing', label:'Pricing Power',         desc:'Margin expansion capacity',       score: moat.pricing, max:25, color:'#968ff7' },
+    { key:'capEff',  label:'Capital Efficiency',    desc:'High returns on reinvestment',    score: moat.capEff,  max:25, color:'#eca851' },
   ];
   return (
-    <div style={{background:'#111827',border:'1px solid #1f2937',borderRadius:12,padding:'20px 24px',marginBottom:16}}>
+    <div style={{background:'#24262f',border:'1px solid #24262f',borderRadius:12,padding:'20px 24px',marginBottom:16}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
         <div>
-          <div style={{color:'#f9fafb',fontWeight:700,fontSize:15}}>Quality Moat Scorecard</div>
-          <div style={{color:'#6b7280',fontSize:12,marginTop:2}}>Durable competitive advantage across 4 pillars</div>
+          <div style={{color:'#edeef4',fontWeight:700,fontSize:15}}>Quality Moat Scorecard</div>
+          <div style={{color:'#787a83',fontSize:12,marginTop:2}}>Durable competitive advantage across 4 pillars</div>
         </div>
         <div style={{textAlign:'right'}}>
           <div style={{color:moat.moatColor,fontWeight:700,fontSize:14}}>{moat.moatRating}</div>
-          <div style={{color:'#6b7280',fontSize:12}}>{moat.total}/100</div>
+          <div style={{color:'#787a83',fontSize:12}}>{moat.total}/100</div>
         </div>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
@@ -1322,18 +1322,18 @@ function QualityMoatCard({ metrics, ratios, stmts, profile }) {
             <div key={d.key}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
                 <div>
-                  <span style={{color:'#e5e7eb',fontSize:13,fontWeight:600}}>{d.label}</span>
-                  <span style={{color:'#6b7280',fontSize:11,marginLeft:8}}>{d.desc}</span>
+                  <span style={{color:'#edeef4',fontSize:13,fontWeight:600}}>{d.label}</span>
+                  <span style={{color:'#787a83',fontSize:11,marginLeft:8}}>{d.desc}</span>
                 </div>
                 <span style={{
-                  color: d.score >= 18 ? d.color : d.score <= 8 ? '#ef4444' : '#9ca3af',
+                  color: d.score >= 18 ? d.color : d.score <= 8 ? '#eb6459' : '#a6a7b1',
                   fontSize:13,fontWeight:700
                 }}>{d.score}/{d.max}</span>
               </div>
-              <div style={{background:'#1f2937',borderRadius:4,height:6,overflow:'hidden'}}>
+              <div style={{background:'#24262f',borderRadius:4,height:6,overflow:'hidden'}}>
                 <div style={{
                   height:'100%',width:`${pct}%`,borderRadius:4,
-                  background: d.score >= 18 ? d.color : d.score <= 8 ? '#ef4444' : '#4b5563',
+                  background: d.score >= 18 ? d.color : d.score <= 8 ? '#eb6459' : '#4b4c58',
                   transition:'width 0.4s ease'
                 }}/>
               </div>
@@ -1341,8 +1341,8 @@ function QualityMoatCard({ metrics, ratios, stmts, profile }) {
           );
         })}
       </div>
-      <div style={{marginTop:16,padding:'10px 14px',background:'#0d1117',borderRadius:8,borderLeft:`3px solid ${moat.moatColor}`}}>
-        <div style={{color:'#9ca3af',fontSize:11}}>
+      <div style={{marginTop:16,padding:'10px 14px',background:'#15151c',borderRadius:8,borderLeft:`3px solid ${moat.moatColor}`}}>
+        <div style={{color:'#a6a7b1',fontSize:11}}>
           <strong style={{color:moat.moatColor}}>Moat insight: </strong>
           {moat.total >= 85
             ? 'Exceptional competitive position. The business can compound capital at high rates for a decade+.'
@@ -1368,9 +1368,9 @@ function OvervaluationBanner({ metrics, ratios, profile }) {
   );
   if (!metrics || result.level === 'none') return null;
   const config = {
-    caution: { bg:'#422006', border:'#92400e', icon:'⚠️', title:'Valuation Caution', color:'#fbbf24' },
-    risk:    { bg:'#450a0a', border:'#991b1b', icon:'🔴', title:'Overvaluation Risk Detected', color:'#f87171' },
-    bubble:  { bg:'#1c1917', border:'#57534e', icon:'⚫', title:'BUBBLE TERRITORY — Extreme Overvaluation', color:'#d1d5db' },
+    caution: { bg:'#54360b', border:'#54360b', icon:'⚠️', title:'Valuation Caution', color:'#eca851' },
+    risk:    { bg:'#602a25', border:'#602a25', icon:'🔴', title:'Overvaluation Risk Detected', color:'#eb6459' },
+    bubble:  { bg:'#33353f', border:'#33353f', icon:'⚫', title:'BUBBLE TERRITORY — Extreme Overvaluation', color:'#a6a7b1' },
   };
   const c = config[result.level];
   return (
@@ -1379,17 +1379,17 @@ function OvervaluationBanner({ metrics, ratios, profile }) {
         <span style={{fontSize:16}}>{c.icon}</span>
         <span style={{color:c.color,fontWeight:700,fontSize:14}}>{c.title}</span>
         {result.peg && (
-          <span style={{marginLeft:'auto',background:'#1f2937',borderRadius:6,padding:'2px 8px',color:c.color,fontSize:11,fontWeight:600}}>
+          <span style={{marginLeft:'auto',background:'#24262f',borderRadius:6,padding:'2px 8px',color:c.color,fontSize:11,fontWeight:600}}>
             PEG {result.peg.toFixed(2)}
           </span>
         )}
       </div>
       <ul style={{margin:0,padding:'0 0 0 20px',listStyle:'disc'}}>
         {result.reasons.map((r,i) => (
-          <li key={i} style={{color:'#9ca3af',fontSize:12,marginBottom:2}}>{r}</li>
+          <li key={i} style={{color:'#a6a7b1',fontSize:12,marginBottom:2}}>{r}</li>
         ))}
       </ul>
-      <div style={{marginTop:10,color:'#6b7280',fontSize:11,fontStyle:'italic'}}>
+      <div style={{marginTop:10,color:'#787a83',fontSize:11,fontStyle:'italic'}}>
         Priced-for-perfection stocks face asymmetric downside. Any earnings miss can destroy 20–40% of value instantly.
       </div>
     </div>
@@ -1404,20 +1404,20 @@ function FactorTiltCard({ metrics, ratios, history, stmts, profile }) {
   );
   if (!metrics) return null;
   const factors = [
-    { key: 'value',    label: 'Value',    color: '#10b981', icon: '💰' },
-    { key: 'growth',   label: 'Growth',   color: '#6366f1', icon: '📈' },
-    { key: 'momentum', label: 'Momentum', color: '#f59e0b', icon: '⚡' },
-    { key: 'quality',  label: 'Quality',  color: '#3b82f6', icon: '🏆' },
-    { key: 'size',     label: 'Size',     color: '#8b5cf6', icon: '📊' },
+    { key: 'value',    label: 'Value',    color: '#5ac576', icon: '💰' },
+    { key: 'growth',   label: 'Growth',   color: '#968ff7', icon: '📈' },
+    { key: 'momentum', label: 'Momentum', color: '#eca851', icon: '⚡' },
+    { key: 'quality',  label: 'Quality',  color: '#968ff7', icon: '🏆' },
+    { key: 'size',     label: 'Size',     color: '#968ff7', icon: '📊' },
   ];
   return (
-    <div style={{background:'#111827',border:'1px solid #1f2937',borderRadius:12,padding:'20px 24px',marginBottom:16}}>
+    <div style={{background:'#24262f',border:'1px solid #24262f',borderRadius:12,padding:'20px 24px',marginBottom:16}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
         <div>
-          <div style={{color:'#f9fafb',fontWeight:700,fontSize:15}}>Factor Tilt Analysis</div>
-          <div style={{color:'#6b7280',fontSize:12,marginTop:2}}>Quant factor exposure across 5 dimensions (0–20 each)</div>
+          <div style={{color:'#edeef4',fontWeight:700,fontSize:15}}>Factor Tilt Analysis</div>
+          <div style={{color:'#787a83',fontSize:12,marginTop:2}}>Quant factor exposure across 5 dimensions (0–20 each)</div>
         </div>
-        <div style={{background:'#1f2937',borderRadius:8,padding:'4px 12px',color:'#a78bfa',fontSize:12,fontWeight:600}}>
+        <div style={{background:'#24262f',borderRadius:8,padding:'4px 12px',color:'#968ff7',fontSize:12,fontWeight:600}}>
           {tilts.tilt_label}
         </div>
       </div>
@@ -1428,20 +1428,20 @@ function FactorTiltCard({ metrics, ratios, history, stmts, profile }) {
           const neutral = pct > 45 && pct < 55;
           return (
             <div key={f.key} style={{display:'flex',alignItems:'center',gap:10}}>
-              <div style={{width:80,color:'#9ca3af',fontSize:12,textAlign:'right'}}>{f.icon} {f.label}</div>
-              <div style={{flex:1,background:'#1f2937',borderRadius:4,height:8,overflow:'hidden',position:'relative'}}>
+              <div style={{width:80,color:'#a6a7b1',fontSize:12,textAlign:'right'}}>{f.icon} {f.label}</div>
+              <div style={{flex:1,background:'#24262f',borderRadius:4,height:8,overflow:'hidden',position:'relative'}}>
                 <div style={{
                   position:'absolute',left:0,top:0,height:'100%',
                   width:`${pct}%`,
-                  background: neutral ? '#374151' : f.color,
+                  background: neutral ? '#33353f' : f.color,
                   borderRadius:4,
                   transition:'width 0.4s ease'
                 }}/>
-                <div style={{position:'absolute',left:'50%',top:-2,bottom:-2,width:1,background:'#374151'}}/>
+                <div style={{position:'absolute',left:'50%',top:-2,bottom:-2,width:1,background:'#33353f'}}/>
               </div>
               <div style={{
                 width:28,textAlign:'right',
-                color: score >= 14 ? f.color : score <= 6 ? '#ef4444' : '#6b7280',
+                color: score >= 14 ? f.color : score <= 6 ? '#eb6459' : '#787a83',
                 fontSize:13,fontWeight:700
               }}>{score}</div>
             </div>
@@ -1451,8 +1451,8 @@ function FactorTiltCard({ metrics, ratios, history, stmts, profile }) {
       <div style={{marginTop:12,display:'flex',gap:16,justifyContent:'flex-end'}}>
         {['Weak (0-7)','Neutral (8-12)','Strong (13-20)'].map((l,i)=>(
           <div key={l} style={{display:'flex',alignItems:'center',gap:4}}>
-            <div style={{width:8,height:8,borderRadius:2,background:i===0?'#ef4444':i===1?'#374151':'#10b981'}}/>
-            <span style={{color:'#6b7280',fontSize:10}}>{l}</span>
+            <div style={{width:8,height:8,borderRadius:2,background:i===0?'#eb6459':i===1?'#33353f':'#5ac576'}}/>
+            <span style={{color:'#787a83',fontSize:10}}>{l}</span>
           </div>
         ))}
       </div>
@@ -1495,36 +1495,36 @@ function VerdictSection({scores, profile, metrics, ratios, aiVerdict, aiLoading}
     <div>
       <SectionTitle>Investment Verdict</SectionTitle>
       <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:12,marginBottom:14,alignItems:'start'}}>
-        <div style={{background:'#0d2e1a',border:'1px solid #166534',borderRadius:6,padding:'13px 15px'}}>
-          <div style={{fontSize:10,fontWeight:700,color:'#22c55e',marginBottom:8,textTransform:'uppercase',letterSpacing:'1px'}}>🏰 Bull Case</div>
+        <div style={{background:'#194224',border:'1px solid #194224',borderRadius:6,padding:'13px 15px'}}>
+          <div style={{fontSize:10,fontWeight:700,color:'#5ac576',marginBottom:8,textTransform:'uppercase',letterSpacing:'1px'}}>🏰 Bull Case</div>
           {moat.length ? moat.map((m,i)=>(
-            <div key={i} style={{fontSize:11,color:'#86efac',marginBottom:5,lineHeight:1.5}}>· {m}</div>
-          )) : <div style={{fontSize:11,color:'#334155'}}>No strong moat signals at current levels</div>}
+            <div key={i} style={{fontSize:11,color:'#5ac576',marginBottom:5,lineHeight:1.5}}>· {m}</div>
+          )) : <div style={{fontSize:11,color:'#33353f'}}>No strong moat signals at current levels</div>}
         </div>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,padding:'0 8px'}}>
           <ScoreGauge score={scores.total}/>
           <div style={{width:140}}>
-            <ScoreBar label="Valuation"       value={scores.val}    max={25} color="#60a5fa"/>
-            <ScoreBar label="Financial Health" value={scores.hlth}   max={30} color="#22c55e"/>
-            <ScoreBar label="Momentum"         value={scores.mom}    max={25} color="#fbbf24"/>
-            <ScoreBar label="Growth"           value={scores.growth} max={20} color="#a78bfa"/>
+            <ScoreBar label="Valuation"       value={scores.val}    max={25} color="#968ff7"/>
+            <ScoreBar label="Financial Health" value={scores.hlth}   max={30} color="#5ac576"/>
+            <ScoreBar label="Momentum"         value={scores.mom}    max={25} color="#eca851"/>
+            <ScoreBar label="Growth"           value={scores.growth} max={20} color="#968ff7"/>
           </div>
         </div>
-        <div style={{background:'#2a0d0d',border:'1px solid #7f1d1d',borderRadius:6,padding:'13px 15px'}}>
-          <div style={{fontSize:10,fontWeight:700,color:'#f87171',marginBottom:8,textTransform:'uppercase',letterSpacing:'1px'}}>⚠ Bear Case</div>
+        <div style={{background:'#602a25',border:'1px solid #602a25',borderRadius:6,padding:'13px 15px'}}>
+          <div style={{fontSize:10,fontWeight:700,color:'#eb6459',marginBottom:8,textTransform:'uppercase',letterSpacing:'1px'}}>⚠ Bear Case</div>
           {risks.length ? risks.map((rk,i)=>(
-            <div key={i} style={{fontSize:11,color:'#fca5a5',marginBottom:5,lineHeight:1.5}}>· {rk}</div>
-          )) : <div style={{fontSize:11,color:'#334155'}}>No major risk flags detected</div>}
+            <div key={i} style={{fontSize:11,color:'#eb6459',marginBottom:5,lineHeight:1.5}}>· {rk}</div>
+          )) : <div style={{fontSize:11,color:'#33353f'}}>No major risk flags detected</div>}
         </div>
       </div>
       <div style={{background:r.bg,border:`1px solid ${r.border}`,borderRadius:8,padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:16}}>
         <div style={{flex:1}}>
-          <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'1px',marginBottom:5}}>
-            Bottom Line {aiVerdict && <span style={{color:'#a78bfa',fontWeight:400,textTransform:'none',letterSpacing:0}}>✨ AI</span>}
+          <div style={{fontSize:10,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px',marginBottom:5}}>
+            Bottom Line {aiVerdict && <span style={{color:'#968ff7',fontWeight:400,textTransform:'none',letterSpacing:0}}>✨ AI</span>}
           </div>
-          <div style={{fontSize:13,color:'#cbd5e1',lineHeight:1.65}}>
+          <div style={{fontSize:13,color:'#a6a7b1',lineHeight:1.65}}>
             {aiLoading ? (
-              <span style={{color:'#475569',fontStyle:'italic'}}>✨ Generating AI analysis...</span>
+              <span style={{color:'#787a83',fontStyle:'italic'}}>✨ Generating AI analysis...</span>
             ) : aiVerdict ? (
               <span>{aiVerdict}</span>
             ) : (
@@ -1566,19 +1566,19 @@ function DCFCalculator({inputs,setInputs,currentPrice,profile}) {
   const result=runDCF(inputs);
   const iv=result?.intrinsicValue;
   const mos=(ok(iv)&&ok(currentPrice)&&currentPrice>0)?(iv-currentPrice)/iv:null;
-  const mosColor=!ok(mos)?'#475569':mos>0.15?'#22c55e':mos>-0.15?'#fbbf24':'#f87171';
+  const mosColor=!ok(mos)?'#787a83':mos>0.15?'#5ac576':mos>-0.15?'#eca851':'#eb6459';
   const set=(key,val)=>setInputs(p=>({...p,[key]:val}));
 
   const SliderInput=({label,stateKey,min,max,step=1,unit='%',note})=>(
     <div style={{marginBottom:10}}>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-        <span style={{fontSize:10,color:'#64748b'}}>{label}</span>
-        <span style={{fontSize:11,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace',fontWeight:700}}>{inputs[stateKey]}{unit}</span>
+        <span style={{fontSize:10,color:'#787a83'}}>{label}</span>
+        <span style={{fontSize:11,color:'#edeef4',fontFamily:'Geist Mono,monospace',fontWeight:700}}>{inputs[stateKey]}{unit}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={inputs[stateKey]}
         onChange={e=>set(stateKey,parseFloat(e.target.value))}
-        style={{width:'100%',accentColor:'#3b82f6',cursor:'pointer'}}/>
-      {note&&<div style={{fontSize:9,color:'#334155'}}>{note}</div>}
+        style={{width:'100%',accentColor:'#968ff7',cursor:'pointer'}}/>
+      {note&&<div style={{fontSize:9,color:'#33353f'}}>{note}</div>}
     </div>
   );
 
@@ -1593,57 +1593,57 @@ function DCFCalculator({inputs,setInputs,currentPrice,profile}) {
   });
 
   return (
-    <div style={{background:'#0c0e14',border:'1px solid #161b26',borderRadius:10,overflow:'hidden'}}>
-      <div style={{background:'#141720',borderBottom:'1px solid #161b26',padding:'12px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-        <div style={{fontSize:11,fontWeight:700,color:'#e2e8f0',textTransform:'uppercase',letterSpacing:'1px'}}>📐 Interactive DCF Model</div>
-        <div style={{fontSize:10,color:'#475569'}}>{profile?.companyName} · All values auto-recalculate</div>
+    <div style={{background:'#15151c',border:'1px solid #1c1d26',borderRadius:10,overflow:'hidden'}}>
+      <div style={{background:'#1c1d26',borderBottom:'1px solid #1c1d26',padding:'12px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{fontSize:11,fontWeight:700,color:'#edeef4',textTransform:'uppercase',letterSpacing:'1px'}}>📐 Interactive DCF Model</div>
+        <div style={{fontSize:10,color:'#787a83'}}>{profile?.companyName} · All values auto-recalculate</div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 300px',gap:0}}>
-        <div style={{padding:'16px 20px',borderRight:'1px solid #161b26'}}>
-          <div style={{fontSize:10,fontWeight:700,color:'#3b82f6',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}}>Revenue Growth</div>
+        <div style={{padding:'16px 20px',borderRight:'1px solid #1c1d26'}}>
+          <div style={{fontSize:10,fontWeight:700,color:'#968ff7',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}}>Revenue Growth</div>
           <SliderInput label="Years 1–5 Growth Rate" stateKey="revGrowth1to5" min={-10} max={50} note="Analyst estimates for near-term growth"/>
           <SliderInput label="Years 6–10 Growth Rate" stateKey="revGrowth6to10" min={-5} max={30} note="Conservative long-run growth"/>
           <SliderInput label="EBIT Margin" stateKey="ebitMargin" min={0} max={60} note="Operating income / revenue"/>
           <SliderInput label="Tax Rate" stateKey="taxRate" min={10} max={40} note="Effective tax rate"/>
         </div>
-        <div style={{padding:'16px 20px',borderRight:'1px solid #161b26'}}>
-          <div style={{fontSize:10,fontWeight:700,color:'#a78bfa',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}}>Discount & Capital</div>
+        <div style={{padding:'16px 20px',borderRight:'1px solid #1c1d26'}}>
+          <div style={{fontSize:10,fontWeight:700,color:'#968ff7',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}}>Discount & Capital</div>
           <SliderInput label="Discount Rate (WACC)" stateKey="discountRate" min={4} max={20} step={0.5} note="Weighted average cost of capital"/>
           <SliderInput label="Terminal Growth Rate" stateKey="terminalGrowth" min={0} max={6} step={0.5} note="Perpetuity growth (≤ GDP growth)"/>
           <SliderInput label="CapEx % of Revenue" stateKey="capexPct" min={0} max={30} note="Maintenance + growth capex"/>
           <SliderInput label="Beta" stateKey="beta" min={0.3} max={3} step={0.1} unit="" note="Used to contextualize risk"/>
-          <div style={{fontSize:9,color:'#334155',marginTop:4}}>Net Debt: {fmt.usd(inputs.netDebt)} · Shares: {ok(inputs.shares)?(inputs.shares/1e6).toFixed(0)+'M':'—'}</div>
+          <div style={{fontSize:9,color:'#33353f',marginTop:4}}>Net Debt: {fmt.usd(inputs.netDebt)} · Shares: {ok(inputs.shares)?(inputs.shares/1e6).toFixed(0)+'M':'—'}</div>
         </div>
         <div style={{padding:'16px 20px',display:'flex',flexDirection:'column',gap:12}}>
-          <div style={{fontSize:10,fontWeight:700,color:'#fbbf24',textTransform:'uppercase',letterSpacing:'1px',marginBottom:4}}>Valuation Result</div>
-          <div style={{textAlign:'center',padding:'16px',background:'#0a0b10',borderRadius:8,border:'1px solid #1e2430'}}>
-            <div style={{fontSize:10,color:'#475569',marginBottom:4}}>Intrinsic Value / Share</div>
-            <div style={{fontSize:28,fontWeight:800,color:ok(iv)?mosColor:'#475569',fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>
+          <div style={{fontSize:10,fontWeight:700,color:'#eca851',textTransform:'uppercase',letterSpacing:'1px',marginBottom:4}}>Valuation Result</div>
+          <div style={{textAlign:'center',padding:'16px',background:'#15151c',borderRadius:8,border:'1px solid #24262f'}}>
+            <div style={{fontSize:10,color:'#787a83',marginBottom:4}}>Intrinsic Value / Share</div>
+            <div style={{fontSize:28,fontWeight:800,color:ok(iv)?mosColor:'#787a83',fontFamily:'Geist Mono,monospace',lineHeight:1}}>
               {ok(iv)?fmt.price(iv):'—'}
             </div>
             {ok(mos)&&<div style={{marginTop:6,fontSize:12,fontWeight:700,color:mosColor}}>{mos>0?`+${(mos*100).toFixed(1)}% upside`:`${(mos*100).toFixed(1)}% overvalued`}</div>}
-            {ok(currentPrice)&&<div style={{fontSize:10,color:'#475569',marginTop:3}}>vs. current {fmt.price(currentPrice)}</div>}
+            {ok(currentPrice)&&<div style={{fontSize:10,color:'#787a83',marginTop:3}}>vs. current {fmt.price(currentPrice)}</div>}
           </div>
           <div>
-            <div style={{fontSize:9,color:'#334155',marginBottom:4}}>Sensitivity: Discount Rate (rows) × Terminal Growth (cols)</div>
+            <div style={{fontSize:9,color:'#33353f',marginBottom:4}}>Sensitivity: Discount Rate (rows) × Terminal Growth (cols)</div>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:9}}>
               <thead>
                 <tr>
-                  <th style={{color:'#334155',padding:'2px 4px',textAlign:'center'}}>WACC\TG</th>
+                  <th style={{color:'#33353f',padding:'2px 4px',textAlign:'center'}}>WACC\TG</th>
                   {[inputs.terminalGrowth-1,inputs.terminalGrowth,inputs.terminalGrowth+1].map(tg=>(
-                    <th key={tg} style={{color:'#475569',padding:'2px 4px',textAlign:'center'}}>{tg}%</th>
+                    <th key={tg} style={{color:'#787a83',padding:'2px 4px',textAlign:'center'}}>{tg}%</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {[-2,-1,0,1,2].map((dr,ri)=>(
                   <tr key={dr}>
-                    <td style={{color:'#475569',padding:'2px 4px',textAlign:'center',fontFamily:'JetBrains Mono,monospace'}}>{inputs.discountRate+dr}%</td>
+                    <td style={{color:'#787a83',padding:'2px 4px',textAlign:'center',fontFamily:'Geist Mono,monospace'}}>{inputs.discountRate+dr}%</td>
                     {sensRows[ri].map((v,ci)=>{
                       const mos2=(ok(v)&&ok(currentPrice)&&currentPrice>0)?(v-currentPrice)/v:null;
-                      const c=!ok(v)?'#334155':mos2>0.15?'#22c55e':mos2>-0.15?'#fbbf24':'#f87171';
+                      const c=!ok(v)?'#33353f':mos2>0.15?'#5ac576':mos2>-0.15?'#eca851':'#eb6459';
                       return (
-                        <td key={ci} style={{color:c,padding:'3px 4px',textAlign:'center',fontFamily:'JetBrains Mono,monospace',fontWeight:dr===0&&ci===1?800:400,background:dr===0&&ci===1?'#141720':'transparent',borderRadius:3}}>
+                        <td key={ci} style={{color:c,padding:'3px 4px',textAlign:'center',fontFamily:'Geist Mono,monospace',fontWeight:dr===0&&ci===1?800:400,background:dr===0&&ci===1?'#1c1d26':'transparent',borderRadius:3}}>
                           {ok(v)?`$${v.toFixed(0)}`:'—'}
                         </td>
                       );
@@ -1703,9 +1703,9 @@ function EVEBITDAHistory({stmts, balanceSheets, history, shares}) {
   },[stmts,balanceSheets,history,shares]);
 
   if(!series||series.length<3) return (
-    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
       <SectionTitle>EV/EBITDA — Histórico</SectionTitle>
-      <div style={{fontSize:11,color:'#475569',padding:'6px 0'}}>Histórico no disponible (faltan datos de balance o EBITDA).</div>
+      <div style={{fontSize:11,color:'#787a83',padding:'6px 0'}}>Histórico no disponible (faltan datos de balance o EBITDA).</div>
     </div>
   );
 
@@ -1720,40 +1720,40 @@ function EVEBITDAHistory({stmts, balanceSheets, history, shares}) {
   const py=v=>pt+(1-(v-minV)/rng)*ch;
   const linePts=vals.map((v,i)=>`${px(i)},${py(v)}`).join(' ');
   const medY=py(median);
-  const curColor=current>median*1.1?'#f87171':current<median*0.9?'#22c55e':'#fbbf24';
+  const curColor=current>median*1.1?'#eb6459':current<median*0.9?'#5ac576':'#eca851';
 
   return (
-    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
       <SectionTitle>EV/EBITDA — Histórico ({series.length}Q)</SectionTitle>
       <div style={{display:'flex',gap:18,marginBottom:10,flexWrap:'wrap'}}>
         <div>
-          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px'}}>Actual</div>
-          <div style={{fontSize:20,fontWeight:800,color:curColor,fontFamily:'JetBrains Mono,monospace',lineHeight:1.1}}>{current.toFixed(1)}x</div>
+          <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px'}}>Actual</div>
+          <div style={{fontSize:20,fontWeight:800,color:curColor,fontFamily:'Geist Mono,monospace',lineHeight:1.1}}>{current.toFixed(1)}x</div>
         </div>
         <div>
-          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px'}}>Mediana</div>
-          <div style={{fontSize:20,fontWeight:800,color:'#94a3b8',fontFamily:'JetBrains Mono,monospace',lineHeight:1.1}}>{median.toFixed(1)}x</div>
+          <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px'}}>Mediana</div>
+          <div style={{fontSize:20,fontWeight:800,color:'#a6a7b1',fontFamily:'Geist Mono,monospace',lineHeight:1.1}}>{median.toFixed(1)}x</div>
         </div>
-        <div style={{alignSelf:'flex-end',fontSize:10,color:current>median?'#f87171':'#22c55e'}}>
+        <div style={{alignSelf:'flex-end',fontSize:10,color:current>median?'#eb6459':'#5ac576'}}>
           {current>median?'▲ prima':'▼ descuento'} {Math.abs((current/median-1)*100).toFixed(0)}% vs mediana
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:150,display:'block'}}>
         {[0.25,0.5,0.75].map(f=>(
-          <line key={f} x1={pl} x2={W-pr} y1={pt+f*ch} y2={pt+f*ch} stroke="#161b26" strokeWidth="1"/>
+          <line key={f} x1={pl} x2={W-pr} y1={pt+f*ch} y2={pt+f*ch} stroke="#1c1d26" strokeWidth="1"/>
         ))}
-        <line x1={pl} x2={W-pr} y1={medY} y2={medY} stroke="#94a3b8" strokeWidth="0.9" strokeDasharray="5 4"/>
-        <text x={W-pr+3} y={medY+3} fontSize="8.5" fill="#94a3b8">med {median.toFixed(1)}x</text>
-        <polyline points={linePts} fill="none" stroke="#60a5fa" strokeWidth="1.8" strokeLinejoin="round"/>
-        <circle cx={px(vals.length-1)} cy={py(current)} r="3.5" fill={curColor} stroke="#0c0e14" strokeWidth="1.5"/>
-        <text x={pl+2} y={pt+8} fontSize="8" fill="#334155">{maxV.toFixed(0)}x</text>
-        <text x={pl+2} y={H-pb+8} fontSize="8" fill="#334155">{minV.toFixed(0)}x</text>
+        <line x1={pl} x2={W-pr} y1={medY} y2={medY} stroke="#a6a7b1" strokeWidth="0.9" strokeDasharray="5 4"/>
+        <text x={W-pr+3} y={medY+3} fontSize="8.5" fill="#a6a7b1">med {median.toFixed(1)}x</text>
+        <polyline points={linePts} fill="none" stroke="#968ff7" strokeWidth="1.8" strokeLinejoin="round"/>
+        <circle cx={px(vals.length-1)} cy={py(current)} r="3.5" fill={curColor} stroke="#15151c" strokeWidth="1.5"/>
+        <text x={pl+2} y={pt+8} fontSize="8" fill="#33353f">{maxV.toFixed(0)}x</text>
+        <text x={pl+2} y={H-pb+8} fontSize="8" fill="#33353f">{minV.toFixed(0)}x</text>
         {series.filter((_,i)=>i%Math.ceil(series.length/6)===0).map((s,k)=>{
           const idx=series.indexOf(s);
-          return <text key={k} x={px(idx)} y={H-6} fontSize="7.5" fill="#334155" textAnchor="middle">{s.label}</text>;
+          return <text key={k} x={px(idx)} y={H-6} fontSize="7.5" fill="#33353f" textAnchor="middle">{s.label}</text>;
         })}
       </svg>
-      <div style={{fontSize:9,color:'#334155',marginTop:6}}>EV ≈ precio·acciones + deuda total − caja · EBITDA TTM (4Q) · EV aproximado con acciones actuales.</div>
+      <div style={{fontSize:9,color:'#33353f',marginTop:6}}>EV ≈ precio·acciones + deuda total − caja · EBITDA TTM (4Q) · EV aproximado con acciones actuales.</div>
     </div>
   );
 }
@@ -1779,7 +1779,7 @@ function MultiModelValuation({met,rat,quote,prof,stmts,currentPrice}) {
   if(!models.length) return null;
   const avg=models.reduce((s,m)=>s+m.value,0)/models.length;
   const avgMos=(avg-currentPrice)/avg;
-  const avgColor=avgMos>0.15?'#22c55e':avgMos>-0.15?'#fbbf24':'#f87171';
+  const avgColor=avgMos>0.15?'#5ac576':avgMos>-0.15?'#eca851':'#eb6459';
 
   return (
     <div>
@@ -1787,21 +1787,21 @@ function MultiModelValuation({met,rat,quote,prof,stmts,currentPrice}) {
       <div style={{display:'grid',gridTemplateColumns:`repeat(${models.length},1fr) 1fr`,gap:10}}>
         {models.map((m,i)=>{
           const mos=(m.value-currentPrice)/m.value;
-          const c=mos>0.15?'#22c55e':mos>-0.15?'#fbbf24':'#f87171';
+          const c=mos>0.15?'#5ac576':mos>-0.15?'#eca851':'#eb6459';
           return (
-            <div key={i} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'14px 16px'}}>
-              <div style={{fontSize:10,color:'#475569',marginBottom:4}}>{m.name}</div>
-              <div style={{fontSize:20,fontWeight:800,color:c,fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>{fmt.price(m.value)}</div>
+            <div key={i} style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 16px'}}>
+              <div style={{fontSize:10,color:'#787a83',marginBottom:4}}>{m.name}</div>
+              <div style={{fontSize:20,fontWeight:800,color:c,fontFamily:'Geist Mono,monospace',lineHeight:1}}>{fmt.price(m.value)}</div>
               <div style={{fontSize:10,color:c,marginTop:3}}>{mos>0?`+${(mos*100).toFixed(1)}% upside`:`${(mos*100).toFixed(1)}% overvalued`}</div>
-              <div style={{fontSize:9,color:'#334155',marginTop:4}}>{m.note}</div>
+              <div style={{fontSize:9,color:'#33353f',marginTop:4}}>{m.note}</div>
             </div>
           );
         })}
-        <div style={{background:'#0a0b10',border:`2px solid ${avgColor}44`,borderRadius:8,padding:'14px 16px'}}>
-          <div style={{fontSize:10,color:'#475569',marginBottom:4}}>Model Average ({models.length} models)</div>
-          <div style={{fontSize:20,fontWeight:800,color:avgColor,fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>{fmt.price(avg)}</div>
+        <div style={{background:'#15151c',border:`2px solid ${avgColor}44`,borderRadius:8,padding:'14px 16px'}}>
+          <div style={{fontSize:10,color:'#787a83',marginBottom:4}}>Model Average ({models.length} models)</div>
+          <div style={{fontSize:20,fontWeight:800,color:avgColor,fontFamily:'Geist Mono,monospace',lineHeight:1}}>{fmt.price(avg)}</div>
           <div style={{fontSize:10,color:avgColor,marginTop:3}}>{avgMos>0?`+${(avgMos*100).toFixed(1)}% upside`:`${(avgMos*100).toFixed(1)}% overvalued`}</div>
-          <div style={{fontSize:9,color:'#334155',marginTop:4}}>avg of {models.length} methods</div>
+          <div style={{fontSize:9,color:'#33353f',marginTop:4}}>avg of {models.length} methods</div>
         </div>
       </div>
     </div>
@@ -1825,28 +1825,28 @@ function HealthScorePanel({met,rat,hist,stmts,scores}) {
     {name:'Fin. Health',icon:'🏦',score:(()=>{const s=scores.hlth;return s>=24?5:s>=18?4:s>=12?3:s>=6?2:1;})(),note:'Leverage, coverage, balance sheet'},
   ];
   const overall=dims.reduce((a,d)=>a+d.score,0)/dims.length;
-  const overallColor=overall>=4?'#22c55e':overall>=3?'#fbbf24':'#f87171';
+  const overallColor=overall>=4?'#5ac576':overall>=3?'#eca851':'#eb6459';
 
   return (
-    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:10,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'1px'}}>Financial Health Score</div>
-        <div style={{fontSize:22,fontWeight:800,color:overallColor,fontFamily:'JetBrains Mono,monospace'}}>{overall.toFixed(1)}<span style={{fontSize:12,color:'#475569'}}>/5</span></div>
+        <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px'}}>Financial Health Score</div>
+        <div style={{fontSize:22,fontWeight:800,color:overallColor,fontFamily:'Geist Mono,monospace'}}>{overall.toFixed(1)}<span style={{fontSize:12,color:'#787a83'}}>/5</span></div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>
         {dims.map((d,i)=>{
-          const c=d.score>=4?'#22c55e':d.score>=3?'#fbbf24':'#f87171';
+          const c=d.score>=4?'#5ac576':d.score>=3?'#eca851':'#eb6459';
           return (
             <div key={i} style={{textAlign:'center'}}>
               <div style={{fontSize:18,marginBottom:4}}>{d.icon}</div>
-              <div style={{fontSize:10,color:'#64748b',marginBottom:6}}>{d.name}</div>
+              <div style={{fontSize:10,color:'#787a83',marginBottom:6}}>{d.name}</div>
               <div style={{display:'flex',gap:2,justifyContent:'center',marginBottom:4}}>
                 {[1,2,3,4,5].map(n=>(
-                  <div key={n} style={{width:8,height:8,borderRadius:2,background:n<=d.score?c:'#1e2430',transition:'background 0.3s'}}/>
+                  <div key={n} style={{width:8,height:8,borderRadius:2,background:n<=d.score?c:'#24262f',transition:'background 0.3s'}}/>
                 ))}
               </div>
               <div style={{fontSize:12,fontWeight:700,color:c}}>{d.score}/5</div>
-              <div style={{fontSize:9,color:'#334155',marginTop:2,lineHeight:1.3}}>{d.note}</div>
+              <div style={{fontSize:9,color:'#33353f',marginTop:2,lineHeight:1.3}}>{d.note}</div>
             </div>
           );
         })}
@@ -1875,18 +1875,18 @@ function PeerComparison({peers, peerMetrics, currentMet, currentRat, currentProf
   ];
 
   const colorVal = (col, s) => {
-    if (col.label === 'Ticker') return s === currentProf?.symbol ? '#60a5fa' : '#e2e8f0';
+    if (col.label === 'Ticker') return s === currentProf?.symbol ? '#968ff7' : '#edeef4';
     const raw = col.label==='P/E'?(getM(s)?.priceToEarningsRatioTTM??getM(s)?.peRatioTTM)
               : col.label==='EV/EBITDA'?getM(s)?.evToEBITDATTM
               : col.label==='Gross Margin'?getR(s)?.grossProfitMarginTTM
               : col.label==='ROIC'?(getM(s)?.returnOnInvestedCapitalTTM??getM(s)?.roicTTM)
               : col.label==='Net Debt/EBITDA'?getM(s)?.netDebtToEBITDATTM
               : null;
-    if (!ok(raw)) return '#475569';
-    if (col.label==='Gross Margin') return raw>=0.4?'#22c55e':raw>=0.2?'#fbbf24':'#f87171';
-    if (col.label==='ROIC')         return raw>=0.15?'#22c55e':raw>=0.06?'#fbbf24':'#f87171';
-    if (col.label==='Net Debt/EBITDA') return raw<0.5?'#22c55e':raw<2.5?'#fbbf24':'#f87171';
-    return '#e2e8f0';
+    if (!ok(raw)) return '#787a83';
+    if (col.label==='Gross Margin') return raw>=0.4?'#5ac576':raw>=0.2?'#eca851':'#eb6459';
+    if (col.label==='ROIC')         return raw>=0.15?'#5ac576':raw>=0.06?'#eca851':'#eb6459';
+    if (col.label==='Net Debt/EBITDA') return raw<0.5?'#5ac576':raw<2.5?'#eca851':'#eb6459';
+    return '#edeef4';
   };
 
   return (
@@ -1898,8 +1898,8 @@ function PeerComparison({peers, peerMetrics, currentMet, currentRat, currentProf
             <tr>
               {cols.map(c=>(
                 <th key={c.label} style={{padding:'6px 10px',textAlign:c.label==='Ticker'?'left':'right',
-                  color:'#334155',fontSize:9,fontWeight:700,textTransform:'uppercase',
-                  letterSpacing:'0.8px',borderBottom:'1px solid #1e2430',whiteSpace:'nowrap'
+                  color:'#33353f',fontSize:9,fontWeight:700,textTransform:'uppercase',
+                  letterSpacing:'0.8px',borderBottom:'1px solid #24262f',whiteSpace:'nowrap'
                 }}>{c.label}</th>
               ))}
             </tr>
@@ -1909,14 +1909,14 @@ function PeerComparison({peers, peerMetrics, currentMet, currentRat, currentProf
               const isMain = s === currentProf?.symbol;
               return (
                 <tr key={s} style={{
-                  borderBottom:'1px solid #141720',
-                  background: isMain ? '#1e2430' : (ri%2===0?'transparent':'#0f1117')
+                  borderBottom:'1px solid #1c1d26',
+                  background: isMain ? '#24262f' : (ri%2===0?'transparent':'#15151c')
                 }}>
                   {cols.map(col=>(
                     <td key={col.label} style={{
                       padding:'8px 10px',
                       textAlign:col.label==='Ticker'?'left':'right',
-                      fontFamily:'JetBrains Mono,monospace',
+                      fontFamily:'Geist Mono,monospace',
                       color: colorVal(col, s),
                       fontWeight: isMain ? 700 : 400,
                       cursor: col.label==='Ticker'&&!isMain ? 'pointer' : 'default',
@@ -1928,7 +1928,7 @@ function PeerComparison({peers, peerMetrics, currentMet, currentRat, currentProf
                       {col.label==='Ticker' ? (
                         <span>
                           {s}
-                          {isMain && <span style={{fontSize:8,color:'#3b82f6',marginLeft:4,fontWeight:700}}>(current)</span>}
+                          {isMain && <span style={{fontSize:8,color:'#968ff7',marginLeft:4,fontWeight:700}}>(current)</span>}
                         </span>
                       ) : col.fn(s)}
                     </td>
@@ -1940,7 +1940,7 @@ function PeerComparison({peers, peerMetrics, currentMet, currentRat, currentProf
         </table>
       </div>
       {peers.some(s=>!peerMetrics[s]) && (
-        <div style={{fontSize:9,color:'#334155',marginTop:6}}>Loading peer metrics…</div>
+        <div style={{fontSize:9,color:'#33353f',marginTop:6}}>Loading peer metrics…</div>
       )}
     </div>
   );
@@ -1964,13 +1964,13 @@ function BalanceSheetPanel({bsData}) {
   const currentR = (ok(currentA)&&ok(currentL)&&currentL>0) ? currentA/currentL : null;
 
   const rows = [
-    {label:'Cash & Equivalents', value:fmt.usd(cash),   note:'liquidity cushion', color:ok(cash)&&cash>0?'#22c55e':'#f87171'},
-    {label:'Total Debt',         value:fmt.usd(totalDebt), note:'short + long term', color:ok(totalDebt)&&totalDebt<cash?'#22c55e':'#fbbf24'},
-    {label:'Net Debt',           value:ok(netDebt)?(netDebt<0?`${fmt.usd(-netDebt)} net cash`:fmt.usd(netDebt)):'—', note:ok(netDebt)&&netDebt<0?'net cash position':'debt in excess of cash', color:ok(netDebt)?(netDebt<0?'#22c55e':netDebt<1e9?'#fbbf24':'#f87171'):'#475569'},
-    {label:"Shareholders' Equity", value:fmt.usd(equity), note:'book value', color:'#94a3b8'},
-    {label:'Total Assets',       value:fmt.usd(totalA),  note:'as of last period', color:'#94a3b8'},
-    {label:'Current Ratio',      value:ok(currentR)?currentR.toFixed(2)+'x':'—', note:'current assets / liabilities', color:ok(currentR)?(currentR>=2?'#22c55e':currentR>=1?'#fbbf24':'#f87171'):'#475569'},
-    {label:'Intangibles / Assets', value:(ok(intangibles)&&ok(totalA)&&totalA>0)?fmt.pct(intangibles/totalA):'—', note:'goodwill + intangibles share', color:'#94a3b8'},
+    {label:'Cash & Equivalents', value:fmt.usd(cash),   note:'liquidity cushion', color:ok(cash)&&cash>0?'#5ac576':'#eb6459'},
+    {label:'Total Debt',         value:fmt.usd(totalDebt), note:'short + long term', color:ok(totalDebt)&&totalDebt<cash?'#5ac576':'#eca851'},
+    {label:'Net Debt',           value:ok(netDebt)?(netDebt<0?`${fmt.usd(-netDebt)} net cash`:fmt.usd(netDebt)):'—', note:ok(netDebt)&&netDebt<0?'net cash position':'debt in excess of cash', color:ok(netDebt)?(netDebt<0?'#5ac576':netDebt<1e9?'#eca851':'#eb6459'):'#787a83'},
+    {label:"Shareholders' Equity", value:fmt.usd(equity), note:'book value', color:'#a6a7b1'},
+    {label:'Total Assets',       value:fmt.usd(totalA),  note:'as of last period', color:'#a6a7b1'},
+    {label:'Current Ratio',      value:ok(currentR)?currentR.toFixed(2)+'x':'—', note:'current assets / liabilities', color:ok(currentR)?(currentR>=2?'#5ac576':currentR>=1?'#eca851':'#eb6459'):'#787a83'},
+    {label:'Intangibles / Assets', value:(ok(intangibles)&&ok(totalA)&&totalA>0)?fmt.pct(intangibles/totalA):'—', note:'goodwill + intangibles share', color:'#a6a7b1'},
   ];
 
   // Debt trend over 4 periods
@@ -1985,16 +1985,16 @@ function BalanceSheetPanel({bsData}) {
       <SectionTitle>Balance Sheet Snapshot</SectionTitle>
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
         {rows.map(r=>(
-          <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
-            <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
-            <div style={{fontSize:14,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color||'#e2e8f0'}}>{r.value}</div>
-            <div style={{fontSize:9,color:'#334155',marginTop:2}}>{r.note}</div>
+          <div key={r.label} style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'10px 14px'}}>
+            <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+            <div style={{fontSize:14,fontWeight:700,fontFamily:'Geist Mono,monospace',color:r.color||'#edeef4'}}>{r.value}</div>
+            <div style={{fontSize:9,color:'#33353f',marginTop:2}}>{r.note}</div>
           </div>
         ))}
       </div>
       {debtTrend.length >= 2 && (
         <div>
-          <div style={{fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Debt vs Cash — last {debtTrend.length} periods</div>
+          <div style={{fontSize:10,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Debt vs Cash — last {debtTrend.length} periods</div>
           <div style={{display:'flex',gap:6}}>
             {debtTrend.map((p,i)=>{
               const maxVal = Math.max(...debtTrend.map(x=>Math.max(x.totalDebt||0,x.cash||0)),1);
@@ -2003,17 +2003,17 @@ function BalanceSheetPanel({bsData}) {
               return (
                 <div key={i} style={{flex:1,textAlign:'center'}}>
                   <div style={{display:'flex',gap:2,height:48,alignItems:'flex-end',justifyContent:'center',marginBottom:4}}>
-                    <div style={{width:12,background:'#f87171',borderRadius:'2px 2px 0 0',height:`${dPct}%`,minHeight:2,title:'Debt'}}/>
-                    <div style={{width:12,background:'#22c55e',borderRadius:'2px 2px 0 0',height:`${cPct}%`,minHeight:2,title:'Cash'}}/>
+                    <div style={{width:12,background:'#eb6459',borderRadius:'2px 2px 0 0',height:`${dPct}%`,minHeight:2,title:'Debt'}}/>
+                    <div style={{width:12,background:'#5ac576',borderRadius:'2px 2px 0 0',height:`${cPct}%`,minHeight:2,title:'Cash'}}/>
                   </div>
-                  <div style={{fontSize:8,color:'#475569',lineHeight:1.3}}>{p.label}</div>
+                  <div style={{fontSize:8,color:'#787a83',lineHeight:1.3}}>{p.label}</div>
                 </div>
               );
             })}
           </div>
           <div style={{display:'flex',gap:12,marginTop:6}}>
-            <span style={{fontSize:8,color:'#f87171'}}>■ Total Debt</span>
-            <span style={{fontSize:8,color:'#22c55e'}}>■ Cash</span>
+            <span style={{fontSize:8,color:'#eb6459'}}>■ Total Debt</span>
+            <span style={{fontSize:8,color:'#5ac576'}}>■ Cash</span>
           </div>
         </div>
       )}
@@ -2053,13 +2053,13 @@ function FCFPanel({cfData, incomeData}) {
       <SectionTitle>Free Cash Flow — Quarterly</SectionTitle>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
         {[
-          {label:'TTM FCF',       value:fmt.usd(ttmFCF),       color:ttmFCF>0?'#22c55e':'#f87171'},
-          {label:'TTM FCF Margin',value:fmt.pct(ttmFCFM),      color:ok(ttmFCFM)?(ttmFCFM>=0.15?'#22c55e':ttmFCFM>=0.05?'#fbbf24':'#f87171'):'#475569'},
-          {label:'FCF Conversion', value:ok(recent4[recent4.length-1]?.fcfConv)?recent4[recent4.length-1].fcfConv.toFixed(2)+'x':'—', color:'#94a3b8'},
+          {label:'TTM FCF',       value:fmt.usd(ttmFCF),       color:ttmFCF>0?'#5ac576':'#eb6459'},
+          {label:'TTM FCF Margin',value:fmt.pct(ttmFCFM),      color:ok(ttmFCFM)?(ttmFCFM>=0.15?'#5ac576':ttmFCFM>=0.05?'#eca851':'#eb6459'):'#787a83'},
+          {label:'FCF Conversion', value:ok(recent4[recent4.length-1]?.fcfConv)?recent4[recent4.length-1].fcfConv.toFixed(2)+'x':'—', color:'#a6a7b1'},
         ].map(r=>(
-          <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
-            <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
-            <div style={{fontSize:16,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color}}>{r.value}</div>
+          <div key={r.label} style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'10px 14px'}}>
+            <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+            <div style={{fontSize:16,fontWeight:700,fontFamily:'Geist Mono,monospace',color:r.color}}>{r.value}</div>
           </div>
         ))}
       </div>
@@ -2070,10 +2070,10 @@ function FCFPanel({cfData, incomeData}) {
           const isPos = (q.fcf||0) >= 0;
           return (
             <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-              <div style={{fontSize:8,color:'#475569',fontFamily:'JetBrains Mono,monospace'}}>{fmt.usd(q.fcf)}</div>
+              <div style={{fontSize:8,color:'#787a83',fontFamily:'Geist Mono,monospace'}}>{fmt.usd(q.fcf)}</div>
               <div style={{
                 width:'100%',height:h+4,minHeight:4,
-                background: isPos ? '#22c55e' : '#f87171',
+                background: isPos ? '#5ac576' : '#eb6459',
                 borderRadius:'2px 2px 0 0',opacity:0.85
               }}/>
             </div>
@@ -2082,26 +2082,26 @@ function FCFPanel({cfData, incomeData}) {
       </div>
       <div style={{display:'flex',gap:0}}>
         {enriched.map((q,i)=>(
-          <div key={i} style={{flex:1,textAlign:'center',fontSize:8,color:'#334155'}}>{q.label.split(' ')[0]}<br/>{q.label.split(' ')[1]}</div>
+          <div key={i} style={{flex:1,textAlign:'center',fontSize:8,color:'#33353f'}}>{q.label.split(' ')[0]}<br/>{q.label.split(' ')[1]}</div>
         ))}
       </div>
       <table style={{width:'100%',borderCollapse:'collapse',fontSize:10,marginTop:12}}>
         <thead>
           <tr>
             {['Period','Op. Cash Flow','CapEx','FCF','FCF Margin','FCF Conv.'].map(h=>(
-              <th key={h} style={{padding:'5px 8px',textAlign:h==='Period'?'left':'right',color:'#334155',fontSize:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.7px',borderBottom:'1px solid #1e2430'}}>{h}</th>
+              <th key={h} style={{padding:'5px 8px',textAlign:h==='Period'?'left':'right',color:'#33353f',fontSize:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.7px',borderBottom:'1px solid #24262f'}}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {enriched.slice().reverse().slice(0,6).map((q,i)=>(
-            <tr key={i} style={{borderBottom:'1px solid #0f1117'}}>
-              <td style={{padding:'6px 8px',color:'#64748b',fontFamily:'JetBrains Mono,monospace',fontSize:9}}>{q.label}</td>
-              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:'#94a3b8'}}>{fmt.usd(q.ocf)}</td>
-              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:'#f87171'}}>{ok(q.capex)?`(${fmt.usd(q.capex)})`:'—'}</td>
-              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:ok(q.fcf)?(q.fcf>=0?'#22c55e':'#f87171'):'#475569',fontWeight:700}}>{fmt.usd(q.fcf)}</td>
-              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:'#94a3b8'}}>{fmt.pct(q.fcfM)}</td>
-              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'JetBrains Mono,monospace',color:'#94a3b8'}}>{ok(q.fcfConv)?q.fcfConv.toFixed(2)+'x':'—'}</td>
+            <tr key={i} style={{borderBottom:'1px solid #15151c'}}>
+              <td style={{padding:'6px 8px',color:'#787a83',fontFamily:'Geist Mono,monospace',fontSize:9}}>{q.label}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'Geist Mono,monospace',color:'#a6a7b1'}}>{fmt.usd(q.ocf)}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'Geist Mono,monospace',color:'#eb6459'}}>{ok(q.capex)?`(${fmt.usd(q.capex)})`:'—'}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'Geist Mono,monospace',color:ok(q.fcf)?(q.fcf>=0?'#5ac576':'#eb6459'):'#787a83',fontWeight:700}}>{fmt.usd(q.fcf)}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'Geist Mono,monospace',color:'#a6a7b1'}}>{fmt.pct(q.fcfM)}</td>
+              <td style={{padding:'6px 8px',textAlign:'right',fontFamily:'Geist Mono,monospace',color:'#a6a7b1'}}>{ok(q.fcfConv)?q.fcfConv.toFixed(2)+'x':'—'}</td>
             </tr>
           ))}
         </tbody>
@@ -2151,29 +2151,29 @@ function DividendsPanel({divData, met, currentPrice}) {
       <SectionTitle>Dividends</SectionTitle>
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
         {[
-          {label:'Dividend Yield',     value:fmt.pct(divYield),   color:ok(divYield)&&divYield>0?'#22c55e':'#475569'},
-          {label:'Payout Ratio',       value:fmt.pct(payoutR),    color:ok(payoutR)?(payoutR<0.6?'#22c55e':payoutR<0.9?'#fbbf24':'#f87171'):'#475569'},
-          {label:'Consec. Years Paid', value:consec>0?`${consec} yrs`:'—', color:consec>=10?'#22c55e':consec>=5?'#fbbf24':'#94a3b8'},
-          {label:'Div. CAGR',          value:fmt.pct(divCAGR),    color:ok(divCAGR)&&divCAGR>0?'#22c55e':'#f87171'},
+          {label:'Dividend Yield',     value:fmt.pct(divYield),   color:ok(divYield)&&divYield>0?'#5ac576':'#787a83'},
+          {label:'Payout Ratio',       value:fmt.pct(payoutR),    color:ok(payoutR)?(payoutR<0.6?'#5ac576':payoutR<0.9?'#eca851':'#eb6459'):'#787a83'},
+          {label:'Consec. Years Paid', value:consec>0?`${consec} yrs`:'—', color:consec>=10?'#5ac576':consec>=5?'#eca851':'#a6a7b1'},
+          {label:'Div. CAGR',          value:fmt.pct(divCAGR),    color:ok(divCAGR)&&divCAGR>0?'#5ac576':'#eb6459'},
         ].map(r=>(
-          <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
-            <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
-            <div style={{fontSize:15,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color}}>{r.value}</div>
+          <div key={r.label} style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'10px 14px'}}>
+            <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:'Geist Mono,monospace',color:r.color}}>{r.value}</div>
           </div>
         ))}
       </div>
       {/* Annual dividends bar chart */}
       {years.length >= 2 && (
         <>
-          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Annual Dividends per Share</div>
+          <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Annual Dividends per Share</div>
           <div style={{display:'flex',gap:6,alignItems:'flex-end',height:60}}>
             {years.map((yr,i)=>{
               const h = Math.round((annualVals[i]/maxAnnual)*48);
               return (
                 <div key={yr} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                  <div style={{fontSize:8,color:'#94a3b8',fontFamily:'JetBrains Mono,monospace'}}>${annualVals[i].toFixed(2)}</div>
-                  <div style={{width:'70%',height:h+4,minHeight:4,background:'#3b82f6',borderRadius:'2px 2px 0 0',opacity:0.8}}/>
-                  <div style={{fontSize:8,color:'#475569'}}>{yr}</div>
+                  <div style={{fontSize:8,color:'#a6a7b1',fontFamily:'Geist Mono,monospace'}}>${annualVals[i].toFixed(2)}</div>
+                  <div style={{width:'70%',height:h+4,minHeight:4,background:'#968ff7',borderRadius:'2px 2px 0 0',opacity:0.8}}/>
+                  <div style={{fontSize:8,color:'#787a83'}}>{yr}</div>
                 </div>
               );
             })}
@@ -2182,12 +2182,12 @@ function DividendsPanel({divData, met, currentPrice}) {
       )}
       {/* Recent dividend history */}
       <div style={{marginTop:12}}>
-        <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Recent Payments</div>
+        <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Recent Payments</div>
         <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
           {sorted.slice(0,8).map((d,i)=>(
-            <div key={i} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:4,padding:'5px 10px',textAlign:'center'}}>
-              <div style={{fontSize:9,color:'#64748b'}}>{d.date?.substring(0,10)}</div>
-              <div style={{fontSize:12,fontWeight:700,color:'#22c55e',fontFamily:'JetBrains Mono,monospace'}}>${(d.dividend||d.adjDividend||0).toFixed(3)}</div>
+            <div key={i} style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:4,padding:'5px 10px',textAlign:'center'}}>
+              <div style={{fontSize:9,color:'#787a83'}}>{d.date?.substring(0,10)}</div>
+              <div style={{fontSize:12,fontWeight:700,color:'#5ac576',fontFamily:'Geist Mono,monospace'}}>${(d.dividend||d.adjDividend||0).toFixed(3)}</div>
             </div>
           ))}
         </div>
@@ -2222,7 +2222,7 @@ function DilutionPanel({stmts, cfData}) {
 
   // Trend classification on YoY share count
   const trend = yoyDelta==null ? 'flat' : (yoyDelta > 0.005 ? 'dilution' : yoyDelta < -0.005 ? 'buyback' : 'flat');
-  const trendColor = trend==='buyback' ? '#22c55e' : trend==='dilution' ? '#f87171' : '#fbbf24';
+  const trendColor = trend==='buyback' ? '#5ac576' : trend==='dilution' ? '#eb6459' : '#eca851';
   const trendLabel = trend==='buyback' ? 'Recompra neta' : trend==='dilution' ? 'Dilución' : 'Estable';
 
   // Bar chart scaled within min..max so small % changes are visible
@@ -2238,32 +2238,32 @@ function DilutionPanel({stmts, cfData}) {
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
         {[
           {label:'Δ Shares YoY',  value:ok(yoyDelta)?(yoyDelta>=0?'+':'')+(yoyDelta*100).toFixed(2)+'%':'—', color:trendColor},
-          {label:`Δ Shares (${series.length}T)`, value:ok(totDelta)?(totDelta>=0?'+':'')+(totDelta*100).toFixed(2)+'%':'—', color:ok(totDelta)?(totDelta<=0?'#22c55e':'#f87171'):'#475569'},
+          {label:`Δ Shares (${series.length}T)`, value:ok(totDelta)?(totDelta>=0?'+':'')+(totDelta*100).toFixed(2)+'%':'—', color:ok(totDelta)?(totDelta<=0?'#5ac576':'#eb6459'):'#787a83'},
           {label:'Tendencia',     value:trendLabel, color:trendColor},
         ].map(r=>(
-          <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
-            <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
-            <div style={{fontSize:15,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color}}>{r.value}</div>
+          <div key={r.label} style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'10px 14px'}}>
+            <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:'Geist Mono,monospace',color:r.color}}>{r.value}</div>
           </div>
         ))}
       </div>
 
       {/* Diluted share count bar chart */}
-      <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Diluted Shares Outstanding</div>
+      <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:8}}>Diluted Shares Outstanding</div>
       <div style={{display:'flex',gap:4,alignItems:'flex-end',height:70,marginBottom:4}}>
         {view.map((q,i)=>{
           const h = 18 + Math.round(((q.shares-minS)/range)*44);
           return (
             <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-              <div style={{fontSize:8,color:'#475569',fontFamily:'JetBrains Mono,monospace'}}>{fmtShares(q.shares)}</div>
-              <div style={{width:'100%',height:h,minHeight:4,background:trend==='buyback'?'#22c55e':trend==='dilution'?'#f87171':'#60a5fa',borderRadius:'2px 2px 0 0',opacity:0.82}}/>
+              <div style={{fontSize:8,color:'#787a83',fontFamily:'Geist Mono,monospace'}}>{fmtShares(q.shares)}</div>
+              <div style={{width:'100%',height:h,minHeight:4,background:trend==='buyback'?'#5ac576':trend==='dilution'?'#eb6459':'#968ff7',borderRadius:'2px 2px 0 0',opacity:0.82}}/>
             </div>
           );
         })}
       </div>
       <div style={{display:'flex',gap:0,marginBottom:14}}>
         {view.map((q,i)=>(
-          <div key={i} style={{flex:1,textAlign:'center',fontSize:8,color:'#334155'}}>{q.label.split(' ')[0]}<br/>{q.label.split(' ')[1]}</div>
+          <div key={i} style={{flex:1,textAlign:'center',fontSize:8,color:'#33353f'}}>{q.label.split(' ')[0]}<br/>{q.label.split(' ')[1]}</div>
         ))}
       </div>
 
@@ -2271,19 +2271,19 @@ function DilutionPanel({stmts, cfData}) {
       {hasCF && (
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:12}}>
           {[
-            {label:'Buybacks (TTM)',  value:fmt.usd(ttmRepurch), color:ttmRepurch>0?'#22c55e':'#475569'},
-            {label:'Issuance (TTM)',  value:fmt.usd(ttmIssued),  color:ttmIssued>0?'#f87171':'#475569'},
-            {label:'Neto (TTM)',      value:(netBuyback>=0?'+':'-')+fmt.usd(Math.abs(netBuyback)), color:netBuyback>=0?'#22c55e':'#f87171'},
+            {label:'Buybacks (TTM)',  value:fmt.usd(ttmRepurch), color:ttmRepurch>0?'#5ac576':'#787a83'},
+            {label:'Issuance (TTM)',  value:fmt.usd(ttmIssued),  color:ttmIssued>0?'#eb6459':'#787a83'},
+            {label:'Neto (TTM)',      value:(netBuyback>=0?'+':'-')+fmt.usd(Math.abs(netBuyback)), color:netBuyback>=0?'#5ac576':'#eb6459'},
           ].map(r=>(
-            <div key={r.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
-              <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
-              <div style={{fontSize:14,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:r.color}}>{r.value}</div>
+            <div key={r.label} style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'10px 14px'}}>
+              <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{r.label}</div>
+              <div style={{fontSize:14,fontWeight:700,fontFamily:'Geist Mono,monospace',color:r.color}}>{r.value}</div>
             </div>
           ))}
         </div>
       )}
 
-      <div style={{fontSize:10,color:'#64748b',lineHeight:1.6,background:'#0c0e14',border:'1px solid #1e2430',borderRadius:6,padding:'8px 12px'}}>
+      <div style={{fontSize:10,color:'#787a83',lineHeight:1.6,background:'#15151c',border:'1px solid #24262f',borderRadius:6,padding:'8px 12px'}}>
         {trend==='buyback'
           ? '↓ El share count cae: las recompras concentran el EPS y benefician al accionista.'
           : trend==='dilution'
@@ -2308,7 +2308,7 @@ function ShortInterestPanel({data, quote}) {
     return (
       <div>
         <SectionTitle>Short Interest</SectionTitle>
-        <div style={{fontSize:11,color:'#475569',background:'#0c0e14',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
+        <div style={{fontSize:11,color:'#787a83',background:'#15151c',border:'1px solid #24262f',borderRadius:6,padding:'10px 14px'}}>
           Short interest no disponible en el plan actual de datos.
         </div>
       </div>
@@ -2329,11 +2329,11 @@ function ShortInterestPanel({data, quote}) {
   const view  = series.slice(-12);
 
   const cards = [
-    {label:'Short Interest', value:fmtShares(latest.si), sub:latest.date, color:'#e2e8f0'},
+    {label:'Short Interest', value:fmtShares(latest.si), sub:latest.date, color:'#edeef4'},
     {label:'% Shares Out',   value:ok(pctOut)?(pctOut*100).toFixed(2)+'%':'—', sub:'aprox. float',
-      color:ok(pctOut)?(pctOut>0.10?'#f87171':pctOut>0.05?'#fbbf24':'#22c55e'):'#475569'},
+      color:ok(pctOut)?(pctOut>0.10?'#eb6459':pctOut>0.05?'#eca851':'#5ac576'):'#787a83'},
     {label:'Days to Cover',  value:ok(daysCover)?daysCover.toFixed(1):'—', sub:'SI / avg vol',
-      color:ok(daysCover)?(daysCover>5?'#f87171':daysCover>2?'#fbbf24':'#22c55e'):'#475569'},
+      color:ok(daysCover)?(daysCover>5?'#eb6459':daysCover>2?'#eca851':'#5ac576'):'#787a83'},
   ];
 
   return (
@@ -2341,28 +2341,28 @@ function ShortInterestPanel({data, quote}) {
       <SectionTitle>Short Interest</SectionTitle>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:12}}>
         {cards.map(c=>(
-          <div key={c.label} style={{background:'#141720',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
-            <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{c.label}</div>
-            <div style={{fontSize:15,fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:c.color}}>{c.value}</div>
-            <div style={{fontSize:8,color:'#334155',marginTop:2}}>{c.sub}</div>
+          <div key={c.label} style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'10px 14px'}}>
+            <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:4}}>{c.label}</div>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:'Geist Mono,monospace',color:c.color}}>{c.value}</div>
+            <div style={{fontSize:8,color:'#33353f',marginTop:2}}>{c.sub}</div>
           </div>
         ))}
       </div>
       {view.length>=2&&(
         <>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:6}}>
-            <span style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px'}}>Tendencia (short interest)</span>
-            {ok(deltaPct)&&<span style={{fontSize:10,fontFamily:'JetBrains Mono,monospace',color:deltaPct>0?'#f87171':'#22c55e'}}>{deltaPct>=0?'▲':'▼'} {Math.abs(deltaPct*100).toFixed(1)}% vs anterior</span>}
+            <span style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px'}}>Tendencia (short interest)</span>
+            {ok(deltaPct)&&<span style={{fontSize:10,fontFamily:'Geist Mono,monospace',color:deltaPct>0?'#eb6459':'#5ac576'}}>{deltaPct>=0?'▲':'▼'} {Math.abs(deltaPct*100).toFixed(1)}% vs anterior</span>}
           </div>
           <div style={{display:'flex',gap:3,alignItems:'flex-end',height:50}}>
             {view.map((q,i)=>{
               const h = 6 + Math.round((q.si/maxSI)*40);
-              return <div key={i} title={`${q.date}: ${fmtShares(q.si)}`} style={{flex:1,height:h,minHeight:3,background:i===view.length-1?'#fbbf24':'#475569',borderRadius:'2px 2px 0 0',opacity:0.85}}/>;
+              return <div key={i} title={`${q.date}: ${fmtShares(q.si)}`} style={{flex:1,height:h,minHeight:3,background:i===view.length-1?'#eca851':'#787a83',borderRadius:'2px 2px 0 0',opacity:0.85}}/>;
             })}
           </div>
         </>
       )}
-      <div style={{fontSize:8,color:'#334155',marginTop:6}}>% Shares Out usa acciones en circulación como aproximación al float. Fuente: Finnhub.</div>
+      <div style={{fontSize:8,color:'#33353f',marginTop:6}}>% Shares Out usa acciones en circulación como aproximación al float. Fuente: Finnhub.</div>
     </div>
   );
 }
@@ -2373,9 +2373,9 @@ function AboutText({text}) {
   const display=expanded||!long?text:text.substring(0,400)+'...';
   return (
     <div>
-      <div style={{fontSize:12,color:'#94a3b8',lineHeight:1.75}}>{display}</div>
+      <div style={{fontSize:12,color:'#a6a7b1',lineHeight:1.75}}>{display}</div>
       {long&&(
-        <button onClick={()=>setExpanded(e=>!e)} style={{marginTop:6,background:'none',border:'none',color:'#3b82f6',fontSize:11,cursor:'pointer',padding:0}}>
+        <button onClick={()=>setExpanded(e=>!e)} style={{marginTop:6,background:'none',border:'none',color:'#968ff7',fontSize:11,cursor:'pointer',padding:0}}>
           {expanded?'▲ Show less':'▼ Read more'}
         </button>
       )}
@@ -2386,19 +2386,19 @@ function AboutText({text}) {
 // ─── CARTERA K MATRIX ────────────────────────────────────────
 function CarteraKMatrix({ activeQuadrant, onSelect }) {
   const quads = [
-    { id:'estanflacion', label:'Estanflación', sectors:['Oro','Energía'], x:80, y:50, color:'#D89B26', fill:'#F0E0B8' },
-    { id:'inflacion', label:'Inflación', sectors:['Energía','Real estate'], x:240, y:50, color:'#B85A1E', fill:'#E8C3A7' },
-    { id:'defensivo', label:'Defensivo', sectors:['Salud','Utilities','C. básico','Renta fija'], x:80, y:200, color:'#5C9156', fill:'#CFDDC8' },
-    { id:'crecimiento', label:'Crecimiento', sectors:['Tecnología'], x:240, y:200, color:'#C0392B', fill:'#F0C4BD' },
+    { id:'estanflacion', label:'Estanflación', sectors:['Oro','Energía'], x:80, y:50, color:'#eca851', fill:'#eca851' },
+    { id:'inflacion', label:'Inflación', sectors:['Energía','Real estate'], x:240, y:50, color:'#54360b', fill:'#eca851' },
+    { id:'defensivo', label:'Defensivo', sectors:['Salud','Utilities','C. básico','Renta fija'], x:80, y:200, color:'#5ac576', fill:'#5ac576' },
+    { id:'crecimiento', label:'Crecimiento', sectors:['Tecnología'], x:240, y:200, color:'#eb6459', fill:'#eb6459' },
   ];
   const QW=140, QH=140, W=460, H=370;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',maxWidth:W,height:'auto'}}>
-      <text x={W/2} y={25} textAnchor="middle" fontSize={14} fontWeight="bold" fill="#e2e8f0">Cartera K — Macro Playbook</text>
-      <text x={32} y={110} textAnchor="middle" fontSize={10} fill="#64748b">Infl. alta</text>
-      <text x={32} y={270} textAnchor="middle" fontSize={10} fill="#64748b">Infl. baja</text>
-      <text x={150} y={H-12} textAnchor="middle" fontSize={10} fill="#64748b">Crec. bajo</text>
-      <text x={310} y={H-12} textAnchor="middle" fontSize={10} fill="#64748b">Crec. alto</text>
+      <text x={W/2} y={25} textAnchor="middle" fontSize={14} fontWeight="bold" fill="#edeef4">Cartera K — Macro Playbook</text>
+      <text x={32} y={110} textAnchor="middle" fontSize={10} fill="#787a83">Infl. alta</text>
+      <text x={32} y={270} textAnchor="middle" fontSize={10} fill="#787a83">Infl. baja</text>
+      <text x={150} y={H-12} textAnchor="middle" fontSize={10} fill="#787a83">Crec. bajo</text>
+      <text x={310} y={H-12} textAnchor="middle" fontSize={10} fill="#787a83">Crec. alto</text>
       {quads.map(q => {
         const active = q.id === activeQuadrant;
         return (
@@ -2440,14 +2440,14 @@ function Funds13FPanel({ supabase }) {
       {loading
         ? <LoadingSkeleton/>
         : Object.keys(data).length === 0
-          ? <div style={{color:'#64748b',padding:16,textAlign:'center'}}>Sin datos 13F aún. El cron los puebla mensualmente (día 15).</div>
+          ? <div style={{color:'#787a83',padding:16,textAlign:'center'}}>Sin datos 13F aún. El cron los puebla mensualmente (día 15).</div>
           : Object.entries(data).map(([fund, rows]) => (
-            <div key={fund} style={{marginBottom:20,padding:12,background:'#141720',borderRadius:8,border:'1px solid #1e2430'}}>
-              <h4 style={{color:'#e2e8f0',margin:'0 0 4px 0',fontSize:13}}>{fund}</h4>
-              <div style={{fontSize:10,color:'#64748b',marginBottom:8}}>Last filing: {rows[0]?.filing_date}</div>
-              <table style={{width:'100%',fontSize:11,fontFamily:'JetBrains Mono,monospace'}}>
+            <div key={fund} style={{marginBottom:20,padding:12,background:'#1c1d26',borderRadius:8,border:'1px solid #24262f'}}>
+              <h4 style={{color:'#edeef4',margin:'0 0 4px 0',fontSize:13}}>{fund}</h4>
+              <div style={{fontSize:10,color:'#787a83',marginBottom:8}}>Last filing: {rows[0]?.filing_date}</div>
+              <table style={{width:'100%',fontSize:11,fontFamily:'Geist Mono,monospace'}}>
                 <thead>
-                  <tr style={{color:'#64748b',textAlign:'left',borderBottom:'1px solid #1e2430'}}>
+                  <tr style={{color:'#787a83',textAlign:'left',borderBottom:'1px solid #24262f'}}>
                     <th style={{padding:'4px 6px'}}>Issuer</th>
                     <th style={{padding:'4px 6px'}}>Shares</th>
                     <th style={{padding:'4px 6px'}}>Value</th>
@@ -2456,11 +2456,11 @@ function Funds13FPanel({ supabase }) {
                 </thead>
                 <tbody>
                   {rows.slice(0, 10).map(r => (
-                    <tr key={r.id} style={{borderBottom:'1px solid #0d1117'}}>
+                    <tr key={r.id} style={{borderBottom:'1px solid #15151c'}}>
                       <td style={{padding:'4px 6px',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.ticker}</td>
                       <td style={{padding:'4px 6px'}}>{r.shares_held ? (r.shares_held/1e3).toFixed(0)+'K' : '—'}</td>
                       <td style={{padding:'4px 6px'}}>{r.market_value_usd ? '$'+(r.market_value_usd/1e6).toFixed(1)+'M' : '—'}</td>
-                      <td style={{padding:'4px 6px',color:'#94a3b8'}}>{r.action}</td>
+                      <td style={{padding:'4px 6px',color:'#a6a7b1'}}>{r.action}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2499,14 +2499,14 @@ function ConsensusPanel({ supabase }) {
       {loading
         ? <LoadingSkeleton/>
         : consensus.length === 0
-          ? <div style={{color:'#64748b',padding:16,textAlign:'center'}}>Sin consenso todavía (necesita datos 13F de ≥3 fondos).</div>
+          ? <div style={{color:'#787a83',padding:16,textAlign:'center'}}>Sin consenso todavía (necesita datos 13F de ≥3 fondos).</div>
           : (
             <div style={{display:'flex',flexDirection:'column',gap:6}}>
               {consensus.map(c => (
-                <div key={c.ticker} style={{padding:'8px 12px',background:'#141720',borderRadius:6,border:'1px solid #1e2430',display:'flex',alignItems:'center',gap:12}}>
-                  <span style={{fontWeight:700,color:'#3b82f6',fontFamily:'JetBrains Mono,monospace',minWidth:60}}>{c.ticker}</span>
-                  <span style={{fontSize:11,color:'#94a3b8'}}>{c.fund_count} fondos:</span>
-                  <span style={{fontSize:11,color:'#64748b'}}>{c.funds.join(' · ')}</span>
+                <div key={c.ticker} style={{padding:'8px 12px',background:'#1c1d26',borderRadius:6,border:'1px solid #24262f',display:'flex',alignItems:'center',gap:12}}>
+                  <span style={{fontWeight:700,color:'#968ff7',fontFamily:'Geist Mono,monospace',minWidth:60}}>{c.ticker}</span>
+                  <span style={{fontSize:11,color:'#a6a7b1'}}>{c.fund_count} fondos:</span>
+                  <span style={{fontSize:11,color:'#787a83'}}>{c.funds.join(' · ')}</span>
                 </div>
               ))}
             </div>
@@ -2555,16 +2555,16 @@ function JensenPatternPanel({ fmpGet }) {
   return (
     <div>
       <SectionTitle>Jensen Pattern — Nvidia-Adjacent Companies</SectionTitle>
-      <div style={{padding:10,background:'#1a1407',border:'1px solid #D89B26',borderRadius:6,marginBottom:14,fontSize:11,color:'#e8c87a',lineHeight:1.5}}>
+      <div style={{padding:10,background:'#54360b',border:'1px solid #eca851',borderRadius:6,marginBottom:14,fontSize:11,color:'#eca851',lineHeight:1.5}}>
         Empresas mencionadas en keynotes de Jensen Huang o en las que NVIDIA ha invertido directamente.
         Patrón histórico observado, no causalidad confirmada. Past performance does not predict future returns.
       </div>
       {loading
         ? <LoadingSkeleton/>
         : (
-          <table style={{width:'100%',fontSize:11,fontFamily:'JetBrains Mono,monospace'}}>
+          <table style={{width:'100%',fontSize:11,fontFamily:'Geist Mono,monospace'}}>
             <thead>
-              <tr style={{color:'#64748b',textAlign:'left',borderBottom:'1px solid #1e2430'}}>
+              <tr style={{color:'#787a83',textAlign:'left',borderBottom:'1px solid #24262f'}}>
                 <th style={{padding:'4px 6px'}}>Ticker</th>
                 <th style={{padding:'4px 6px'}}>Name</th>
                 <th style={{padding:'4px 6px'}}>Date</th>
@@ -2576,16 +2576,16 @@ function JensenPatternPanel({ fmpGet }) {
             </thead>
             <tbody>
               {enriched.sort((a,b) => (b.returnPct||0) - (a.returnPct||0)).map(j => (
-                <tr key={j.ticker} style={{borderBottom:'1px solid #141720'}}>
-                  <td style={{padding:'4px 6px',fontWeight:700,color:'#3b82f6'}}>{j.ticker}</td>
-                  <td style={{padding:'4px 6px',color:'#94a3b8'}}>{j.name}</td>
+                <tr key={j.ticker} style={{borderBottom:'1px solid #1c1d26'}}>
+                  <td style={{padding:'4px 6px',fontWeight:700,color:'#968ff7'}}>{j.ticker}</td>
+                  <td style={{padding:'4px 6px',color:'#a6a7b1'}}>{j.name}</td>
                   <td style={{padding:'4px 6px'}}>{j.mention_date}</td>
                   <td style={{padding:'4px 6px'}}>${j.mention_price.toLocaleString()}</td>
                   <td style={{padding:'4px 6px'}}>{j.currentPrice != null ? '$'+j.currentPrice.toFixed(0) : '—'}</td>
-                  <td style={{padding:'4px 6px',fontWeight:700,color:(j.returnPct||0)>0?'#22c55e':'#ef4444'}}>
+                  <td style={{padding:'4px 6px',fontWeight:700,color:(j.returnPct||0)>0?'#5ac576':'#eb6459'}}>
                     {j.returnPct != null ? (j.returnPct>0?'+':'')+j.returnPct.toFixed(0)+'%' : '—'}
                   </td>
-                  <td style={{padding:'4px 6px',fontSize:9,color:'#475569'}}>{j.source}</td>
+                  <td style={{padding:'4px 6px',fontSize:9,color:'#787a83'}}>{j.source}</td>
                 </tr>
               ))}
             </tbody>
@@ -2633,13 +2633,13 @@ function WatchlistManager({ supabase, onAnalyze }) {
   return (
     <div style={{padding:16}}>
       <div style={{display:'flex',gap:8,marginBottom:16}}>
-        <input value={newTicker} onChange={e=>setNewTicker(e.target.value)} placeholder="Añadir ticker (ej. NVDA)" onKeyDown={e=>e.key==='Enter'&&addTicker()} style={{flex:1,padding:'8px 12px',background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',borderRadius:6}}/>
-        <button onClick={addTicker} style={{padding:'8px 16px',background:'#3b82f6',border:'none',color:'#fff',borderRadius:6,cursor:'pointer',fontWeight:600}}>Añadir</button>
-        <button onClick={load} style={{padding:'8px 16px',background:'#1e2430',border:'1px solid #2d3748',color:'#e2e8f0',borderRadius:6,cursor:'pointer'}}>{loading?'…':'Recargar'}</button>
+        <input value={newTicker} onChange={e=>setNewTicker(e.target.value)} placeholder="Añadir ticker (ej. NVDA)" onKeyDown={e=>e.key==='Enter'&&addTicker()} style={{flex:1,padding:'8px 12px',background:'#1c1d26',border:'1px solid #24262f',color:'#edeef4',borderRadius:6}}/>
+        <button onClick={addTicker} style={{padding:'8px 16px',background:'#968ff7',border:'none',color:'#fff',borderRadius:6,cursor:'pointer',fontWeight:600}}>Añadir</button>
+        <button onClick={load} style={{padding:'8px 16px',background:'#24262f',border:'1px solid #33353f',color:'#edeef4',borderRadius:6,cursor:'pointer'}}>{loading?'…':'Recargar'}</button>
       </div>
       <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
         <thead>
-          <tr style={{color:'#64748b',textAlign:'left',borderBottom:'1px solid #1e2430'}}>
+          <tr style={{color:'#787a83',textAlign:'left',borderBottom:'1px solid #24262f'}}>
             <th style={{padding:8}}>Ticker</th>
             <th style={{padding:8,cursor:'pointer'}} onClick={()=>setSortBy('score_total')}>Score{sortBy==='score_total'?' ▾':''}</th>
             <th style={{padding:8,cursor:'pointer'}} onClick={()=>setSortBy('macro_tilt')}>Macro Tilt{sortBy==='macro_tilt'?' ▾':''}</th>
@@ -2651,17 +2651,17 @@ function WatchlistManager({ supabase, onAnalyze }) {
         </thead>
         <tbody>
           {sorted.map(it => (
-            <tr key={it.id} style={{borderBottom:'1px solid #141720'}}>
-              <td style={{padding:8,fontWeight:600,color:'#3b82f6',cursor:'pointer'}} onClick={()=>onAnalyze&&onAnalyze(it.ticker)}>{it.ticker}</td>
+            <tr key={it.id} style={{borderBottom:'1px solid #1c1d26'}}>
+              <td style={{padding:8,fontWeight:600,color:'#968ff7',cursor:'pointer'}} onClick={()=>onAnalyze&&onAnalyze(it.ticker)}>{it.ticker}</td>
               <td style={{padding:8}}>{it.analysis?.score_total ?? '—'}</td>
-              <td style={{padding:8,color: it.analysis?.macro_tilt ? (it.analysis.macro_tilt>0?'#22c55e':'#f87171') : '#64748b'}}>{it.analysis?.macro_tilt ? ((it.analysis.macro_tilt>0?'+':'')+it.analysis.macro_tilt) : '—'}</td>
-              <td style={{padding:8,fontWeight:700,color: it.analysis ? getRating(icScore(it.analysis.score_total, it.analysis.macro_tilt)).color : '#64748b'}}>{it.analysis ? icScore(it.analysis.score_total, it.analysis.macro_tilt) : '—'}</td>
+              <td style={{padding:8,color: it.analysis?.macro_tilt ? (it.analysis.macro_tilt>0?'#5ac576':'#eb6459') : '#787a83'}}>{it.analysis?.macro_tilt ? ((it.analysis.macro_tilt>0?'+':'')+it.analysis.macro_tilt) : '—'}</td>
+              <td style={{padding:8,fontWeight:700,color: it.analysis ? getRating(icScore(it.analysis.score_total, it.analysis.macro_tilt)).color : '#787a83'}}>{it.analysis ? icScore(it.analysis.score_total, it.analysis.macro_tilt) : '—'}</td>
               <td style={{padding:8}}>{it.analysis?.rating ?? '—'}</td>
-              <td style={{padding:8,color:'#94a3b8'}}>{it.analysis?.sector ?? '—'}</td>
-              <td style={{padding:8}}><button onClick={()=>removeTicker(it.id)} style={{background:'none',border:'none',color:'#ef4444',cursor:'pointer'}}>✕</button></td>
+              <td style={{padding:8,color:'#a6a7b1'}}>{it.analysis?.sector ?? '—'}</td>
+              <td style={{padding:8}}><button onClick={()=>removeTicker(it.id)} style={{background:'none',border:'none',color:'#eb6459',cursor:'pointer'}}>✕</button></td>
             </tr>
           ))}
-          {!sorted.length && <tr><td colSpan={7} style={{padding:16,textAlign:'center',color:'#64748b'}}>Watchlist vacía. Añade tickers arriba, analízalos en Overview, y aparecerán aquí con su score.</td></tr>}
+          {!sorted.length && <tr><td colSpan={7} style={{padding:16,textAlign:'center',color:'#787a83'}}>Watchlist vacía. Añade tickers arriba, analízalos en Overview, y aparecerán aquí con su score.</td></tr>}
         </tbody>
       </table>
     </div>
@@ -2708,7 +2708,7 @@ function CompareView({ supabase, onAnalyze }) {
 
   return (
     <div style={{padding:16}}>
-      <div style={{fontSize:13,color:'#94a3b8',marginBottom:8}}>Selecciona 2–3 tickers de tu watchlist para compararlos lado a lado (datos ya guardados, $0).</div>
+      <div style={{fontSize:13,color:'#a6a7b1',marginBottom:8}}>Selecciona 2–3 tickers de tu watchlist para compararlos lado a lado (datos ya guardados, $0).</div>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:16}}>
         {rows.map(r => {
           const on = sel.includes(r.ticker);
@@ -2719,30 +2719,30 @@ function CompareView({ supabase, onAnalyze }) {
               title={has ? '' : 'Sin análisis guardado — analízalo primero'}
               style={{
                 padding:'6px 12px',borderRadius:6,cursor:blocked?'not-allowed':'pointer',
-                background:on?'#3b82f6':'#141720',border:`1px solid ${on?'#3b82f6':'#1e2430'}`,
-                color:on?'#fff':(has?'#e2e8f0':'#64748b'),fontWeight:600,fontSize:12,opacity:blocked?0.5:1
+                background:on?'#968ff7':'#1c1d26',border:`1px solid ${on?'#968ff7':'#24262f'}`,
+                color:on?'#fff':(has?'#edeef4':'#787a83'),fontWeight:600,fontSize:12,opacity:blocked?0.5:1
               }}>{r.ticker}{has?'':' ·—'}</button>
           );
         })}
-        <button onClick={load} style={{padding:'6px 12px',background:'#1e2430',border:'1px solid #2d3748',color:'#e2e8f0',borderRadius:6,cursor:'pointer',fontSize:12}}>{loading?'…':'↻'}</button>
+        <button onClick={load} style={{padding:'6px 12px',background:'#24262f',border:'1px solid #33353f',color:'#edeef4',borderRadius:6,cursor:'pointer',fontSize:12}}>{loading?'…':'↻'}</button>
       </div>
 
       {!rows.length && !loading && (
-        <div style={{padding:'40px 20px',textAlign:'center',color:'#64748b',fontSize:13}}>Watchlist vacía. Añade tickers en la pestaña Screener y analízalos.</div>
+        <div style={{padding:'40px 20px',textAlign:'center',color:'#787a83',fontSize:13}}>Watchlist vacía. Añade tickers en la pestaña Screener y analízalos.</div>
       )}
 
       {rows.length > 0 && chosen.length < 2 && (
-        <div style={{padding:'40px 20px',textAlign:'center',color:'#64748b',fontSize:13}}>Elige al menos 2 tickers para comparar.</div>
+        <div style={{padding:'40px 20px',textAlign:'center',color:'#787a83',fontSize:13}}>Elige al menos 2 tickers para comparar.</div>
       )}
 
       {chosen.length >= 2 && (
         <>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <thead>
-              <tr style={{color:'#64748b',textAlign:'left',borderBottom:'1px solid #1e2430'}}>
+              <tr style={{color:'#787a83',textAlign:'left',borderBottom:'1px solid #24262f'}}>
                 <th style={{padding:8}}>Métrica</th>
                 {chosen.map(c => (
-                  <th key={c.ticker} style={{padding:8,color:'#3b82f6',cursor:'pointer'}}
+                  <th key={c.ticker} style={{padding:8,color:'#968ff7',cursor:'pointer'}}
                     title="Analizar este ticker" onClick={() => onAnalyze && onAnalyze(c.ticker)}>{c.ticker}</th>
                 ))}
               </tr>
@@ -2754,8 +2754,8 @@ function CompareView({ supabase, onAnalyze }) {
                 const best = (mr.hi === 'max' && nums.length) ? Math.max(...nums) : null;
                 const manyDistinct = new Set(nums).size > 1;
                 return (
-                  <tr key={mr.k} style={{borderBottom:'1px solid #141720'}}>
-                    <td style={{padding:8,color:'#94a3b8'}}>{mr.k}</td>
+                  <tr key={mr.k} style={{borderBottom:'1px solid #1c1d26'}}>
+                    <td style={{padding:8,color:'#a6a7b1'}}>{mr.k}</td>
                     {chosen.map((c, i) => {
                       const v = cells[i];
                       const isBest = best != null && manyDistinct && typeof v === 'number' && v === best;
@@ -2763,7 +2763,7 @@ function CompareView({ supabase, onAnalyze }) {
                       return (
                         <td key={c.ticker} style={{
                           padding:8,fontWeight:isBest?800:500,
-                          color:isBest?'#22c55e':(c.analysis?'#e2e8f0':'#64748b')
+                          color:isBest?'#5ac576':(c.analysis?'#edeef4':'#787a83')
                         }}>{display}</td>
                       );
                     })}
@@ -2773,16 +2773,16 @@ function CompareView({ supabase, onAnalyze }) {
             </tbody>
           </table>
           {noAnalysis.length > 0 && (
-            <div style={{marginTop:12,fontSize:11,color:'#64748b'}}>
+            <div style={{marginTop:12,fontSize:11,color:'#787a83'}}>
               Sin análisis guardado: {noAnalysis.map((t, i) => (
                 <span key={t}>
-                  <span style={{color:'#3b82f6',cursor:'pointer',fontWeight:600}} onClick={() => onAnalyze && onAnalyze(t)}>{t}</span>
+                  <span style={{color:'#968ff7',cursor:'pointer',fontWeight:600}} onClick={() => onAnalyze && onAnalyze(t)}>{t}</span>
                   {i < noAnalysis.length - 1 ? ', ' : ''}
                 </span>
               ))} — analízalo(s) primero para comparar.
             </div>
           )}
-          <div style={{marginTop:10,fontSize:9,color:'#334155'}}>Verde = mejor valor de la fila. Comparativa de análisis ya guardados; no dispara nuevos análisis.</div>
+          <div style={{marginTop:10,fontSize:9,color:'#33353f'}}>Verde = mejor valor de la fila. Comparativa de análisis ya guardados; no dispara nuevos análisis.</div>
         </>
       )}
     </div>
@@ -2799,18 +2799,18 @@ function LoginScreen() {
     const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
     if (error) setErr(error.message); else setSent(true);
   };
-  if (sent) return <div style={{padding:40,textAlign:'center',color:'#e2e8f0'}}><h2>Check your email</h2><p>We sent a magic link to {email}.</p></div>;
+  if (sent) return <div style={{padding:40,textAlign:'center',color:'#edeef4'}}><h2>Check your email</h2><p>We sent a magic link to {email}.</p></div>;
   return (
-    <div style={{maxWidth:380,margin:'80px auto',padding:32,background:'#0c0e14',borderRadius:12,border:'1px solid #1e2430'}}>
-      <h2 style={{color:'#e2e8f0',marginBottom:8}}>StockLens — Login</h2>
-      <p style={{color:'#64748b',fontSize:13,marginBottom:20}}>Sign in with email magic link. No password.</p>
+    <div style={{maxWidth:380,margin:'80px auto',padding:32,background:'#15151c',borderRadius:12,border:'1px solid #24262f'}}>
+      <h2 style={{color:'#edeef4',marginBottom:8}}>StockLens — Login</h2>
+      <p style={{color:'#787a83',fontSize:13,marginBottom:20}}>Sign in with email magic link. No password.</p>
       <input type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)}
-        style={{width:'100%',padding:'10px 12px',background:'#141720',border:'1px solid #1e2430',color:'#e2e8f0',borderRadius:6,fontSize:14,marginBottom:12}}/>
+        style={{width:'100%',padding:'10px 12px',background:'#1c1d26',border:'1px solid #24262f',color:'#edeef4',borderRadius:6,fontSize:14,marginBottom:12}}/>
       <button onClick={sendMagicLink}
-        style={{width:'100%',padding:'10px',background:'#3b82f6',border:'none',color:'#fff',borderRadius:6,cursor:'pointer',fontWeight:600}}>
+        style={{width:'100%',padding:'10px',background:'#968ff7',border:'none',color:'#fff',borderRadius:6,cursor:'pointer',fontWeight:600}}>
         Send magic link
       </button>
-      {err && <div style={{color:'#f87171',fontSize:12,marginTop:10}}>{err}</div>}
+      {err && <div style={{color:'#eb6459',fontSize:12,marginTop:10}}>{err}</div>}
     </div>
   );
 }
@@ -3504,7 +3504,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
   const dcfVal    = dcf?.dcf;
   const mosFrac   = (ok(dcfVal)&&ok(priceNow)&&dcfVal>0)?(dcfVal-priceNow)/dcfVal:null;
-  const mosColor  = !ok(mosFrac)?'#475569':mosFrac>0.15?'#22c55e':mosFrac>-0.15?'#fbbf24':'#f87171';
+  const mosColor  = !ok(mosFrac)?'#787a83':mosFrac>0.15?'#5ac576':mosFrac>-0.15?'#eca851':'#eb6459';
 
   const healthCards = useMemo(()=>{
     if (!met||!rat) return [];
@@ -3528,8 +3528,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
   return (
     <div style={{
-      minHeight:'100vh',background:'#07080c',color:'#e2e8f0',
-      fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif",
+      minHeight:'100vh',background:'#15151c',color:'#edeef4',
+      fontFamily:"'Hanken Grotesk',-apple-system,BlinkMacSystemFont,sans-serif",
       paddingBottom:60
     }}>
       <style>{`
@@ -3537,9 +3537,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:5px;height:5px}
-        ::-webkit-scrollbar-track{background:#07080c}
-        ::-webkit-scrollbar-thumb{background:#1e2430;border-radius:3px}
-        input::placeholder{color:#334155}
+        ::-webkit-scrollbar-track{background:#15151c}
+        ::-webkit-scrollbar-thumb{background:#24262f;border-radius:3px}
+        input::placeholder{color:#33353f}
         a{color:inherit;text-decoration:none}
         button:hover{opacity:0.88}
       `}</style>
@@ -3548,22 +3548,22 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       {scrolled&&hasData&&ticker&&(
         <div style={{
           position:'fixed',top:52,left:0,right:0,zIndex:190,
-          background:'#0a0b10ee',backdropFilter:'blur(8px)',
-          borderBottom:'1px solid #161b26',
+          background:'#15151cee',backdropFilter:'blur(8px)',
+          borderBottom:'1px solid #1c1d26',
           padding:'8px 24px',display:'flex',alignItems:'center',gap:12
         }}>
           {prof?.image&&<img src={prof.image} alt={ticker} style={{width:22,height:22,objectFit:'contain',borderRadius:3,background:'#fff',padding:2}}/>}
-          <span style={{fontSize:14,fontWeight:800,color:'#fff',fontFamily:'JetBrains Mono,monospace'}}>{ticker}</span>
-          <span style={{fontSize:12,color:'#64748b'}}>{prof?.companyName}</span>
-          <span style={{fontSize:14,fontWeight:700,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace',marginLeft:'auto'}}>{fmt.price(priceNow)}</span>
-          <span style={{fontSize:12,fontWeight:600,color:isUpDay?'#22c55e':'#f87171'}}>{isUpDay?'▲':'▼'}{Math.abs(chg1d||0).toFixed(2)}%</span>
+          <span style={{fontSize:14,fontWeight:800,color:'#fff',fontFamily:'Geist Mono,monospace'}}>{ticker}</span>
+          <span style={{fontSize:12,color:'#787a83'}}>{prof?.companyName}</span>
+          <span style={{fontSize:14,fontWeight:700,color:'#edeef4',fontFamily:'Geist Mono,monospace',marginLeft:'auto'}}>{fmt.price(priceNow)}</span>
+          <span style={{fontSize:12,fontWeight:600,color:isUpDay?'#5ac576':'#eb6459'}}>{isUpDay?'▲':'▼'}{Math.abs(chg1d||0).toFixed(2)}%</span>
           {r&&<div style={{padding:'2px 10px',borderRadius:12,background:r.bg,border:`1px solid ${r.border}`,fontSize:10,fontWeight:700,color:r.color,letterSpacing:'1px'}}>{r.label}</div>}
           {macroTilt && macroTilt.tilt !== 0 && (
             <span title={(macroTilt?.reasons||[]).join(" · ")}
               style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 8px",marginLeft:8,borderRadius:4,
-                background: macroTilt.tilt>0 ? "#22c55e22":"#ef444422",
-                border:`1px solid ${macroTilt.tilt>0?"#22c55e":"#ef4444"}`,
-                fontSize:11,fontFamily:"JetBrains Mono,monospace",cursor:"help"}}>
+                background: macroTilt.tilt>0 ? "#5ac57622":"#eb645922",
+                border:`1px solid ${macroTilt.tilt>0?"#5ac576":"#eb6459"}`,
+                fontSize:11,fontFamily:"Geist Mono,monospace",cursor:"help"}}>
               Macro Tilt: {macroTilt.tilt>0?"+":""}{macroTilt.tilt}
             </span>
           )}
@@ -3572,7 +3572,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
       {/* ── Top navbar ── */}
       <div style={{
-        background:'#0a0b10',borderBottom:'1px solid #161b26',
+        background:'#15151c',borderBottom:'1px solid #1c1d26',
         padding:'0 24px',display:'flex',flexDirection:'column',
         position:'sticky',top:0,zIndex:200
       }}>
@@ -3581,7 +3581,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
             <span style={{fontSize:18,fontWeight:800,color:'#fff',letterSpacing:'-0.5px'}}>⚡ StockLens</span>
             <a href="https://ic-datalayer-app.vercel.app" target="_blank" rel="noopener noreferrer"
                title="Ver régimen macro completo (IC DataLayer)"
-               style={{fontSize:11,color:'#60a5fa',textDecoration:'none'}}>🌐 Macro ↗</a>
+               style={{fontSize:11,color:'#968ff7',textDecoration:'none'}}>🌐 Macro ↗</a>
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
             <input
@@ -3591,39 +3591,39 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               placeholder="TICKER"
               maxLength={10}
               style={{
-                background:'#141720',border:'1px solid #1e2430',color:'#fff',
+                background:'#1c1d26',border:'1px solid #24262f',color:'#fff',
                 padding:'7px 13px',borderRadius:6,fontSize:14,fontWeight:700,
-                width:110,outline:'none',fontFamily:'JetBrains Mono,monospace',
+                width:110,outline:'none',fontFamily:'Geist Mono,monospace',
                 letterSpacing:'1.5px',textTransform:'uppercase'
               }}
             />
             <button onClick={handleSearch} disabled={loading||!inputTicker.trim()} style={{
-              background:loading?'#1e2430':'#3b82f6',color:'#fff',border:'none',
+              background:loading?'#24262f':'#968ff7',color:'#fff',border:'none',
               padding:'7px 18px',borderRadius:6,cursor:loading?'not-allowed':'pointer',
               fontSize:13,fontWeight:600,whiteSpace:'nowrap'
             }}>{loading?'…':'Analyze'}</button>
             {!autoLoaded&&(
               <button onClick={()=>setAutoLoaded(true)} title="Activar Screener y Smart Money" style={{
-                background:'#1e2430',color:'#94a3b8',
-                border:'1px solid #2d3748',padding:'7px 13px',borderRadius:6,
+                background:'#24262f',color:'#a6a7b1',
+                border:'1px solid #33353f',padding:'7px 13px',borderRadius:6,
                 cursor:'pointer',fontSize:11,whiteSpace:'nowrap'
               }}>⬇ Cargar contexto</button>
             )}
             <button onClick={() => sb && sb.auth.signOut()} title="Sign out" style={{
-              background:'#141720',color:'#475569',
-              border:'1px solid #1e2430',padding:'7px 11px',borderRadius:6,
+              background:'#1c1d26',color:'#787a83',
+              border:'1px solid #24262f',padding:'7px 11px',borderRadius:6,
               cursor:'pointer',fontSize:13
             }}>⏻</button>
           </div>
         </div>
         {recentTickers.length>0&&(
           <div style={{display:'flex',gap:6,paddingBottom:8,alignItems:'center'}}>
-            <span style={{fontSize:9,color:'#334155',textTransform:'uppercase',letterSpacing:'0.5px',marginRight:2}}>Recent:</span>
+            <span style={{fontSize:9,color:'#33353f',textTransform:'uppercase',letterSpacing:'0.5px',marginRight:2}}>Recent:</span>
             {recentTickers.map(t=>(
               <button key={t} onClick={()=>{setInputTicker(t);analyze(t);}} style={{
-                background:'#141720',border:'1px solid #1e2430',color:'#64748b',
+                background:'#1c1d26',border:'1px solid #24262f',color:'#787a83',
                 padding:'2px 10px',borderRadius:4,cursor:'pointer',fontSize:11,
-                fontFamily:'JetBrains Mono,monospace',fontWeight:600
+                fontFamily:'Geist Mono,monospace',fontWeight:600
               }}>{t}</button>
             ))}
           </div>
@@ -3639,15 +3639,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
           <div style={{textAlign:'center',padding:'90px 20px'}}>
             <div style={{fontSize:52,marginBottom:14}}>⚡</div>
             <div style={{fontSize:26,fontWeight:800,color:'#fff',marginBottom:8}}>StockLens</div>
-            <div style={{fontSize:13,color:'#334155',maxWidth:400,margin:'0 auto 32px',lineHeight:1.7}}>
+            <div style={{fontSize:13,color:'#33353f',maxWidth:400,margin:'0 auto 32px',lineHeight:1.7}}>
               Professional stock analysis — enter any ticker to get started. 4-dimensional scoring: valuation, financial health, momentum, and growth.
             </div>
             <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>
               {['AAPL','MSFT','NVDA','AMZN','META','COST','V','ASML'].map(t=>(
                 <button key={t} onClick={()=>{setInputTicker(t);analyze(t);}} style={{
-                  background:'#141720',border:'1px solid #1e2430',color:'#94a3b8',
+                  background:'#1c1d26',border:'1px solid #24262f',color:'#a6a7b1',
                   padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,
-                  fontFamily:'JetBrains Mono,monospace',fontWeight:600
+                  fontFamily:'Geist Mono,monospace',fontWeight:600
                 }}>{t}</button>
               ))}
             </div>
@@ -3659,12 +3659,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
         {/* Error */}
         {!loading&&error&&(
-          <div style={{background:'#2a0d0d',border:'1px solid #7f1d1d',borderRadius:8,padding:'16px 20px',margin:'24px 0'}}>
-            <div style={{color:'#f87171',fontSize:13,marginBottom:error.includes('limit')?12:0}}>
+          <div style={{background:'#602a25',border:'1px solid #602a25',borderRadius:8,padding:'16px 20px',margin:'24px 0'}}>
+            <div style={{color:'#eb6459',fontSize:13,marginBottom:error.includes('limit')?12:0}}>
               ⚠ {error}
             </div>
             {error.includes('limit')&&(
-              <div style={{fontSize:11,color:'#64748b',marginTop:8}}>
+              <div style={{fontSize:11,color:'#787a83',marginTop:8}}>
                 Try again in about a minute.
               </div>
             )}
@@ -3684,56 +3684,56 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   )}
                   <div>
                     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
-                      <span style={{fontSize:11,color:'#334155'}}>{[prof?.exchange,prof?.sector,prof?.industry].filter(Boolean).join(' · ')}</span>
+                      <span style={{fontSize:11,color:'#33353f'}}>{[prof?.exchange,prof?.sector,prof?.industry].filter(Boolean).join(' · ')}</span>
                       {prof?.exchange&&(
                         <span style={{
                           fontSize:9,padding:'1px 6px',borderRadius:3,fontWeight:700,
-                          background:prof.exchange.includes('NASDAQ')?'#1e3a5f':prof.exchange.includes('NYSE')?'#1a3a1a':'#2a2a1a',
-                          color:prof.exchange.includes('NASDAQ')?'#60a5fa':prof.exchange.includes('NYSE')?'#4ade80':'#fbbf24'
+                          background:prof.exchange.includes('NASDAQ')?'#34315f':prof.exchange.includes('NYSE')?'#194224':'#54360b',
+                          color:prof.exchange.includes('NASDAQ')?'#968ff7':prof.exchange.includes('NYSE')?'#5ac576':'#eca851'
                         }}>{prof.exchange}</span>
                       )}
                     </div>
                     <div style={{display:'flex',alignItems:'baseline',gap:10,flexWrap:'wrap'}}>
-                      <div style={{fontSize:28,fontWeight:800,color:'#fff',fontFamily:'JetBrains Mono,monospace'}}>{ticker}</div>
-                      <div style={{fontSize:16,color:'#94a3b8',fontWeight:500}}>{prof?.companyName}</div>
+                      <div style={{fontSize:28,fontWeight:800,color:'#fff',fontFamily:'Geist Mono,monospace'}}>{ticker}</div>
+                      <div style={{fontSize:16,color:'#a6a7b1',fontWeight:500}}>{prof?.companyName}</div>
                     </div>
-                    <div style={{display:'flex',gap:14,marginTop:6,fontSize:11,color:'#475569',flexWrap:'wrap'}}>
+                    <div style={{display:'flex',gap:14,marginTop:6,fontSize:11,color:'#787a83',flexWrap:'wrap'}}>
                       {prof?.ceo&&<span>CEO: {prof.ceo}</span>}
                       {prof?.fullTimeEmployees&&<span>👥 {Number(prof.fullTimeEmployees).toLocaleString()} employees</span>}
                       {prof?.ipoDate&&<span>Est. {prof.ipoDate?.substring(0,4)}</span>}
-                      {prof?.website&&<a href={prof.website} target="_blank" rel="noopener noreferrer" style={{color:'#3b82f6'}}>{prof.website?.replace(/^https?:\/\//,'')}</a>}
+                      {prof?.website&&<a href={prof.website} target="_blank" rel="noopener noreferrer" style={{color:'#968ff7'}}>{prof.website?.replace(/^https?:\/\//,'')}</a>}
                     </div>
                   </div>
                 </div>
                 <div style={{textAlign:'right'}}>
-                  <div style={{fontSize:32,fontWeight:800,color:'#fff',fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>
+                  <div style={{fontSize:32,fontWeight:800,color:'#fff',fontFamily:'Geist Mono,monospace',lineHeight:1}}>
                     {fmt.price(priceNow)}
                   </div>
-                  <div style={{fontSize:14,fontWeight:600,color:isUpDay?'#22c55e':'#f87171',marginTop:3}}>
+                  <div style={{fontSize:14,fontWeight:600,color:isUpDay?'#5ac576':'#eb6459',marginTop:3}}>
                     {isUpDay?'▲':'▼'} {Math.abs(chg1d||0).toFixed(2)}% today
                   </div>
                   {ok(ret12m)&&(
-                    <div style={{fontSize:11,color:ret12m>=0?'#4ade80':'#f87171'}}>
+                    <div style={{fontSize:11,color:ret12m>=0?'#5ac576':'#eb6459'}}>
                       {ret12m>=0?'▲':'▼'} {Math.abs(ret12m*100).toFixed(1)}% past 12m
                     </div>
                   )}
-                  <div style={{fontSize:11,color:'#334155',marginTop:3}}>
+                  <div style={{fontSize:11,color:'#33353f',marginTop:3}}>
                     Mkt Cap {fmt.usd(quote?.marketCap)} · Avg Vol {fmt.usd(quote?.averageVolume ?? quote?.avgVolume ?? quote?.volAvg)}
                   </div>
                   <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:8}}>
                     <button
                       onClick={()=>setActiveTab('Valuation')}
-                      style={{background:'#141720',border:'1px solid #1e2430',borderRadius:5,padding:'5px 12px',color:'#3b82f6',fontSize:11,cursor:'pointer'}}
+                      style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:5,padding:'5px 12px',color:'#968ff7',fontSize:11,cursor:'pointer'}}
                     >→ See Valuation</button>
                     <button
                       onClick={exportPDF}
                       title="Descargar informe en PDF"
-                      style={{background:'#141720',border:'1px solid #1e2430',borderRadius:5,padding:'5px 12px',color:'#94a3b8',fontSize:11,cursor:'pointer'}}
+                      style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:5,padding:'5px 12px',color:'#a6a7b1',fontSize:11,cursor:'pointer'}}
                     >⬇ Export Report</button>
                     <button
                       onClick={exportFullPDF}
                       title="Informe completo: IC Score + macro + AI Verdict + earnings (si ya se generó)"
-                      style={{background:'#141720',border:'1px solid #2d3a5f',borderRadius:5,padding:'5px 12px',color:'#60a5fa',fontSize:11,cursor:'pointer'}}
+                      style={{background:'#1c1d26',border:'1px solid #34315f',borderRadius:5,padding:'5px 12px',color:'#968ff7',fontSize:11,cursor:'pointer'}}
                     >📄 Full Report</button>
                   </div>
                 </div>
@@ -3742,14 +3742,14 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
             {/* Tab bar */}
             <div style={{
-              background:'#0c0e14',borderLeft:'1px solid #161b26',borderRight:'1px solid #161b26',
+              background:'#15151c',borderLeft:'1px solid #1c1d26',borderRight:'1px solid #1c1d26',
               display:'flex',gap:0,
               position:'sticky',top:52+(recentTickers.length>0?32:0),zIndex:100
             }}>
               {tabs.map(tab=>(
                 <button key={tab} onClick={()=>setActiveTab(tab)} style={{
-                  background:'none',border:'none',borderBottom:activeTab===tab?'2px solid #3b82f6':'2px solid transparent',
-                  color:activeTab===tab?'#e2e8f0':'#475569',
+                  background:'none',border:'none',borderBottom:activeTab===tab?'2px solid #968ff7':'2px solid transparent',
+                  color:activeTab===tab?'#edeef4':'#787a83',
                   padding:'10px 20px',cursor:'pointer',fontSize:12,fontWeight:600,
                   letterSpacing:'0.3px',transition:'color 0.15s',whiteSpace:'nowrap'
                 }}>{tab}</button>
@@ -3758,7 +3758,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
             {/* Tab content */}
             <div style={{
-              background:'#0c0e14',border:'1px solid #161b26',
+              background:'#15151c',border:'1px solid #1c1d26',
               borderTop:'none',borderBottomLeftRadius:10,borderBottomRightRadius:10,
               padding:'20px 24px',display:'flex',flexDirection:'column',gap:16
             }}>
@@ -3770,10 +3770,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:18,padding:'4px 0'}}>
                       <ScoreGauge score={scores.total}/>
                       <div style={{width:'100%'}}>
-                        <ScoreBar label="Valuation"        value={scores.val}    max={25} color="#60a5fa"/>
-                        <ScoreBar label="Financial Health"  value={scores.hlth}   max={30} color="#22c55e"/>
-                        <ScoreBar label="Momentum"          value={scores.mom}    max={25} color="#fbbf24"/>
-                        <ScoreBar label="Growth"            value={scores.growth} max={20} color="#a78bfa"/>
+                        <ScoreBar label="Valuation"        value={scores.val}    max={25} color="#968ff7"/>
+                        <ScoreBar label="Financial Health"  value={scores.hlth}   max={30} color="#5ac576"/>
+                        <ScoreBar label="Momentum"          value={scores.mom}    max={25} color="#eca851"/>
+                        <ScoreBar label="Growth"            value={scores.growth} max={20} color="#968ff7"/>
                       </div>
 
                       {/* ── Frescura macro (cron macro-refresh) — $0, solo dato ya cargado ── */}
@@ -3785,7 +3785,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                             style={{alignSelf:'flex-start',display:'inline-flex',alignItems:'center',gap:5,
                               padding:'2px 8px',borderRadius:10,background:`${fr.color}22`,
                               border:`1px solid ${fr.color}`,fontSize:9,fontWeight:700,color:fr.color,
-                              fontFamily:'JetBrains Mono,monospace',cursor:'help'}}>
+                              fontFamily:'Geist Mono,monospace',cursor:'help'}}>
                             <span style={{width:6,height:6,borderRadius:'50%',background:fr.color}}/>
                             macro: {fr.age}{fr.warn?' ⚠':''}
                           </div>
@@ -3794,26 +3794,26 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
                       {/* ── IC Score (macro × micro) — score unificado ── */}
                       {macroTilt && tiltN !== 0 ? (
-                        <div style={{width:'100%',background:'#0c0e14',border:`1px solid ${tiltN>0?'#166534':'#7f1d1d'}`,borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:6}}>
-                          <div style={{fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px',fontWeight:700}}>IC Score (macro × micro)</div>
+                        <div style={{width:'100%',background:'#15151c',border:`1px solid ${tiltN>0?'#194224':'#602a25'}`,borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:6}}>
+                          <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.7px',fontWeight:700}}>IC Score (macro × micro)</div>
                           <div style={{display:'flex',alignItems:'baseline',gap:8}}>
-                            <span style={{fontSize:28,fontWeight:800,color:adjRating?.color,fontFamily:'JetBrains Mono,monospace',lineHeight:1}}>{macroAdj}</span>
-                            <span style={{fontSize:12,fontWeight:700,color:tiltN>0?'#22c55e':'#f87171',fontFamily:'JetBrains Mono,monospace'}}>{tiltN>0?'+':''}{tiltN}</span>
+                            <span style={{fontSize:28,fontWeight:800,color:adjRating?.color,fontFamily:'Geist Mono,monospace',lineHeight:1}}>{macroAdj}</span>
+                            <span style={{fontSize:12,fontWeight:700,color:tiltN>0?'#5ac576':'#eb6459',fontFamily:'Geist Mono,monospace'}}>{tiltN>0?'+':''}{tiltN}</span>
                             <span style={{marginLeft:'auto',fontSize:10,fontWeight:700,color:adjRating?.color,letterSpacing:'1px'}}>{adjRating?.label}</span>
                           </div>
                           {adjRating&&baseRating&&adjRating.label!==baseRating.label&&(
-                            <div style={{fontSize:10,fontWeight:700,color:tiltN>0?'#22c55e':'#f87171'}}>{baseRating.label} → {adjRating.label} por macro</div>
+                            <div style={{fontSize:10,fontWeight:700,color:tiltN>0?'#5ac576':'#eb6459'}}>{baseRating.label} → {adjRating.label} por macro</div>
                           )}
                           {(macroTilt.regime||macroTilt.quadrant)&&(
-                            <div style={{fontSize:9,color:'#64748b',lineHeight:1.4}}>{macroTilt.regime?`Régimen: ${macroTilt.regime}`:''}{macroTilt.quadrant?` · ${macroTilt.quadrant}`:''}</div>
+                            <div style={{fontSize:9,color:'#787a83',lineHeight:1.4}}>{macroTilt.regime?`Régimen: ${macroTilt.regime}`:''}{macroTilt.quadrant?` · ${macroTilt.quadrant}`:''}</div>
                           )}
                           {(macroTilt.reasons||[]).length>0&&(
-                            <div style={{fontSize:9,color:'#475569',lineHeight:1.4}} title={(macroTilt.reasons||[]).join(' · ')}>{(macroTilt.reasons||[]).join(' · ')}</div>
+                            <div style={{fontSize:9,color:'#787a83',lineHeight:1.4}} title={(macroTilt.reasons||[]).join(' · ')}>{(macroTilt.reasons||[]).join(' · ')}</div>
                           )}
-                          <div style={{fontSize:8,color:'#334155'}}>Titular = score micro ({scores.total}). IC Score = micro + tilt macro, acotado 0–100.</div>
+                          <div style={{fontSize:8,color:'#33353f'}}>Titular = score micro ({scores.total}). IC Score = micro + tilt macro, acotado 0–100.</div>
                         </div>
                       ) : macroTilt ? (
-                        <div style={{width:'100%',fontSize:9,color:'#334155',textAlign:'center'}}>Sin ajuste macro para este perfil</div>
+                        <div style={{width:'100%',fontSize:9,color:'#33353f',textAlign:'center'}}>Sin ajuste macro para este perfil</div>
                       ) : null}
 
                       {/* ── Histórico del IC Score (sparkline temporal, lee sl_analyses, $0) ── */}
@@ -3825,24 +3825,24 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                       <SectionTitle>Key Metrics — TTM</SectionTitle>
                       {ok(quote?.yearHigh) && ok(quote?.yearLow) && ok(priceNow) && (
                         <div style={{marginBottom:14}}>
-                          <div style={{fontSize:10,color:'#475569',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.5px'}}>52-Week Range</div>
-                          <div style={{position:'relative',height:6,background:'#1e2430',borderRadius:3}}>
+                          <div style={{fontSize:10,color:'#787a83',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.5px'}}>52-Week Range</div>
+                          <div style={{position:'relative',height:6,background:'#24262f',borderRadius:3}}>
                             <div style={{
                               position:'absolute',left:0,
                               width:`${Math.min(100,Math.max(0,((priceNow-quote.yearLow)/(quote.yearHigh-quote.yearLow))*100))}%`,
-                              height:'100%',background:'#3b82f6',borderRadius:3,transition:'width 0.8s ease'
+                              height:'100%',background:'#968ff7',borderRadius:3,transition:'width 0.8s ease'
                             }}/>
                             <div style={{
                               position:'absolute',
                               left:`${Math.min(100,Math.max(0,((priceNow-quote.yearLow)/(quote.yearHigh-quote.yearLow))*100))}%`,
                               top:-3,transform:'translateX(-50%)',
-                              width:12,height:12,background:'#fff',borderRadius:'50%',border:'2px solid #3b82f6'
+                              width:12,height:12,background:'#fff',borderRadius:'50%',border:'2px solid #968ff7'
                             }}/>
                           </div>
-                          <div style={{display:'flex',justifyContent:'space-between',marginTop:4,fontSize:10,color:'#475569',fontFamily:'JetBrains Mono,monospace'}}>
-                            <span>{fmt.price(quote.yearLow)} <span style={{color:'#334155'}}>52W Low</span></span>
-                            <span style={{color:'#e2e8f0',fontWeight:700}}>{fmt.price(priceNow)}</span>
-                            <span><span style={{color:'#334155'}}>52W High</span> {fmt.price(quote.yearHigh)}</span>
+                          <div style={{display:'flex',justifyContent:'space-between',marginTop:4,fontSize:10,color:'#787a83',fontFamily:'Geist Mono,monospace'}}>
+                            <span>{fmt.price(quote.yearLow)} <span style={{color:'#33353f'}}>52W Low</span></span>
+                            <span style={{color:'#edeef4',fontWeight:700}}>{fmt.price(priceNow)}</span>
+                            <span><span style={{color:'#33353f'}}>52W High</span> {fmt.price(quote.yearHigh)}</span>
                           </div>
                         </div>
                       )}
@@ -3851,17 +3851,17 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                         <KPIBadge label="EV/EBITDA"       value={fmt.mult(met?.evToEBITDATTM??met?.enterpriseValueOverEBITDATTM)}   sub="enterprise value mult." bmVal={bm?.ev}   bmLabel="sector avg"/>
                         <KPIBadge label="P/FCF"           value={fmt.mult(met?.pfcfRatioTTM??met?.priceToFreeCashFlowRatioTTM??met?.priceToFreeCashFlowsRatioTTM)}     sub="price / free cash flow"/>
                         <KPIBadge label="Gross Margin"    value={fmt.pct(rat?.grossProfitMarginTTM)}             sub="TTM"
-                          highlight={ok(rat?.grossProfitMarginTTM)?(rat.grossProfitMarginTTM>=0.4?'#22c55e':rat.grossProfitMarginTTM>=0.2?'#fbbf24':'#f87171'):undefined}
+                          highlight={ok(rat?.grossProfitMarginTTM)?(rat.grossProfitMarginTTM>=0.4?'#5ac576':rat.grossProfitMarginTTM>=0.2?'#eca851':'#eb6459'):undefined}
                           bmVal={bm?.gm} bmLabel="sector avg"/>
                         <KPIBadge label="ROIC"            value={fmt.pct(met?.returnOnInvestedCapitalTTM??met?.roicTTM)}       sub="return on inv. capital"
-                          highlight={ok(met?.returnOnInvestedCapitalTTM??met?.roicTTM)?((met?.returnOnInvestedCapitalTTM??met?.roicTTM)>=0.15?'#22c55e':(met?.returnOnInvestedCapitalTTM??met?.roicTTM)>=0.06?'#fbbf24':'#f87171'):undefined}
+                          highlight={ok(met?.returnOnInvestedCapitalTTM??met?.roicTTM)?((met?.returnOnInvestedCapitalTTM??met?.roicTTM)>=0.15?'#5ac576':(met?.returnOnInvestedCapitalTTM??met?.roicTTM)>=0.06?'#eca851':'#eb6459'):undefined}
                           bmVal={bm?.roic} bmLabel="sector avg"/>
                         <KPIBadge label="Net Debt/EBITDA" value={fmt.ndx(met?.netDebtToEBITDATTM)}              sub={ok(met?.netDebtToEBITDATTM)&&met.netDebtToEBITDATTM<0?'net cash position':'leverage'}
-                          highlight={ok(met?.netDebtToEBITDATTM)?(met.netDebtToEBITDATTM<0?'#22c55e':met.netDebtToEBITDATTM<2?'#fbbf24':'#f87171'):undefined}/>
+                          highlight={ok(met?.netDebtToEBITDATTM)?(met.netDebtToEBITDATTM<0?'#5ac576':met.netDebtToEBITDATTM<2?'#eca851':'#eb6459'):undefined}/>
                         <KPIBadge label="FCF Yield"       value={fmt.pct(met?.freeCashFlowYieldTTM)}            sub="TTM"/>
                         <KPIBadge label="ROE"             value={fmt.pct(met?.returnOnEquityTTM??met?.roeTTM)}               sub="return on equity"/>
                         <KPIBadge label="Interest Coverage" value={fmt.mult(met?.interestCoverageTTM??met?.interestCoverageRatioTTM)}     sub="EBIT / interest expense"
-                          highlight={ok(met?.interestCoverageTTM??met?.interestCoverageRatioTTM)?((met?.interestCoverageTTM??met?.interestCoverageRatioTTM)>=10?'#22c55e':(met?.interestCoverageTTM??met?.interestCoverageRatioTTM)>=3?'#fbbf24':'#f87171'):undefined}/>
+                          highlight={ok(met?.interestCoverageTTM??met?.interestCoverageRatioTTM)?((met?.interestCoverageTTM??met?.interestCoverageRatioTTM)>=10?'#5ac576':(met?.interestCoverageTTM??met?.interestCoverageRatioTTM)>=3?'#eca851':'#eb6459'):undefined}/>
                         <KPIBadge label="P/Book"      value={fmt.mult(rat?.priceToBookRatioTTM??met?.pbRatioTTM)}     sub="price / book value"/>
                         <KPIBadge label="P/Sales"     value={fmt.mult(rat?.priceToSalesRatioTTM)}   sub="price / revenue TTM"/>
                         <KPIBadge label="Div. Yield"  value={fmt.pct(met?.dividendYieldTTM)}         sub="annual dividend yield"/>
@@ -3873,12 +3873,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   <HealthScorePanel met={met} rat={rat} hist={hist} stmts={stmts} scores={scores}/>
 
                   {(ptC||udC)&&(
-                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
                       <AnalystPanel ptC={ptC} udC={udC} analystEst={analystEst} currentPrice={priceNow} ptList={ptList}/>
                     </div>
                   )}
 
-                  <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                  <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
                     <ShortInterestPanel data={shortInt} quote={quote}/>
                   </div>
 
@@ -3889,7 +3889,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     </div>
                   )}
 
-                  <div style={{padding:16,background:'#0c0e14',border:'1px solid #1e2430',borderRadius:8,marginTop:16}}>
+                  <div style={{padding:16,background:'#15151c',border:'1px solid #24262f',borderRadius:8,marginTop:16}}>
                     <CarteraKMatrix activeQuadrant={macroTilt?.quadrant || null} />
                   </div>
                 </div>
@@ -3907,7 +3907,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   {stmts.length>=2&&<GrowthPanel stmts={stmts}/>}
                   {stmts.length>0&&<QuarterlyTable stmts={stmts}/>}
                   {peers.length>0&&(
-                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
                       <PeerComparison
                         peers={peers}
                         peerMetrics={peerMetrics}
@@ -3919,22 +3919,22 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     </div>
                   )}
                   {balanceSheets.length>0&&(
-                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
                       <BalanceSheetPanel bsData={balanceSheets}/>
                     </div>
                   )}
                   {cfStmts.length>0&&(
-                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
                       <FCFPanel cfData={cfStmts} incomeData={stmts}/>
                     </div>
                   )}
                   {stmts.length>=2&&(
-                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
                       <DilutionPanel stmts={stmts} cfData={cfStmts}/>
                     </div>
                   )}
                   {historicalDivs.length>0&&(
-                    <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
                       <DividendsPanel divData={historicalDivs} met={met} currentPrice={priceNow}/>
                     </div>
                   )}
@@ -3962,20 +3962,20 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                 <div style={{display:'flex',flexDirection:'column',gap:16}}>
                   <div>
                     <div style={{display:'flex',gap:6,marginBottom:10,alignItems:'center'}}>
-                      <span style={{fontSize:10,color:'#475569',marginRight:4}}>PERIOD:</span>
+                      <span style={{fontSize:10,color:'#787a83',marginRight:4}}>PERIOD:</span>
                       {['1M','3M','6M','1Y','5Y'].map(p=>(
                         <button key={p} onClick={()=>setChartPeriod(p)} style={{
-                          background:chartPeriod===p?'#1e3a5f':'#141720',
-                          color:chartPeriod===p?'#60a5fa':'#475569',
-                          border:`1px solid ${chartPeriod===p?'#3b82f6':'#1e2430'}`,
+                          background:chartPeriod===p?'#34315f':'#1c1d26',
+                          color:chartPeriod===p?'#968ff7':'#787a83',
+                          border:`1px solid ${chartPeriod===p?'#968ff7':'#24262f'}`,
                           padding:'3px 12px',borderRadius:4,cursor:'pointer',fontSize:11,
-                          fontFamily:'JetBrains Mono,monospace',fontWeight:600
+                          fontFamily:'Geist Mono,monospace',fontWeight:600
                         }}>{p}</button>
                       ))}
                     </div>
                     {hist.length>0
                       ? <PriceChart history={hist} ticker={ticker} period={chartPeriod}/>
-                      : <div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'#334155',fontSize:12}}>No price data</div>
+                      : <div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'#33353f',fontSize:12}}>No price data</div>
                     }
                   </div>
                   <TechnicalSignals history={hist} spyHistory={spyHistory}/>
@@ -3992,12 +3992,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     return (
                       <div>
                         <SectionTitle>Historical P/E — 1 Year</SectionTitle>
-                        <div style={{fontSize:11,color:'#64748b',marginBottom:8}}>
-                          Current P/E: <span style={{color:'#e2e8f0',fontWeight:700,fontFamily:'JetBrains Mono,monospace'}}>{peCurrent}x</span>
-                          &nbsp;·&nbsp; Range: <span style={{fontFamily:'JetBrains Mono,monospace'}}>{peMin}x – {peMax}x</span>
+                        <div style={{fontSize:11,color:'#787a83',marginBottom:8}}>
+                          Current P/E: <span style={{color:'#edeef4',fontWeight:700,fontFamily:'Geist Mono,monospace'}}>{peCurrent}x</span>
+                          &nbsp;·&nbsp; Range: <span style={{fontFamily:'Geist Mono,monospace'}}>{peMin}x – {peMax}x</span>
                         </div>
-                        <Sparkline data={peHistory.map(d=>d.pe)} type="line" color="#a78bfa" h={60} w={760}/>
-                        <div style={{fontSize:9,color:'#334155',marginTop:4}}>Based on trailing quarterly EPS × 4 (annualized)</div>
+                        <Sparkline data={peHistory.map(d=>d.pe)} type="line" color="#968ff7" h={60} w={760}/>
+                        <div style={{fontSize:9,color:'#33353f',marginTop:4}}>Based on trailing quarterly EPS × 4 (annualized)</div>
                       </div>
                     );
                   })()}
@@ -4009,8 +4009,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                 autoLoaded
                   ? <WatchlistManager supabase={sb} onAnalyze={(t)=>{ setInputTicker(t); setActiveTab('Overview'); analyze(t); }}/>
                   : <div style={{textAlign:'center',padding:'60px 20px'}}>
-                      <div style={{fontSize:13,color:'#475569',marginBottom:20}}>Activa el contexto para cargar el screener.</div>
-                      <button onClick={()=>setAutoLoaded(true)} style={{background:'#3b82f6',color:'#fff',border:'none',padding:'10px 24px',borderRadius:6,cursor:'pointer',fontWeight:600,fontSize:13}}>⬇ Cargar contexto</button>
+                      <div style={{fontSize:13,color:'#787a83',marginBottom:20}}>Activa el contexto para cargar el screener.</div>
+                      <button onClick={()=>setAutoLoaded(true)} style={{background:'#968ff7',color:'#fff',border:'none',padding:'10px 24px',borderRadius:6,cursor:'pointer',fontWeight:600,fontSize:13}}>⬇ Cargar contexto</button>
                     </div>
               )}
 
@@ -4029,8 +4029,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                         <JensenPatternPanel fmpGet={fmpGet}/>
                       </>
                     : <div style={{textAlign:'center',padding:'60px 20px'}}>
-                        <div style={{fontSize:13,color:'#475569',marginBottom:20}}>Activa el contexto para cargar los datos Smart Money.</div>
-                        <button onClick={()=>setAutoLoaded(true)} style={{background:'#3b82f6',color:'#fff',border:'none',padding:'10px 24px',borderRadius:6,cursor:'pointer',fontWeight:600,fontSize:13}}>⬇ Cargar contexto</button>
+                        <div style={{fontSize:13,color:'#787a83',marginBottom:20}}>Activa el contexto para cargar los datos Smart Money.</div>
+                        <button onClick={()=>setAutoLoaded(true)} style={{background:'#968ff7',color:'#fff',border:'none',padding:'10px 24px',borderRadius:6,cursor:'pointer',fontWeight:600,fontSize:13}}>⬇ Cargar contexto</button>
                       </div>
                   }
                 </div>
@@ -4045,14 +4045,14 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   <VerdictSection scores={scores} profile={prof} metrics={met} ratios={rat} aiVerdict={aiVerdict} aiLoading={aiLoading}/>
 
                   {/* AI Earnings Analysis — datos FMP free + Sonnet, gated por botón (1 llamada Anthropic) */}
-                  <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'16px 20px'}}>
+                  <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-                      <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:'#334155'}}>AI Earnings Analysis</div>
+                      <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:'#33353f'}}>AI Earnings Analysis</div>
                       <button
                         onClick={summarizeEarnings}
                         disabled={transcriptLoading}
                         style={{
-                          background:transcriptLoading?'#1e2430':'#3b82f6',color:'#fff',border:'none',
+                          background:transcriptLoading?'#24262f':'#968ff7',color:'#fff',border:'none',
                           padding:'7px 14px',borderRadius:6,cursor:transcriptLoading?'not-allowed':'pointer',
                           fontSize:12,fontWeight:600,whiteSpace:'nowrap'
                         }}
@@ -4060,17 +4060,17 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     </div>
 
                     {transcriptLoading&&(
-                      <div style={{marginTop:14,fontSize:12,color:'#64748b'}}>Analizando earnings con Claude Sonnet…</div>
+                      <div style={{marginTop:14,fontSize:12,color:'#787a83'}}>Analizando earnings con Claude Sonnet…</div>
                     )}
 
                     {!transcriptLoading&&transcriptError==='empty'&&(
-                      <div style={{marginTop:14,fontSize:11,color:'#475569',background:'#0c0e14',border:'1px solid #1e2430',borderRadius:6,padding:'10px 14px'}}>
+                      <div style={{marginTop:14,fontSize:11,color:'#787a83',background:'#15151c',border:'1px solid #24262f',borderRadius:6,padding:'10px 14px'}}>
                         Sin datos de earnings suficientes para analizar {ticker}.
                       </div>
                     )}
 
                     {!transcriptLoading&&transcriptError&&transcriptError!=='empty'&&(
-                      <div style={{marginTop:14,fontSize:11,color:'#f87171',background:'#2a0d0d',border:'1px solid #7f1d1d',borderRadius:6,padding:'10px 14px'}}>
+                      <div style={{marginTop:14,fontSize:11,color:'#eb6459',background:'#602a25',border:'1px solid #602a25',borderRadius:6,padding:'10px 14px'}}>
                         ⚠ {transcriptError}
                       </div>
                     )}
@@ -4078,11 +4078,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     {!transcriptLoading&&transcriptSum&&transcriptSum.ticker===ticker&&(
                       <div style={{marginTop:14}}>
                         <div style={{display:'flex',gap:10,alignItems:'baseline',marginBottom:10,flexWrap:'wrap'}}>
-                          <span style={{fontSize:12,fontWeight:700,color:'#e2e8f0',fontFamily:'JetBrains Mono,monospace'}}>{transcriptSum.label}</span>
-                          {transcriptSum.date&&<span style={{fontSize:10,color:'#475569'}}>{transcriptSum.date}</span>}
+                          <span style={{fontSize:12,fontWeight:700,color:'#edeef4',fontFamily:'Geist Mono,monospace'}}>{transcriptSum.label}</span>
+                          {transcriptSum.date&&<span style={{fontSize:10,color:'#787a83'}}>{transcriptSum.date}</span>}
                         </div>
-                        <div style={{fontSize:12.5,color:'#cbd5e1',lineHeight:1.7,whiteSpace:'pre-wrap'}}>{transcriptSum.summary}</div>
-                        <div style={{fontSize:9,color:'#334155',marginTop:12,fontStyle:'italic'}}>Análisis IA (Claude Sonnet) sobre datos reportados — no es asesoría.</div>
+                        <div style={{fontSize:12.5,color:'#a6a7b1',lineHeight:1.7,whiteSpace:'pre-wrap'}}>{transcriptSum.summary}</div>
+                        <div style={{fontSize:9,color:'#33353f',marginTop:12,fontStyle:'italic'}}>Análisis IA (Claude Sonnet) sobre datos reportados — no es asesoría.</div>
                       </div>
                     )}
                   </div>
@@ -4094,27 +4094,27 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     {insiderTxns.length>0&&<InsiderTable data={insiderTxns}/>}
                   </>
 
-                  <div style={{background:'#141720',border:'1px solid #1e2430',borderRadius:8,padding:'14px 18px'}}>
-                    <div style={{fontSize:10,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}}>SEC EDGAR Filings</div>
+                  <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
+                    <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}}>SEC EDGAR Filings</div>
                     <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
                       <a
                         href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=4&dateb=&owner=include&count=20`}
                         target="_blank" rel="noopener noreferrer"
-                        style={{fontSize:11,color:'#60a5fa',background:'#1e3a5f22',border:'1px solid #1e3a5f',padding:'5px 12px',borderRadius:5}}
+                        style={{fontSize:11,color:'#968ff7',background:'#34315f22',border:'1px solid #34315f',padding:'5px 12px',borderRadius:5}}
                       >
                         Form 4 — Insider Filings ↗
                       </a>
                       <a
                         href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=10-K&dateb=&owner=include&count=5`}
                         target="_blank" rel="noopener noreferrer"
-                        style={{fontSize:11,color:'#60a5fa',background:'#1e3a5f22',border:'1px solid #1e3a5f',padding:'5px 12px',borderRadius:5}}
+                        style={{fontSize:11,color:'#968ff7',background:'#34315f22',border:'1px solid #34315f',padding:'5px 12px',borderRadius:5}}
                       >
                         10-K Annual Reports ↗
                       </a>
                       <a
                         href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=13F&dateb=&owner=include&count=5`}
                         target="_blank" rel="noopener noreferrer"
-                        style={{fontSize:11,color:'#60a5fa',background:'#1e3a5f22',border:'1px solid #1e3a5f',padding:'5px 12px',borderRadius:5}}
+                        style={{fontSize:11,color:'#968ff7',background:'#34315f22',border:'1px solid #34315f',padding:'5px 12px',borderRadius:5}}
                       >
                         13F — Institutional Holdings ↗
                       </a>
@@ -4129,7 +4129,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       </div>
 
       {/* Footer */}
-      <div style={{textAlign:'center',marginTop:48,fontSize:10,color:'#1e2430',lineHeight:1.8}}>
+      <div style={{textAlign:'center',marginTop:48,fontSize:10,color:'#24262f',lineHeight:1.8}}>
         StockLens v5.0 · Data: Financial Modeling Prep · Not financial advice · {new Date().getFullYear()}
         {ticker&&quote&&<span> · Last updated: {new Date().toLocaleTimeString()}</span>}
       </div>
