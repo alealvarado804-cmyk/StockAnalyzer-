@@ -495,6 +495,61 @@ function getRating(s) {
 // Bandas (getRating): ≥80 STRONG BUY · ≥65 BUY · ≥50 HOLD · ≥35 CAUTION · <35 AVOID
 // Mismo concepto y fórmula en IC DataLayer (panel "Tu Watchlist", columna "IC Score").
 const icScore = (total, tilt) => Math.max(0, Math.min(100, Math.round((total || 0) + (tilt || 0))));
+
+// ─── B1 — PESOS POR RÉGIMEN (gated) — MASTER_PROMPT_MEJORAS_RESEARCH F2 ───
+// El régimen macro re-pondera las 4 dimensiones micro (no solo inclina el score
+// final). FLAG OFF (default) → NO se usa: el IC Score es BYTE-idéntico al de hoy
+// (los call-sites usan scores.total directamente cuando el flag está off).
+// Los pesos _default = los caps actuales (val25/hlth30/mom25/growth20), así que
+// regimeWeightedTotal con quadrant desconocido reproduce scores.total exacto.
+const SL_FLAGS = {
+  B1_REGIME_WEIGHTS: false
+};
+const REGIME_WEIGHTS = {
+  _default: {
+    val: 25,
+    hlth: 30,
+    mom: 25,
+    growth: 20
+  },
+  // = caps actuales (hoy)
+  crecimiento: {
+    val: 22,
+    hlth: 25,
+    mom: 28,
+    growth: 25
+  },
+  // risk-on: + Growth/Momentum
+  inflacion: {
+    val: 25,
+    hlth: 28,
+    mom: 25,
+    growth: 22
+  },
+  // reflación: balanceado
+  estanflacion: {
+    val: 24,
+    hlth: 38,
+    mom: 20,
+    growth: 18
+  },
+  // tipos altos: + Financial Health
+  defensivo: {
+    val: 24,
+    hlth: 40,
+    mom: 20,
+    growth: 16
+  } // contracción/neutral: + Financial Health
+};
+// Re-escala cada sub-score (0..cap → 0..1) por su peso de régimen. La suma de
+// pesos = 100 en todas las filas → resultado en 0..100. Con _default reproduce
+// val+hlth+mom+growth = scores.total. Solo se invoca con el flag ON.
+function regimeWeightedTotal(s, quadrant) {
+  if (!s) return 0;
+  const W = REGIME_WEIGHTS[quadrant] || REGIME_WEIGHTS._default;
+  const t = s.val / 25 * W.val + s.hlth / 30 * W.hlth + s.mom / 25 * W.mom + s.growth / 20 * W.growth;
+  return Math.round(t);
+}
 async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
   if (!supabase) return {
     tilt: 0,
@@ -6474,6 +6529,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       const scores_ = calcScores(met_, rat_, hD_, sD_);
       const _mt = await computeMacroTilt(sb, pD_?.sector, met_?.netDebtToEBITDATTM, met_?.peRatioTTM ?? met_?.priceToEarningsRatioTTM);
       setMacroTilt(_mt);
+      // B1 (gated): el régimen re-pondera el micro_total que se persiste/puntúa.
+      // Flag off → idéntico a scores_.total (call directo, sin reponderar).
+      const microTotal_ = SL_FLAGS.B1_REGIME_WEIGHTS ? regimeWeightedTotal(scores_, _mt?.quadrant) : scores_.total;
 
       // AI verdict (con contexto macro/régimen)
       fetchAiVerdict(sym, scores_, pD_, met_, _mt);
@@ -6491,12 +6549,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               user_id: sess.user.id,
               ticker: sym.toUpperCase(),
               analysis_date: new Date().toISOString().slice(0, 10),
-              score_total: scores_.total,
+              score_total: microTotal_,
               score_val: scores_.val,
               score_hlth: scores_.hlth,
               score_mom: scores_.mom,
               score_growth: scores_.growth,
-              rating: getRating(scores_.total)?.label,
+              rating: getRating(microTotal_)?.label,
               macro_tilt: _mt?.tilt || 0,
               sector: pD_?.sector || null
             });
@@ -6552,8 +6610,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
 
   // ── IC Score (macro × micro) — display layer, NO toca calcScores ──
   const tiltN = macroTilt?.tilt || 0;
-  const macroAdj = icScore(scores?.total, tiltN); // IC Score canónico
-  const baseRating = scores ? getRating(scores.total) : null;
+  // B1 (gated): el micro_total mostrado se re-pondera por régimen. Flag off →
+  // microTotalLive === scores?.total (idéntico a hoy).
+  const microTotalLive = SL_FLAGS.B1_REGIME_WEIGHTS && scores ? regimeWeightedTotal(scores, macroTilt?.quadrant) : scores?.total;
+  const macroAdj = icScore(microTotalLive, tiltN); // IC Score canónico
+  const baseRating = scores ? getRating(microTotalLive) : null;
   const adjRating = scores ? getRating(macroAdj) : null;
   const bm = useMemo(() => SECTOR_BM[prof?.sector] || null, [prof?.sector]);
 
