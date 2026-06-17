@@ -3538,6 +3538,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               rating: getRating(microTotal_)?.label,
               macro_tilt: _mt?.tilt || 0,
               sector: pD_?.sector || null,
+              // Reverse DCF cache (F2, gated). Flag OFF → key absent → insert
+              // object byte-identical to before. Column is nullable/additive.
+              ...(SL_FLAGS.REVERSE_DCF_ENABLED ? { reverse_dcf: _rdcf || null } : {}),
             });
           }
         } catch(e) { /* no romper el análisis si falla el guardado */ }
