@@ -362,7 +362,21 @@ const icScore = (total, tilt) => Math.max(0, Math.min(100, Math.round((total||0)
 // (los call-sites usan scores.total directamente cuando el flag está off).
 // Los pesos _default = los caps actuales (val25/hlth30/mom25/growth20), así que
 // regimeWeightedTotal con quadrant desconocido reproduce scores.total exacto.
-const SL_FLAGS = { B1_REGIME_WEIGHTS: false };
+const SL_FLAGS = { B1_REGIME_WEIGHTS: false, B2_RATE_SENSITIVITY: false };
+
+// ─── B2 — RATE SENSITIVITY (gated) — MEJORAS_RESEARCH F3 ───
+// Apalancamiento alto + baja cobertura de intereses → penaliza más SOLO en
+// regímenes de tipos altos (estanflación/defensivo). Enlaza con B1. Devuelve 0
+// fuera de esos regímenes; con el flag OFF nunca se invoca (IC Score idéntico).
+function rateSensitivityPenalty(netDebtEbitda, interestCov, quadrant) {
+  if (quadrant !== "estanflacion" && quadrant !== "defensivo") return 0;
+  const nd = Number(netDebtEbitda), ic = Number(interestCov);
+  let pen = 0;
+  if (isFinite(nd) && nd > 3) pen += 4;
+  if (isFinite(ic) && ic > 0 && ic < 3) pen += 4;
+  else if (isFinite(ic) && ic >= 3 && ic < 5) pen += 2;
+  return Math.min(8, pen);
+}
 const REGIME_WEIGHTS = {
   _default:     { val: 25, hlth: 30, mom: 25, growth: 20 }, // = caps actuales (hoy)
   crecimiento:  { val: 22, hlth: 25, mom: 28, growth: 25 }, // risk-on: + Growth/Momentum
@@ -3223,7 +3237,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       setMacroTilt(_mt);
       // B1 (gated): el régimen re-pondera el micro_total que se persiste/puntúa.
       // Flag off → idéntico a scores_.total (call directo, sin reponderar).
-      const microTotal_ = SL_FLAGS.B1_REGIME_WEIGHTS ? regimeWeightedTotal(scores_, _mt?.quadrant) : scores_.total;
+      let microTotal_ = SL_FLAGS.B1_REGIME_WEIGHTS ? regimeWeightedTotal(scores_, _mt?.quadrant) : scores_.total;
+      // B2 (gated): penaliza sensibilidad a tipos en regímenes de tipos altos.
+      if (SL_FLAGS.B2_RATE_SENSITIVITY) microTotal_ = Math.max(0, microTotal_ - rateSensitivityPenalty(met_?.netDebtToEBITDATTM, met_?.interestCoverageTTM ?? met_?.interestCoverageRatioTTM, _mt?.quadrant));
 
       // AI verdict (con contexto macro/régimen)
       fetchAiVerdict(sym, scores_, pD_, met_, _mt);
@@ -3296,7 +3312,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   const tiltN     = macroTilt?.tilt || 0;
   // B1 (gated): el micro_total mostrado se re-pondera por régimen. Flag off →
   // microTotalLive === scores?.total (idéntico a hoy).
-  const microTotalLive = (SL_FLAGS.B1_REGIME_WEIGHTS && scores) ? regimeWeightedTotal(scores, macroTilt?.quadrant) : scores?.total;
+  let microTotalLive = (SL_FLAGS.B1_REGIME_WEIGHTS && scores) ? regimeWeightedTotal(scores, macroTilt?.quadrant) : scores?.total;
+  if (SL_FLAGS.B2_RATE_SENSITIVITY && scores) microTotalLive = Math.max(0, microTotalLive - rateSensitivityPenalty(met?.netDebtToEBITDATTM, met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM, macroTilt?.quadrant));
   const macroAdj  = icScore(microTotalLive, tiltN);   // IC Score canónico
   const baseRating = scores ? getRating(microTotalLive) : null;
   const adjRating  = scores ? getRating(macroAdj) : null;
