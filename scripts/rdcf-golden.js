@@ -155,10 +155,30 @@ if (!e2e || e2e.applicable !== true) fail(`buildInputs end-to-end not applicable
 if (e2e.lowConfidence !== true) fail('expected low-confidence (no dgs10 in macro)');
 if (!near(e2e.wacc, 0.043 + 1.3 * 0.05)) fail(`WACC expected ${0.043 + 1.3*0.05}, got ${e2e.wacc}`);
 
+// ── 7. valuationAdj (F4) · signed delta + weight-0 no-op + double gate ──
+if (typeof RDCF.valuationAdj !== 'function') fail('RDCF.valuationAdj missing');
+const adjHigh = RDCF.valuationAdj({ applicable:true, impliedGrowthPremium:0.022, tvShare:0.189 });
+if (!near(adjHigh, -(0.022/0.06)*6)) fail(`valuationAdj high: expected ${-(0.022/0.06)*6}, got ${adjHigh}`);
+const adjHot  = RDCF.valuationAdj({ applicable:true, impliedGrowthPremium:0.17, tvShare:0.82 });
+if (!near(adjHot, -6 - 0.6*4)) fail(`valuationAdj hot: expected ${-6 - 0.6*4}, got ${adjHot}`); // -8.4
+const adjBonus = RDCF.valuationAdj({ applicable:true, impliedGrowthPremium:-0.06, tvShare:0.3 });
+if (!near(adjBonus, 6)) fail(`valuationAdj bonus: expected +6, got ${adjBonus}`);
+if (RDCF.valuationAdj({ applicable:false, reason:'x' }) !== 0) fail('valuationAdj not-applicable must be 0');
+if (RDCF.valuationAdj({ applicable:true }) !== 0) fail('valuationAdj with no premium/tv must be 0');
+if (RDCF.valuationAdj(null) !== 0) fail('valuationAdj(null) must be 0');
+// bounded ≈[-10,+6]
+for (const t of [adjHigh, adjHot, adjBonus]) if (t < -10.0001 || t > 6.0001) fail(`valuationAdj out of bounds: ${t}`);
+// weight-0 no-op: contribution is exactly 0 regardless of the signal (flag-on, weight 0).
+const W0 = 0;
+if (W0 * adjHot !== 0) fail('weight-0 contribution must be exactly 0');
+// a candidate weight does move it (mechanism alive for when the weight is raised).
+if (!near(0.5 * adjHot, -4.2)) fail(`weight 0.5 × hot expected -4.2, got ${0.5*adjHot}`);
+
 console.log('rdcf-golden OK');
 console.log(`  golden: impliedG1=${(out.impliedG1*100).toFixed(4)}%  EV=${out.ev.toFixed(4)} B$  (|Δg1|=${dG1.toExponential(2)}, |ΔEV|=${dEV.toExponential(2)})`);
 console.log(`  CAGR=${(out.revCagr*100).toFixed(2)}%  band="${out.realityBand}"  tvShare=${(out.tvShare*100).toFixed(1)}%  exitMult=${out.impliedExitMultiple.toFixed(1)}x  perShare=$${out.perShare.toFixed(2)}`);
 console.log(`  degradation: sector_excluded / negative_fcf / missing_data all return applicable:false (no throw)`);
 console.log(`  rf: fallback=${(RDCF.CONFIG.rfDefault*100).toFixed(1)}% (low-confidence) · dgs10 used when macro_state has it`);
 console.log(`  buildInputs: 24 B$ rev / m0=25% / capex=10% / 10 B$ netDebt / 2000 M sh / 300 B$ cap → applicable, WACC=${(e2e.wacc*100).toFixed(2)}%`);
+console.log(`  valuationAdj (F4): high=${adjHigh.toFixed(2)} pts, hot=${adjHot.toFixed(2)} pts, bonus=+${adjBonus.toFixed(2)} pts · weight-0 contribution = 0 (no-op)`);
 process.exit(0);

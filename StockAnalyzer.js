@@ -455,6 +455,29 @@ const RDCF = (() => {
       analystGrowth
     };
   }
+
+  // ── valuation adjustment (F4) · signed point delta for the IC Score ──
+  // Converts the reverse-DCF signals (growth premium vs analysts + terminal-value
+  // share) into a SIGNED adjustment to micro_total, BEFORE any weight.
+  //   <0 penalty: price demands more growth than analysts / speculative terminal.
+  //   >0 bonus:   price demands LESS than the company realistically achieves.
+  // Pure & bounded (≈[-10,+6]). Returns 0 when not applicable or no analyst gap.
+  // NOTE: this is the pre-weight delta; the caller scales it by RDCF_VALUATION_WEIGHT
+  // (default 0 → no effect) and only applies it when the feature flag is on.
+  function valuationAdj(rdcf) {
+    if (!rdcf || rdcf.applicable !== true) return 0;
+    let adj = 0;
+    const prem = num(rdcf.impliedGrowthPremium);
+    if (prem != null) {
+      const x = Math.max(-1, Math.min(1, prem / 0.06)); // ±6pp premium → full ±6 pts
+      adj -= x * 6;
+    }
+    const tv = num(rdcf.tvShare);
+    if (tv != null && tv > 0.70) {
+      adj -= Math.min((tv - 0.70) / 0.20, 1) * 4; // speculative terminal → up to -4 pts
+    }
+    return adj;
+  }
   return {
     buildModel,
     bisect,
@@ -463,6 +486,7 @@ const RDCF = (() => {
     waccFromMacro,
     reverseDcf,
     buildInputs,
+    valuationAdj,
     CONFIG,
     EXCLUDED_SECTORS,
     BASE_YEAR
@@ -873,6 +897,12 @@ const SL_FLAGS = {
   B2_RATE_SENSITIVITY: false,
   REVERSE_DCF_ENABLED: false
 };
+
+// F4 — weight of the reverse-DCF valuation signal in the IC Score. ∈[0,1].
+// DEFAULT 0 → the signal does NOT move any score, even with REVERSE_DCF_ENABLED on.
+// Raising it is a deliberate, reviewed step (see scripts/rdcf-score-table.js for the
+// before/after preview). Applied only when REVERSE_DCF_ENABLED is on AND this is > 0.
+const RDCF_VALUATION_WEIGHT = 0;
 
 // ─── B2 — RATE SENSITIVITY (gated) — MEJORAS_RESEARCH F3 ───
 // Apalancamiento alto + baja cobertura de intereses → penaliza más SOLO en
@@ -7283,6 +7313,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       let microTotal_ = SL_FLAGS.B1_REGIME_WEIGHTS ? regimeWeightedTotal(scores_, _mt?.quadrant) : scores_.total;
       // B2 (gated): penaliza sensibilidad a tipos en regímenes de tipos altos.
       if (SL_FLAGS.B2_RATE_SENSITIVITY) microTotal_ = Math.max(0, microTotal_ - rateSensitivityPenalty(met_?.netDebtToEBITDATTM, met_?.interestCoverageTTM ?? met_?.interestCoverageRatioTTM, _mt?.quadrant));
+      // F4 (gated + weight): reverse-DCF valuation signal into Valuation. DEFAULT
+      // weight 0 → no effect even with the flag on. Persisted score = live score.
+      if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0) microTotal_ = Math.max(0, Math.min(100, microTotal_ + RDCF_VALUATION_WEIGHT * RDCF.valuationAdj(_rdcf)));
 
       // AI verdict (con contexto macro/régimen)
       fetchAiVerdict(sym, scores_, pD_, met_, _mt);
@@ -7370,6 +7403,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   // microTotalLive === scores?.total (idéntico a hoy).
   let microTotalLive = SL_FLAGS.B1_REGIME_WEIGHTS && scores ? regimeWeightedTotal(scores, macroTilt?.quadrant) : scores?.total;
   if (SL_FLAGS.B2_RATE_SENSITIVITY && scores) microTotalLive = Math.max(0, microTotalLive - rateSensitivityPenalty(met?.netDebtToEBITDATTM, met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM, macroTilt?.quadrant));
+  // F4 (gated + weight): reverse-DCF valuation signal. DEFAULT weight 0 → no effect.
+  if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0 && scores && reverseDcf) microTotalLive = Math.max(0, Math.min(100, microTotalLive + RDCF_VALUATION_WEIGHT * RDCF.valuationAdj(reverseDcf)));
   const macroAdj = icScore(microTotalLive, tiltN); // IC Score canónico
   const baseRating = scores ? getRating(microTotalLive) : null;
   const adjRating = scores ? getRating(macroAdj) : null;
