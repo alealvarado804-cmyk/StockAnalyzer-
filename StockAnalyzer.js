@@ -104,6 +104,298 @@ const SECTOR_BM = {
   }
 };
 
+// ─── FEATURE FLAGS ──────────────────────────────────────────
+// Master switches for additive modules. With every flag off, StockLens must
+// behave byte-for-byte as before (no UI, no scoring, no fetch differences).
+const FLAGS = {
+  REVERSE_DCF_ENABLED: false // Reverse DCF ("what the price discounts"). Off by default.
+};
+
+// RDCF-CORE-START  (do not remove markers — scripts/rdcf-golden.js extracts this block)
+// ============================================================
+// REVERSE DCF — headless core (F1). 100% additive, gated by FLAGS.
+// Math (buildModel + bisect) ported VERBATIM from reverse_dcf_v2.html — that
+// artifact is the source of truth for the calculation. No UI here, no scoring
+// impact. The public entry `reverseDcf(ticker, inputs, macro)` ALWAYS returns
+// a plain object and NEVER throws: on any problem it returns
+// { applicable:false, reason }. Units mirror the prototype: money in B$,
+// shares in M (F2 converts raw FMP values into these units).
+// ============================================================
+const RDCF = (() => {
+  const BASE_YEAR = 2026;
+  const num = v => v != null && !isNaN(v) && isFinite(v) ? Number(v) : null;
+
+  // ── math · ported VERBATIM from reverse_dcf_v2.html (buildModel) ──
+  function buildModel(p) {
+    const rows = [];
+    let rev = p.baseRevenue,
+      pvSum = 0;
+    const fade = Math.max(1, Math.min(p.fadeYears, p.horizon));
+    const ramp = Math.max(1, p.marginRamp);
+    const capex = p.capexPct || 0;
+    for (let t = 1; t <= p.horizon; t++) {
+      const fg = Math.min(t - 1, fade) / fade;
+      const g = p.g1 + (p.gT - p.g1) * fg;
+      rev *= 1 + g;
+      const fm = Math.min(t, ramp) / ramp;
+      const margin = p.m0 + (p.mT - p.m0) * fm - capex;
+      const fcf = rev * margin;
+      const pv = fcf * Math.pow(1 + p.wacc, -t);
+      pvSum += pv;
+      rows.push({
+        year: BASE_YEAR + t,
+        t,
+        g,
+        margin,
+        rev,
+        fcf,
+        pv,
+        pvCum: pvSum
+      });
+    }
+    const last = rows[rows.length - 1];
+    const spread = Math.max(p.wacc - p.gT, 0.0025);
+    const tvGordon = last.fcf * (1 + p.gT) / spread;
+    const tv = p.tvMode === 'exit' ? last.fcf * (p.exitMult || 15) : tvGordon;
+    const pvTV = tv * Math.pow(1 + p.wacc, -p.horizon);
+    const ev = pvSum + pvTV;
+    const revCagr = Math.pow(last.rev / p.baseRevenue, 1 / p.horizon) - 1;
+    const impliedExit = last.fcf > 0 ? tv / last.fcf : null;
+    const equity = ev - p.netDebt;
+    const dilShares = p.shares > 0 ? p.shares * Math.pow(1 + (p.dilution || 0), p.horizon) : 0;
+    const perShare = dilShares > 0 ? equity * 1000 / dilShares : null;
+    return {
+      rows,
+      pvFCF: pvSum,
+      tv,
+      pvTV,
+      ev,
+      last,
+      revCagr,
+      impliedExit,
+      equity,
+      perShare,
+      dilShares
+    };
+  }
+  // ── solver · ported VERBATIM from reverse_dcf_v2.html (bisect) ──
+  function bisect(fn, lo, hi, target, iters = 90, tol = 1e-4) {
+    let flo = fn(lo) - target,
+      fhi = fn(hi) - target;
+    if (!isFinite(flo) || !isFinite(fhi) || flo * fhi > 0) return null;
+    let a = lo,
+      b = hi;
+    for (let i = 0; i < iters; i++) {
+      const m = (a + b) / 2,
+        fm = fn(m) - target;
+      if (Math.abs(fm) / target < tol) return m;
+      if (flo * fm <= 0) {
+        b = m;
+      } else {
+        a = m;
+        flo = fm;
+      }
+    }
+    return (a + b) / 2;
+  }
+
+  // ── reality bands (illustrative) · VERBATIM from prototype ──
+  const REALITY_BANDS = [{
+    to: .08,
+    color: '#5ac576',
+    label: 'Común',
+    desc: 'Muchas grandes empresas sostienen <8 % a 20 años.'
+  }, {
+    to: .15,
+    color: '#6ea8ff',
+    label: 'Raro',
+    desc: '8–15 % a 20 años: pocas lo logran.'
+  }, {
+    to: .22,
+    color: '#eca851',
+    label: 'Muy raro',
+    desc: '15–22 % a 20 años: un puñado en cada generación.'
+  }, {
+    to: .40,
+    color: '#eb6459',
+    label: 'Casi nadie',
+    desc: '>22 % sostenido 20 años: prácticamente sin precedentes a esta escala.'
+  }];
+  function realityBand(c) {
+    return REALITY_BANDS.find(b => c <= b.to) || REALITY_BANDS[REALITY_BANDS.length - 1];
+  }
+
+  // ── modeling defaults (mirror the prototype "base" preset) ──
+  const CONFIG = {
+    rfDefault: 0.043,
+    // fallback risk-free when macro_state.dgs10 is absent (low confidence)
+    erp: 0.05,
+    // equity risk premium
+    erpStressAddon: 0.01,
+    // bump ERP under credit stress (spec §3 regime modulation)
+    horizon: 40,
+    fadeYears: 30,
+    marginRamp: 15,
+    gT: 0.025,
+    gSeed: 0.35,
+    mT: 0.30,
+    dilution: 0.015,
+    exitMultDefault: 18
+  };
+
+  // ── WACC from regime · rf from macro_state.dgs10 (read-only), config fallback ──
+  // macro_state.dgs10 is provided by a separate (research) batch via ic-proxy;
+  // this module NEVER writes it. While absent → CONFIG.rfDefault + low confidence.
+  function waccFromMacro(beta, macro) {
+    let rf = CONFIG.rfDefault,
+      lowConfidence = true,
+      rfSource = 'default';
+    const dgs10 = macro ? num(macro.dgs10) : null;
+    if (dgs10 != null) {
+      rf = dgs10 > 1 ? dgs10 / 100 : dgs10; // accept percent (4.3) or decimal (0.043)
+      lowConfidence = false;
+      rfSource = 'macro_state.dgs10';
+    }
+    const b = num(beta) != null && beta > 0 ? Number(beta) : 1;
+    let erp = CONFIG.erp;
+    if (macro && num(macro.credit_stress) != null && macro.credit_stress > 70) erp += CONFIG.erpStressAddon;
+    return {
+      wacc: rf + b * erp,
+      rf,
+      erp,
+      beta: b,
+      lowConfidence,
+      rfSource
+    };
+  }
+
+  // ── exclusions (spec §6): financials / banks / insurers don't fit DCF-FCF ──
+  const EXCLUDED_SECTORS = new Set(['Financials', 'Financial Services', 'Banks', 'Insurance']);
+
+  // ── public entry · always returns an object, never throws ──
+  function reverseDcf(ticker, inputs, macro) {
+    try {
+      inputs = inputs || {};
+      const sector = inputs.sector || null;
+      if (sector && EXCLUDED_SECTORS.has(sector)) return {
+        applicable: false,
+        reason: 'sector_excluded',
+        sector
+      };
+      const marketCap = num(inputs.marketCap);
+      const baseRevenue = num(inputs.baseRevenue);
+      const shares = num(inputs.shares);
+      const m0 = num(inputs.m0);
+      if (marketCap == null || marketCap <= 0 || baseRevenue == null || baseRevenue <= 0 || shares == null || shares <= 0) return {
+        applicable: false,
+        reason: 'missing_data',
+        lowConfidence: true
+      };
+      if (m0 == null || m0 <= 0) return {
+        applicable: false,
+        reason: 'negative_fcf',
+        m0,
+        lowConfidence: true
+      }; // pre-profit / negative FCF
+
+      const netDebt = num(inputs.netDebt) != null ? num(inputs.netDebt) : 0;
+      const capexPct = num(inputs.capexPct) != null ? num(inputs.capexPct) : 0;
+
+      // WACC: explicit override (testing/golden) wins; else derive from macro.
+      const w = num(inputs.wacc) != null ? {
+        wacc: num(inputs.wacc),
+        rf: null,
+        erp: null,
+        beta: num(inputs.beta),
+        lowConfidence: false,
+        rfSource: 'override'
+      } : waccFromMacro(inputs.beta, macro);
+      const base = {
+        baseRevenue,
+        horizon: num(inputs.horizon) != null ? num(inputs.horizon) : CONFIG.horizon,
+        g1: num(inputs.g1) != null ? num(inputs.g1) : CONFIG.gSeed,
+        // seed; replaced by solver
+        gT: num(inputs.gT) != null ? num(inputs.gT) : CONFIG.gT,
+        fadeYears: num(inputs.fadeYears) != null ? num(inputs.fadeYears) : CONFIG.fadeYears,
+        m0,
+        mT: num(inputs.mT) != null ? num(inputs.mT) : CONFIG.mT,
+        marginRamp: num(inputs.marginRamp) != null ? num(inputs.marginRamp) : CONFIG.marginRamp,
+        wacc: w.wacc,
+        capexPct,
+        dilution: num(inputs.dilution) != null ? num(inputs.dilution) : CONFIG.dilution,
+        exitMult: num(inputs.exitMult) != null ? num(inputs.exitMult) : CONFIG.exitMultDefault,
+        tvMode: inputs.tvMode || 'gordon',
+        netDebt,
+        shares
+      };
+      const targetEV = marketCap + netDebt;
+      const impliedG1 = bisect(x => buildModel({
+        ...base,
+        g1: x
+      }).ev, -0.10, 1.50, targetEV);
+      if (impliedG1 == null) return {
+        applicable: false,
+        reason: 'no_convergence',
+        targetEV,
+        wacc: w.wacc,
+        lowConfidence: true
+      };
+      const model = buildModel({
+        ...base,
+        g1: impliedG1
+      });
+      const revCagr = model.revCagr;
+      const tvShare = model.ev > 0 ? model.pvTV / model.ev : null;
+      const band = realityBand(Math.max(0, revCagr));
+      const analystGrowth = num(inputs.analystGrowth);
+      const impliedGrowthPremium = analystGrowth != null ? revCagr - analystGrowth : null;
+      const exitFlag = base.tvMode === 'gordon' && model.impliedExit != null && model.impliedExit > 35;
+      return {
+        applicable: true,
+        ticker: ticker || null,
+        impliedG1,
+        revCagr,
+        realityBand: band.label,
+        realityDesc: band.desc,
+        realityColor: band.color,
+        tvShare,
+        tvFlag: tvShare != null && tvShare > 0.7,
+        impliedExitMultiple: model.impliedExit,
+        exitFlag,
+        impliedGrowthPremium,
+        analystGrowth,
+        perShare: model.perShare,
+        ev: model.ev,
+        targetEV,
+        wacc: w.wacc,
+        rf: w.rf,
+        erp: w.erp,
+        beta: w.beta,
+        rfSource: w.rfSource,
+        lowConfidence: !!w.lowConfidence
+      };
+    } catch (e) {
+      return {
+        applicable: false,
+        reason: 'error',
+        detail: e && e.message || String(e)
+      };
+    }
+  }
+  return {
+    buildModel,
+    bisect,
+    realityBand,
+    REALITY_BANDS,
+    waccFromMacro,
+    reverseDcf,
+    CONFIG,
+    EXCLUDED_SECTORS,
+    BASE_YEAR
+  };
+})();
+// RDCF-CORE-END
+
 // ─── TECHNICAL ──────────────────────────────────────────────
 function computeRSI(prices, period = 14) {
   if (!prices || prices.length < period + 1) return null;
