@@ -520,6 +520,34 @@ function rateSensitivityPenalty(netDebtEbitda, interestCov, quadrant) {
   if (isFinite(ic) && ic > 0 && ic < 3) pen += 4;else if (isFinite(ic) && ic >= 3 && ic < 5) pen += 2;
   return Math.min(8, pen);
 }
+
+// ─── B3 — Conciencia de eventos IPO/lockup — MEJORAS_RESEARCH F4 ───
+// Lockups suelen expirar 90–180d post-IPO (shock de oferta); nombres recién
+// públicos cargan riesgo de venta estructural. Solo es un tag informativo: NO
+// cambia el score. Devuelve null si no aplica.
+function ipoEventTag(profile) {
+  const d = profile && profile.ipoDate;
+  if (!d) return null;
+  const t = new Date(d).getTime();
+  if (!isFinite(t)) return null;
+  const days = (Date.now() - t) / 86400000;
+  if (days < 0 || days > 400) return null;
+  if (days >= 90 && days <= 200) return {
+    label: "Ventana de lockup",
+    color: "#eb6459",
+    note: "Lockup típico 90–180d post-IPO: posible shock de oferta (vender la noticia)."
+  };
+  if (days < 90) return {
+    label: "Recién IPO",
+    color: "#eca851",
+    note: "Salió a bolsa hace <90d: histórico limitado, alta volatilidad."
+  };
+  return {
+    label: "IPO <1 año",
+    color: "#eca851",
+    note: "IPO reciente: riesgo de rotación/lockup residual."
+  };
+}
 const REGIME_WEIGHTS = {
   _default: {
     val: 25,
@@ -7424,7 +7452,20 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       color: '#787a83',
       flexWrap: 'wrap'
     }
-  }, prof?.ceo && /*#__PURE__*/React.createElement("span", null, "CEO: ", prof.ceo), prof?.fullTimeEmployees && /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC65 ", Number(prof.fullTimeEmployees).toLocaleString(), " employees"), prof?.ipoDate && /*#__PURE__*/React.createElement("span", null, "Est. ", prof.ipoDate?.substring(0, 4)), prof?.website && /*#__PURE__*/React.createElement("a", {
+  }, prof?.ceo && /*#__PURE__*/React.createElement("span", null, "CEO: ", prof.ceo), prof?.fullTimeEmployees && /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC65 ", Number(prof.fullTimeEmployees).toLocaleString(), " employees"), prof?.ipoDate && /*#__PURE__*/React.createElement("span", null, "Est. ", prof.ipoDate?.substring(0, 4)), (() => {
+    const tg = ipoEventTag(prof);
+    return tg ? /*#__PURE__*/React.createElement("span", {
+      title: tg.note,
+      style: {
+        padding: '1px 7px',
+        borderRadius: 20,
+        fontWeight: 700,
+        color: tg.color,
+        background: `color-mix(in srgb, ${tg.color} 14%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${tg.color} 32%, transparent)`
+      }
+    }, "\u2691 ", tg.label) : null;
+  })(), prof?.website && /*#__PURE__*/React.createElement("a", {
     href: prof.website,
     target: "_blank",
     rel: "noopener noreferrer",
