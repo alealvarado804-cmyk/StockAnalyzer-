@@ -6469,6 +6469,313 @@ function LoginScreen() {
   }, err));
 }
 
+// ─── REVERSE DCF CARD (F3, gated) — "Qué descuenta el precio" ──
+// Presentational only. Renders the RDCF result computed in App (state
+// `reverseDcf`). Instrument skin: same inline hex palette as the rest of
+// StockLens (accent #968ff7, text #edeef4, muted #787a83, panels #1c1d26).
+// Rendered only when SL_FLAGS.REVERSE_DCF_ENABLED is on AND a result exists,
+// so with the flag off this component never mounts.
+function ReverseDcfCard({
+  data,
+  horizonYears
+}) {
+  const [showAdv, setShowAdv] = useState(false);
+  const pct = (v, d = 1) => v == null || !isFinite(v) ? '—' : `${(v * 100).toFixed(d)}%`;
+  const card = {
+    background: '#15151c',
+    border: '1px solid #1c1d26',
+    borderRadius: 10,
+    padding: '20px 24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16
+  };
+  const panel = {
+    background: '#1c1d26',
+    border: '1px solid #24262f',
+    borderRadius: 6,
+    padding: '10px 14px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 3
+  };
+  if (!data) return null;
+  if (data.applicable === false) {
+    const why = {
+      sector_excluded: 'Sector financiero/asegurador — el DCF de caja libre no aplica de forma fiable.',
+      negative_fcf: 'Caja libre negativa o pre-beneficios — el precio no produce un crecimiento implícito interpretable.',
+      missing_data: 'Faltan datos de FMP (ingresos, acciones o caja libre) para construir el modelo.',
+      no_convergence: 'El solver no converge con el precio actual y los supuestos del modelo.',
+      error: 'No se pudo calcular el reverse DCF para este ticker.'
+    }[data.reason] || 'Reverse DCF no aplicable para este ticker.';
+    return /*#__PURE__*/React.createElement("div", {
+      style: card
+    }, /*#__PURE__*/React.createElement(SectionTitle, null, "Qu\xE9 descuenta el precio"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: '#787a83',
+        lineHeight: 1.6
+      }
+    }, "No aplicable. ", why));
+  }
+  const H = horizonYears || RDCF.CONFIG && RDCF.CONFIG.horizon || 40;
+  const cagr = Math.max(0, data.revCagr || 0);
+  const bands = RDCF.REALITY_BANDS;
+  const band = bands.find(b => cagr <= b.to) || bands[bands.length - 1];
+  const AX = 0.40; // reality-bar axis max
+  const widths = bands.map((b, i) => (Math.min(b.to, AX) - (i === 0 ? 0 : bands[i - 1].to)) / AX * 100);
+  const markerLeft = Math.min(cagr / AX, 1) * 100;
+  const gap = data.impliedGrowthPremium;
+  const tvShare = data.tvShare;
+  const exitM = data.impliedExitMultiple;
+
+  // Natural-language verdict ("what you'd have to believe"), impersonal.
+  const verdict = `Para justificar el precio actual, el mercado exige un crecimiento de ventas de ` + `${pct(cagr)} anual sostenido durante ${H} años — zona «${band.label.toLowerCase()}». ` + band.desc + ' ' + (data.analystGrowth != null ? `Los analistas proyectan ~${pct(data.analystGrowth)} anual` + (gap != null ? ` (${gap >= 0 ? '+' : ''}${pct(gap)} de prima exigida por el precio).` : '.') : 'Sin estimación de analista disponible para contrastar.') + ' Informativo, no recomendación.';
+  return /*#__PURE__*/React.createElement("div", {
+    style: card
+  }, /*#__PURE__*/React.createElement(SectionTitle, null, "Qu\xE9 descuenta el precio \xB7 Reverse DCF"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: 14,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      marginBottom: 4
+    }
+  }, "Crecimiento de ventas impl\xEDcito"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 46,
+      fontWeight: 700,
+      color: '#968ff7',
+      fontFamily: 'Geist Mono,monospace',
+      lineHeight: 1
+    }
+  }, pct(cagr)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#787a83',
+      marginTop: 4
+    }
+  }, "CAGR a ", H, " a\xF1os \xB7 g\u2081 impl\xEDcito ", pct(data.impliedG1, 1))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginLeft: 'auto',
+      alignSelf: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-block',
+      padding: '6px 14px',
+      borderRadius: 100,
+      fontSize: 13,
+      fontWeight: 700,
+      color: band.color,
+      background: `color-mix(in srgb, ${band.color} 14%, transparent)`,
+      border: `1px solid color-mix(in srgb, ${band.color} 40%, transparent)`
+    }
+  }, band.label))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      height: 26,
+      borderRadius: 6,
+      overflow: 'hidden',
+      display: 'flex'
+    }
+  }, bands.map((b, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      width: `${widths[i]}%`,
+      height: '100%',
+      background: `color-mix(in srgb, ${b.color} 80%, transparent)`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 9.5,
+      fontWeight: 700,
+      color: '#0f0f14',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden'
+    }
+  }, b.label)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      top: -3,
+      bottom: -3,
+      left: `${markerLeft}%`,
+      width: 2,
+      background: '#edeef4'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginTop: 5,
+      fontSize: 9.5,
+      color: '#33353f'
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "0%"), /*#__PURE__*/React.createElement("span", null, "10%"), /*#__PURE__*/React.createElement("span", null, "20%"), /*#__PURE__*/React.createElement("span", null, "30%"), /*#__PURE__*/React.createElement("span", null, "40%+"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: panel
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "Peso del valor terminal"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 17,
+      fontWeight: 700,
+      fontFamily: 'Geist Mono,monospace',
+      lineHeight: 1,
+      color: tvShare != null && tvShare > 0.7 ? '#eb6459' : '#5ac576'
+    }
+  }, pct(tvShare)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#33353f'
+    }
+  }, tvShare != null && tvShare > 0.7 ? 'precio depende del futuro lejano' : 'anclado en flujos cercanos')), /*#__PURE__*/React.createElement("div", {
+    style: panel
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "Gap vs analista"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 17,
+      fontWeight: 700,
+      fontFamily: 'Geist Mono,monospace',
+      lineHeight: 1,
+      color: gap == null ? '#787a83' : gap > 0 ? '#eb6459' : '#5ac576'
+    }
+  }, gap == null ? '—' : `${gap >= 0 ? '+' : ''}${pct(gap)}`), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#33353f'
+    }
+  }, "prima de crecimiento exigida")), /*#__PURE__*/React.createElement("div", {
+    style: panel
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "M\xFAltiplo de salida impl."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 17,
+      fontWeight: 700,
+      fontFamily: 'Geist Mono,monospace',
+      lineHeight: 1,
+      color: data.exitFlag ? '#eb6459' : '#edeef4'
+    }
+  }, exitM != null && isFinite(exitM) ? `${exitM.toFixed(1)}x` : '—'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#33353f'
+    }
+  }, data.exitFlag ? 'valoración no anclada' : 'FCF terminal')), /*#__PURE__*/React.createElement("div", {
+    style: panel
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "Valor por acci\xF3n impl."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 17,
+      fontWeight: 700,
+      fontFamily: 'Geist Mono,monospace',
+      lineHeight: 1,
+      color: '#edeef4'
+    }
+  }, data.perShare != null && isFinite(data.perShare) ? `$${data.perShare.toFixed(2)}` : '—'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#33353f'
+    }
+  }, "diluido, supuestos del modelo"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: '#c7c8d1',
+      lineHeight: 1.65,
+      borderLeft: '2px solid #968ff7',
+      paddingLeft: 12
+    }
+  }, verdict), data.lowConfidence && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#eca851',
+      background: 'color-mix(in srgb, #eca851 9%, transparent)',
+      border: '1px solid color-mix(in srgb, #eca851 30%, transparent)',
+      borderRadius: 6,
+      padding: '8px 12px'
+    }
+  }, "WACC con risk-free por defecto (", pct(RDCF.CONFIG.rfDefault), ") \u2014 baja confianza hasta que el 10Y (macro_state.dgs10) est\xE9 disponible. El n\xFAmero se afina solo cuando llegue."), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowAdv(s => !s),
+    style: {
+      background: 'none',
+      border: 'none',
+      color: '#968ff7',
+      fontSize: 11,
+      fontWeight: 600,
+      cursor: 'pointer',
+      padding: 0
+    }
+  }, showAdv ? '▾ Ocultar detalle del modelo' : '▸ Ver detalle del modelo'), showAdv && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))',
+      gap: 8,
+      fontSize: 11
+    }
+  }, [['WACC', pct(data.wacc, 2)], ['Beta', data.beta != null ? data.beta.toFixed(2) : '—'], ['ERP', data.erp != null ? pct(data.erp, 2) : '—'], ['rf', data.rf != null ? pct(data.rf, 2) : `${pct(RDCF.CONFIG.rfDefault)} (def.)`], ['EV implícito', data.ev != null ? `${data.ev.toFixed(0)} B$` : '—'], ['EV objetivo', data.targetEV != null ? `${data.targetEV.toFixed(0)} B$` : '—'], ['g₁ implícito', pct(data.impliedG1, 2)], ['Fuente rf', data.rfSource || '—']].map(([k, v], i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      gap: 8,
+      padding: '4px 0',
+      borderBottom: '1px solid #1c1d26'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#787a83'
+    }
+  }, k), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#edeef4',
+      fontFamily: 'Geist Mono,monospace'
+    }
+  }, v)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#33353f',
+      marginTop: 10,
+      lineHeight: 1.6
+    }
+  }, "Modelo: FCF\u209C = ingresos \xD7 (margen \u2212 capex%); transici\xF3n lineal g\u2081\u2192g\u221E; valor terminal de Gordon; solver por bisecci\xF3n. Las bandas de rareza son ilustrativas (probabilidad hist\xF3rica de sostener un CAGR alto a 20+ a\xF1os). Herramienta anal\xEDtica, no asesoramiento de inversi\xF3n.")));
+}
+
 // ─── MAIN APP ────────────────────────────────────────────────
 function App() {
   const [session, setSession] = useState(null);
@@ -7453,7 +7760,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       status: ok(nd) ? nd < 0.5 ? 'green' : nd < 2.5 ? 'amber' : 'red' : 'neutral'
     }];
   }, [met, rat]);
-  const tabs = ['Overview', 'Fundamentals', 'Screener', '⚖ Comparar', 'Smart Money', 'Valuation', 'Chart', 'Research'];
+  const tabs = ['Overview', 'Fundamentals', 'Screener', '⚖ Comparar', 'Smart Money', 'Valuation', ...(SL_FLAGS.REVERSE_DCF_ENABLED ? ['Descuento'] : []),
+  // F3: tab gated — absent when flag off
+  'Chart', 'Research'];
   if (!authChecked) return null;
   if (!session) return /*#__PURE__*/React.createElement(LoginScreen, null);
   return /*#__PURE__*/React.createElement("div", {
@@ -8594,7 +8903,22 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontWeight: 600,
       fontSize: 13
     }
-  }, "\u2B07 Cargar contexto"))), activeTab === 'Research' && /*#__PURE__*/React.createElement("div", {
+  }, "\u2B07 Cargar contexto"))), SL_FLAGS.REVERSE_DCF_ENABLED && activeTab === 'Descuento' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
+    }
+  }, reverseDcf ? /*#__PURE__*/React.createElement(ReverseDcfCard, {
+    data: reverseDcf
+  }) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      padding: '60px 20px',
+      fontSize: 13,
+      color: '#787a83'
+    }
+  }, "Analiza un ticker para ver qu\xE9 descuenta su precio.")), activeTab === 'Research' && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
