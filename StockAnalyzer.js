@@ -663,7 +663,12 @@ async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
     reasons: reasons.length ? reasons : ["Sin ajustes para este perfil"],
     quadrant: m.cartera_quadrant,
     regime: m.regime_label,
-    updatedAt: m.updated_at || null
+    updatedAt: m.updated_at || null,
+    // A8 contrarian sentiment (ya viene en la fila; 0 fetches extra)
+    putCall: m.put_call_ratio ?? null,
+    fearGreed: m.fear_greed ?? null,
+    fgRating: m.fear_greed_rating ?? null,
+    sentimentSignal: m.sentiment_signal ?? null
   };
 }
 
@@ -7148,7 +7153,22 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontFamily: "Geist Mono,monospace",
       cursor: "help"
     }
-  }, "Macro Tilt: ", macroTilt.tilt > 0 ? "+" : "", macroTilt.tilt)), /*#__PURE__*/React.createElement("div", {
+  }, "Macro Tilt: ", macroTilt.tilt > 0 ? "+" : "", macroTilt.tilt), macroTilt && macroTilt.fearGreed != null && /*#__PURE__*/React.createElement("span", {
+    title: `CNN Fear & Greed ${macroTilt.fearGreed}/100 (${macroTilt.fgRating || '—'})${macroTilt.putCall != null ? ` · Put/Call ${macroTilt.putCall}` : ''}. Contrarian: euforia = cautela, pánico = oportunidad.`,
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 4,
+      padding: "3px 8px",
+      marginLeft: 8,
+      borderRadius: 4,
+      background: macroTilt.sentimentSignal === "euforia" ? "#eb645922" : macroTilt.sentimentSignal === "panico" ? "#5ac57622" : "#787a8322",
+      border: `1px solid ${macroTilt.sentimentSignal === "euforia" ? "#eb6459" : macroTilt.sentimentSignal === "panico" ? "#5ac576" : "#787a83"}`,
+      fontSize: 11,
+      fontFamily: "Geist Mono,monospace",
+      cursor: "help"
+    }
+  }, "F&G ", macroTilt.fearGreed, macroTilt.putCall != null ? ` · P/C ${macroTilt.putCall}` : "")), /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#15151c',
       borderBottom: '1px solid #1c1d26',
