@@ -123,9 +123,42 @@ const withMacro = RDCF.waccFromMacro(1.2, { dgs10:4.3 });
 if (withMacro.lowConfidence || withMacro.rfSource !== 'macro_state.dgs10') fail('expected dgs10 used when present');
 if (Math.abs(withMacro.rf - 0.043) > 1e-12) fail(`dgs10=4.3 should normalize to rf=0.043, got ${withMacro.rf}`);
 
+// ── 6. buildInputs (F2) · FMP-shaped synthetic data → model units (B$/M) ──
+const q = (rev) => ({ revenue: rev });
+const synthStmts = [q(6e9), q(6e9), q(6e9), q(6e9)];                 // TTM rev = 24e9
+const synthCf = [
+  { freeCashFlow: 1.5e9, capitalExpenditure: -0.6e9 },
+  { freeCashFlow: 1.5e9, capitalExpenditure: -0.6e9 },
+  { freeCashFlow: 1.5e9, capitalExpenditure: -0.6e9 },
+  { freeCashFlow: 1.5e9, capitalExpenditure: -0.6e9 },
+];                                                                   // FCF TTM = 6e9, capex TTM = 2.4e9
+const synthBs = [{ netDebt: 10e9 }];
+const synthQuote = { sharesOutstanding: 2e9, marketCap: 300e9, beta: 1.3 };
+const synthProf = { sector: 'Technology' };
+const synthAe = [{ date: '2026', revenueAvg: 24e9 }, { date: '2027', revenueAvg: 30e9 }];
+
+const inp = RDCF.buildInputs(synthQuote && { freeCashFlowMarginTTM: null }, synthProf, synthQuote, synthStmts, synthBs, synthCf, synthAe);
+const near = (a, b, t=1e-9) => Math.abs(a - b) <= t;
+if (!near(inp.baseRevenue, 24)) fail(`buildInputs.baseRevenue expected 24 B$, got ${inp.baseRevenue}`);
+if (!near(inp.m0, 0.25))        fail(`buildInputs.m0 expected 0.25, got ${inp.m0}`);          // 6/24
+if (!near(inp.capexPct, 0.10))  fail(`buildInputs.capexPct expected 0.10, got ${inp.capexPct}`); // 2.4/24
+if (!near(inp.netDebt, 10))     fail(`buildInputs.netDebt expected 10 B$, got ${inp.netDebt}`);
+if (!near(inp.shares, 2000))    fail(`buildInputs.shares expected 2000 M, got ${inp.shares}`);
+if (!near(inp.marketCap, 300))  fail(`buildInputs.marketCap expected 300 B$, got ${inp.marketCap}`);
+if (!near(inp.beta, 1.3))       fail(`buildInputs.beta expected 1.3, got ${inp.beta}`);
+if (inp.sector !== 'Technology') fail(`buildInputs.sector expected Technology, got ${inp.sector}`);
+if (!near(inp.analystGrowth, 0.25)) fail(`buildInputs.analystGrowth expected 0.25, got ${inp.analystGrowth}`);
+
+// End-to-end with no macro → applicable, low-confidence rf fallback, WACC = rf + beta*erp
+const e2e = RDCF.reverseDcf('SYN', inp, null);
+if (!e2e || e2e.applicable !== true) fail(`buildInputs end-to-end not applicable: ${JSON.stringify(e2e)}`);
+if (e2e.lowConfidence !== true) fail('expected low-confidence (no dgs10 in macro)');
+if (!near(e2e.wacc, 0.043 + 1.3 * 0.05)) fail(`WACC expected ${0.043 + 1.3*0.05}, got ${e2e.wacc}`);
+
 console.log('rdcf-golden OK');
 console.log(`  golden: impliedG1=${(out.impliedG1*100).toFixed(4)}%  EV=${out.ev.toFixed(4)} B$  (|Δg1|=${dG1.toExponential(2)}, |ΔEV|=${dEV.toExponential(2)})`);
 console.log(`  CAGR=${(out.revCagr*100).toFixed(2)}%  band="${out.realityBand}"  tvShare=${(out.tvShare*100).toFixed(1)}%  exitMult=${out.impliedExitMultiple.toFixed(1)}x  perShare=$${out.perShare.toFixed(2)}`);
 console.log(`  degradation: sector_excluded / negative_fcf / missing_data all return applicable:false (no throw)`);
 console.log(`  rf: fallback=${(RDCF.CONFIG.rfDefault*100).toFixed(1)}% (low-confidence) · dgs10 used when macro_state has it`);
+console.log(`  buildInputs: 24 B$ rev / m0=25% / capex=10% / 10 B$ netDebt / 2000 M sh / 300 B$ cap → applicable, WACC=${(e2e.wacc*100).toFixed(2)}%`);
 process.exit(0);

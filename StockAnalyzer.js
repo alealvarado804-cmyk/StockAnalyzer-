@@ -104,12 +104,9 @@ const SECTOR_BM = {
   }
 };
 
-// ─── FEATURE FLAGS ──────────────────────────────────────────
-// Master switches for additive modules. With every flag off, StockLens must
-// behave byte-for-byte as before (no UI, no scoring, no fetch differences).
-const FLAGS = {
-  REVERSE_DCF_ENABLED: false // Reverse DCF ("what the price discounts"). Off by default.
-};
+// ─── REVERSE DCF feature flag ───────────────────────────────
+// The master switch lives in SL_FLAGS.REVERSE_DCF_ENABLED (declared with the
+// other StockLens flags). Off by default → no UI / no scoring / no fetch change.
 
 // RDCF-CORE-START  (do not remove markers — scripts/rdcf-golden.js extracts this block)
 // ============================================================
@@ -382,6 +379,82 @@ const RDCF = (() => {
       };
     }
   }
+
+  // ── input mapping (F2) · maps already-fetched FMP data → model units ──
+  // Pure, no fetches. Money → B$, shares → M (the units the prototype uses).
+  // Everything is best-effort; missing pieces just yield null and reverseDcf
+  // degrades gracefully. `stmts`/`cfStmts` are newest-first quarterly arrays.
+  function buildInputs(met, prof, quote, stmts, balanceSheets, cfStmts, analystEst) {
+    const B = 1e9,
+      M = 1e6;
+    stmts = Array.isArray(stmts) ? stmts : [];
+    cfStmts = Array.isArray(cfStmts) ? cfStmts : [];
+    balanceSheets = Array.isArray(balanceSheets) ? balanceSheets : [];
+
+    // Revenue TTM (sum of last 4 quarters; fallback q0×4) — raw $
+    let revTTM = null;
+    if (stmts.length >= 4) {
+      const s4 = stmts.slice(0, 4).map(q => num(q && q.revenue)).filter(v => v != null);
+      if (s4.length === 4) revTTM = s4.reduce((a, b) => a + b, 0);
+    }
+    if (revTTM == null && num(stmts[0] && stmts[0].revenue) != null) revTTM = num(stmts[0].revenue) * 4;
+    const baseRevenue = revTTM != null ? revTTM / B : null;
+
+    // FCF margin TTM (decimal): prefer the metric StockLens already holds
+    let m0 = num(met && met.freeCashFlowMarginTTM);
+    if (m0 == null && cfStmts.length >= 4 && revTTM) {
+      const fcf4 = cfStmts.slice(0, 4).map(q => num(q && q.freeCashFlow)).filter(v => v != null);
+      if (fcf4.length === 4) m0 = fcf4.reduce((a, b) => a + b, 0) / revTTM;
+    }
+
+    // Capex % of sales (decimal) from cash-flow TTM (capex is negative in FMP)
+    let capexPct = 0;
+    if (cfStmts.length >= 4 && revTTM) {
+      const cx4 = cfStmts.slice(0, 4).map(q => num(q && q.capitalExpenditure)).filter(v => v != null);
+      if (cx4.length === 4) capexPct = Math.abs(cx4.reduce((a, b) => a + b, 0)) / revTTM;
+    }
+
+    // Net debt (B$)
+    const bs0 = balanceSheets[0] || null;
+    let netDebtRaw = bs0 ? num(bs0.netDebt) : null;
+    if (netDebtRaw == null && bs0) {
+      const cash = num(bs0.cashAndCashEquivalents) != null ? num(bs0.cashAndCashEquivalents) : num(bs0.cashAndShortTermInvestments) || 0;
+      netDebtRaw = (num(bs0.totalDebt) || 0) - cash;
+    }
+    const netDebt = netDebtRaw != null ? netDebtRaw / B : 0;
+
+    // Shares (M) and market cap (B$)
+    const sharesRaw = num(quote && quote.sharesOutstanding) != null ? num(quote.sharesOutstanding) : num(prof && prof.sharesOutstanding);
+    const shares = sharesRaw != null ? sharesRaw / M : null;
+    const mcRaw = num(quote && quote.marketCap) != null ? num(quote.marketCap) : num(prof && prof.mktCap);
+    const marketCap = mcRaw != null ? mcRaw / B : null;
+    const beta = num(quote && quote.beta) != null ? num(quote.beta) : num(prof && prof.beta);
+    const sector = prof && prof.sector || null;
+
+    // Analyst growth (decimal) for the gap — estimated revenue CAGR, best-effort
+    let analystGrowth = null;
+    const ae = Array.isArray(analystEst) ? analystEst : analystEst ? [analystEst] : [];
+    if (ae.length >= 2) {
+      const sorted = ae.slice().sort((a, b) => String(a && a.date).localeCompare(String(b && b.date)));
+      const first = sorted[0],
+        lastE = sorted[sorted.length - 1];
+      const r0 = num(first && (first.estimatedRevenueAvg != null ? first.estimatedRevenueAvg : first.revenueAvg));
+      const rN = num(lastE && (lastE.estimatedRevenueAvg != null ? lastE.estimatedRevenueAvg : lastE.revenueAvg));
+      const yrs = sorted.length - 1;
+      if (r0 != null && rN != null && r0 > 0 && yrs > 0) analystGrowth = Math.pow(rN / r0, 1 / yrs) - 1;
+    }
+    return {
+      marketCap,
+      netDebt,
+      baseRevenue,
+      shares,
+      m0,
+      capexPct,
+      beta,
+      sector,
+      analystGrowth
+    };
+  }
   return {
     buildModel,
     bisect,
@@ -389,6 +462,7 @@ const RDCF = (() => {
     REALITY_BANDS,
     waccFromMacro,
     reverseDcf,
+    buildInputs,
     CONFIG,
     EXCLUDED_SECTORS,
     BASE_YEAR
@@ -796,7 +870,8 @@ const icScore = (total, tilt) => Math.max(0, Math.min(100, Math.round((total || 
 // regimeWeightedTotal con quadrant desconocido reproduce scores.total exacto.
 const SL_FLAGS = {
   B1_REGIME_WEIGHTS: false,
-  B2_RATE_SENSITIVITY: false
+  B2_RATE_SENSITIVITY: false,
+  REVERSE_DCF_ENABLED: false
 };
 
 // ─── B2 — RATE SENSITIVITY (gated) — MEJORAS_RESEARCH F3 ───
@@ -6446,6 +6521,7 @@ function App() {
   const [macroTilt, setMacroTilt] = useState(null);
   const [autoLoaded, setAutoLoaded] = useState(false);
   const [scoreHistory, setScoreHistory] = useState([]); // [{date, ic}] histórico IC Score del ticker (lectura sl_analyses, $0)
+  const [reverseDcf, setReverseDcf] = useState(null); // Reverse DCF result (gated por SL_FLAGS.REVERSE_DCF_ENABLED; null si flag off)
 
   const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
   useEffect(() => {
@@ -6696,6 +6772,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setSpyHistory([]);
     setMacroTilt(null);
     setScoreHistory([]);
+    setReverseDcf(null);
     try {
       const results = await Promise.allSettled([fmpGet('quote', {
         symbol: sym
@@ -6869,6 +6946,31 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       const scores_ = calcScores(met_, rat_, hD_, sD_);
       const _mt = await computeMacroTilt(sb, pD_?.sector, met_?.netDebtToEBITDATTM, met_?.peRatioTTM ?? met_?.priceToEarningsRatioTTM);
       setMacroTilt(_mt);
+
+      // ── Reverse DCF (F2, gated) — pure math over data ALREADY in memory.
+      // 0 new FMP fetches. When the flag is OFF this whole block is skipped, so
+      // StockLens behaves byte-for-byte as before (no extra Supabase read, no state).
+      let _rdcf = null;
+      if (SL_FLAGS.REVERSE_DCF_ENABLED) {
+        try {
+          // rf comes from macro_state.dgs10 (read-only). A separate research batch
+          // adds that field via ic-proxy; until it's live, RDCF falls back to a
+          // config rf and marks the result low-confidence. One tiny Supabase read,
+          // on-analyze only (never on app open). Never throws.
+          let macroRow = null;
+          try {
+            const {
+              data: mr
+            } = await sb.from('macro_state').select('*').eq('id', 1).maybeSingle();
+            macroRow = mr || null;
+          } catch (e) {/* macro optional → low-confidence rf fallback */}
+          const rdIn = RDCF.buildInputs(met_, pD_, quote_, sD_, bsArr, cfArr, aeD);
+          _rdcf = RDCF.reverseDcf(sym.toUpperCase(), rdIn, macroRow);
+        } catch (e) {
+          _rdcf = null; /* never break the analysis */
+        }
+        setReverseDcf(_rdcf);
+      }
       // B1 (gated): el régimen re-pondera el micro_total que se persiste/puntúa.
       // Flag off → idéntico a scores_.total (call directo, sin reponderar).
       let microTotal_ = SL_FLAGS.B1_REGIME_WEIGHTS ? regimeWeightedTotal(scores_, _mt?.quadrant) : scores_.total;
