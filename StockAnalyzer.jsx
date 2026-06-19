@@ -624,7 +624,7 @@ const icScore = (total, tilt) => Math.max(0, Math.min(100, Math.round((total||0)
 // (los call-sites usan scores.total directamente cuando el flag está off).
 // Los pesos _default = los caps actuales (val25/hlth30/mom25/growth20), así que
 // regimeWeightedTotal con quadrant desconocido reproduce scores.total exacto.
-const SL_FLAGS = { B1_REGIME_WEIGHTS: false, B2_RATE_SENSITIVITY: false, REVERSE_DCF_ENABLED: false };
+const SL_FLAGS = { B1_REGIME_WEIGHTS: false, B2_RATE_SENSITIVITY: false, REVERSE_DCF_ENABLED: true };
 
 // F4 — weight of the reverse-DCF valuation signal in the IC Score. ∈[0,1].
 // DEFAULT 0 → the signal does NOT move any score, even with REVERSE_DCF_ENABLED on.

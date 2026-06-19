@@ -895,7 +895,7 @@ const icScore = (total, tilt) => Math.max(0, Math.min(100, Math.round((total || 
 const SL_FLAGS = {
   B1_REGIME_WEIGHTS: false,
   B2_RATE_SENSITIVITY: false,
-  REVERSE_DCF_ENABLED: false
+  REVERSE_DCF_ENABLED: true
 };
 
 // F4 — weight of the reverse-DCF valuation signal in the IC Score. ∈[0,1].
