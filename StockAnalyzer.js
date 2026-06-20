@@ -330,13 +330,16 @@ const RDCF = (() => {
         ...base,
         g1: x
       }).ev, -0.10, 1.50, targetEV);
-      if (impliedG1 == null) return {
-        applicable: false,
-        reason: 'no_convergence',
-        targetEV,
-        wacc: w.wacc,
-        lowConfidence: true
-      };
+      if (impliedG1 == null) {
+        console.warn('[RDCF] bisect no convergence — targetEV:', targetEV, 'wacc:', w.wacc);
+        return {
+          applicable: false,
+          reason: 'no_convergence',
+          targetEV,
+          wacc: w.wacc,
+          lowConfidence: true
+        };
+      }
       const model = buildModel({
         ...base,
         g1: impliedG1
@@ -845,26 +848,35 @@ function calcScores(metrics, ratios, history, stmts) {
     total: val + hlth + mom + growth
   };
 }
+
+// ─── RATING THRESHOLDS — breakpoints canonicos del IC Score ──
+// Single source of truth. También usados en ScoreGauge para el color del gauge.
+const RT = {
+  STRONG_BUY: 80,
+  BUY: 65,
+  HOLD: 50,
+  CAUTION: 35
+};
 function getRating(s) {
-  if (s >= 80) return {
+  if (s >= RT.STRONG_BUY) return {
     label: 'STRONG BUY',
     color: '#5ac576',
     bg: '#194224',
     border: '#194224'
   };
-  if (s >= 65) return {
+  if (s >= RT.BUY) return {
     label: 'BUY',
     color: '#5ac576',
     bg: '#194224',
     border: '#194224'
   };
-  if (s >= 50) return {
+  if (s >= RT.HOLD) return {
     label: 'HOLD',
     color: '#eca851',
     bg: '#54360b',
     border: '#54360b'
   };
-  if (s >= 35) return {
+  if (s >= RT.CAUTION) return {
     label: 'CAUTION',
     color: '#eca851',
     bg: '#54360b',
@@ -990,6 +1002,29 @@ function regimeWeightedTotal(s, quadrant) {
   const t = s.val / 25 * W.val + s.hlth / 30 * W.hlth + s.mom / 25 * W.mom + s.growth / 20 * W.growth;
   return Math.round(t);
 }
+
+// ─── MACRO TILT THRESHOLDS ───────────────────────────────────
+// Umbrales de los indicadores del macro_state que disparan ajustes en el tilt.
+// Documentados aquí para facilitar calibración futura.
+const MT = {
+  CREDIT_STRESS_HIGH: 70,
+  // credit_stress > 70 → penaliza deuda alta
+  CREDIT_DEBT_HIGH: 3,
+  // netDebt/EBITDA > 3x
+  CREDIT_TILT: -10,
+  LIQUIDITY_LOW: 35,
+  // liquidity_cycle < 35 → penaliza P/E alto
+  LIQUIDITY_PE_HIGH: 40,
+  // P/E > 40
+  LIQUIDITY_TILT: -5,
+  RECESSION_HIGH: 60,
+  // recession_prob > 60 → penaliza sectores cíclicos
+  RECESSION_TILT: -8,
+  GEO_HIGH: 65,
+  // geopolitical_risk > 65 → bonus sectores defensivos
+  GEO_TILT: 5,
+  MAX_TILT: 15
+};
 async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
   if (!supabase) return {
     tilt: 0,
@@ -1003,7 +1038,9 @@ async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
       data
     } = await supabase.from("macro_state").select("*").eq("id", 1).maybeSingle();
     m = data;
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[StockLens] macro_state fetch failed:', e?.message);
+  }
   if (!m) return {
     tilt: 0,
     reasons: ["Macro no disponible aún"],
@@ -1014,20 +1051,20 @@ async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
   const reasons = [];
   const nd = Number(netDebtEbitda) || 0,
     pe = Number(peRatio) || 0;
-  if (m.credit_stress > 70 && nd > 3) {
-    tilt -= 10;
+  if (m.credit_stress > MT.CREDIT_STRESS_HIGH && nd > MT.CREDIT_DEBT_HIGH) {
+    tilt += MT.CREDIT_TILT;
     reasons.push(`Credit stress ${Math.round(m.credit_stress)} + deuda ${nd.toFixed(1)}x`);
   }
-  if (m.liquidity_cycle < 35 && pe > 40) {
-    tilt -= 5;
+  if (m.liquidity_cycle < MT.LIQUIDITY_LOW && pe > MT.LIQUIDITY_PE_HIGH) {
+    tilt += MT.LIQUIDITY_TILT;
     reasons.push(`Liquidez baja ${Math.round(m.liquidity_cycle)} + P/E ${pe.toFixed(0)}`);
   }
-  if (m.recession_prob > 60 && ["Energy", "Industrials", "Consumer Cyclical"].includes(sector)) {
-    tilt -= 8;
+  if (m.recession_prob > MT.RECESSION_HIGH && ["Energy", "Industrials", "Consumer Cyclical"].includes(sector)) {
+    tilt += MT.RECESSION_TILT;
     reasons.push(`Recesión ${Math.round(m.recession_prob)} + ${sector} cíclico`);
   }
-  if (m.geopolitical_risk > 65 && ["Utilities", "Healthcare", "Basic Materials", "Consumer Defensive"].includes(sector)) {
-    tilt += 5;
+  if (m.geopolitical_risk > MT.GEO_HIGH && ["Utilities", "Healthcare", "Basic Materials", "Consumer Defensive"].includes(sector)) {
+    tilt += MT.GEO_TILT;
     reasons.push(`Geopolítica ${Math.round(m.geopolitical_risk)} + ${sector} defensivo`);
   }
   const bonus = {
@@ -1054,7 +1091,7 @@ async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
     tilt += b;
     reasons.push(`Cuadrante ${m.cartera_quadrant} → ${sector} ${b > 0 ? "+" : ""}${b}`);
   }
-  tilt = Math.max(-15, Math.min(15, tilt));
+  tilt = Math.max(-MT.MAX_TILT, Math.min(MT.MAX_TILT, tilt));
   return {
     tilt,
     reasons: reasons.length ? reasons : ["Sin ajustes para este perfil"],
@@ -1412,7 +1449,7 @@ function ScoreGauge({
   const r = getRating(score);
   const cir = 2 * Math.PI * 52;
   const prog = score / 100 * cir;
-  const col = score >= 65 ? '#5ac576' : score >= 50 ? '#eca851' : '#eb6459';
+  const col = score >= RT.BUY ? '#5ac576' : score >= RT.HOLD ? '#eca851' : '#eb6459';
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
@@ -1834,6 +1871,7 @@ function PriceChart({
       setFredObs(obs);
       setFredStatus('idle');
     } catch (e) {
+      console.warn('[StockLens] FRED fetch failed:', e?.message);
       setFredStatus('error');
     }
   }, [fredOn, fredObs, sorted]);
@@ -3714,6 +3752,7 @@ function DCFCalculator({
   profile
 }) {
   if (!inputs) return null;
+  const rateError = inputs.discountRate <= inputs.terminalGrowth;
   const result = runDCF(inputs);
   const iv = result?.intrinsicValue;
   const mos = ok(iv) && ok(currentPrice) && currentPrice > 0 ? (iv - currentPrice) / iv : null;
@@ -3920,13 +3959,23 @@ function DCFCalculator({
       letterSpacing: '1px',
       marginBottom: 4
     }
-  }, "Valuation Result"), /*#__PURE__*/React.createElement("div", {
+  }, "Valuation Result"), rateError && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#602a25',
+      border: '1px solid #eb6459',
+      borderRadius: 6,
+      padding: '8px 12px',
+      fontSize: 10,
+      color: '#eb6459',
+      fontWeight: 600
+    }
+  }, "\u26A0 WACC (", inputs.discountRate, "%) must exceed terminal growth (", inputs.terminalGrowth, "%) \u2014 adjust the sliders above."), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       padding: '16px',
       background: '#15151c',
       borderRadius: 8,
-      border: '1px solid #24262f'
+      border: `1px solid ${rateError ? '#eb6459' : '#24262f'}`
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6944,7 +6993,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       const text = data?.content?.[0]?.text;
       if (text) setAiVerdict(text);
     } catch (e) {
-      // Silently fail — fall back to rule-based text
+      console.warn('[StockLens] AI verdict failed:', e?.message);
     } finally {
       setAiLoading(false);
     }
@@ -7221,7 +7270,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               }
             });
             setPeerMetrics(peerMap);
-          } catch (e) {/* silent fail */}
+          } catch (e) {
+            console.warn('[StockLens] peer metrics fetch failed:', e?.message);
+          }
         })();
       }
 
@@ -7315,7 +7366,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       if (SL_FLAGS.B2_RATE_SENSITIVITY) microTotal_ = Math.max(0, microTotal_ - rateSensitivityPenalty(met_?.netDebtToEBITDATTM, met_?.interestCoverageTTM ?? met_?.interestCoverageRatioTTM, _mt?.quadrant));
       // F4 (gated + weight): reverse-DCF valuation signal into Valuation. DEFAULT
       // weight 0 → no effect even with the flag on. Persisted score = live score.
-      if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0) microTotal_ = Math.max(0, Math.min(100, microTotal_ + RDCF_VALUATION_WEIGHT * RDCF.valuationAdj(_rdcf)));
+      if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0) {
+        const safeWeight = Math.max(0, Math.min(1, RDCF_VALUATION_WEIGHT));
+        microTotal_ = Math.max(0, Math.min(100, microTotal_ + safeWeight * RDCF.valuationAdj(_rdcf)));
+      }
 
       // AI verdict (con contexto macro/régimen)
       fetchAiVerdict(sym, scores_, pD_, met_, _mt);

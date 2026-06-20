@@ -191,8 +191,10 @@ const RDCF = (() => {
 
       const targetEV = marketCap + netDebt;
       const impliedG1 = bisect(x => buildModel({...base, g1:x}).ev, -0.10, 1.50, targetEV);
-      if (impliedG1 == null)
+      if (impliedG1 == null) {
+        console.warn('[RDCF] bisect no convergence — targetEV:', targetEV, 'wacc:', w.wacc);
         return { applicable:false, reason:'no_convergence', targetEV, wacc:w.wacc, lowConfidence:true };
+      }
 
       const model = buildModel({...base, g1:impliedG1});
       const revCagr = model.revCagr;
@@ -602,12 +604,16 @@ function calcScores(metrics, ratios, history, stmts) {
   return {val,hlth,mom,growth,total:val+hlth+mom+growth};
 }
 
+// ─── RATING THRESHOLDS — breakpoints canonicos del IC Score ──
+// Single source of truth. También usados en ScoreGauge para el color del gauge.
+const RT = { STRONG_BUY: 80, BUY: 65, HOLD: 50, CAUTION: 35 };
+
 function getRating(s) {
-  if(s>=80) return {label:'STRONG BUY',color:'#5ac576',bg:'#194224',border:'#194224'};
-  if(s>=65) return {label:'BUY',       color:'#5ac576',bg:'#194224',border:'#194224'};
-  if(s>=50) return {label:'HOLD',      color:'#eca851',bg:'#54360b',border:'#54360b'};
-  if(s>=35) return {label:'CAUTION',   color:'#eca851',bg:'#54360b',border:'#54360b'};
-  return          {label:'AVOID',      color:'#eb6459',bg:'#602a25',border:'#602a25'};
+  if(s>=RT.STRONG_BUY) return {label:'STRONG BUY',color:'#5ac576',bg:'#194224',border:'#194224'};
+  if(s>=RT.BUY)        return {label:'BUY',       color:'#5ac576',bg:'#194224',border:'#194224'};
+  if(s>=RT.HOLD)       return {label:'HOLD',      color:'#eca851',bg:'#54360b',border:'#54360b'};
+  if(s>=RT.CAUTION)    return {label:'CAUTION',   color:'#eca851',bg:'#54360b',border:'#54360b'};
+  return                      {label:'AVOID',      color:'#eb6459',bg:'#602a25',border:'#602a25'};
 }
 
 // ─── IC SCORE — métrica canónica unificada (macro × micro) ───
@@ -678,24 +684,41 @@ function regimeWeightedTotal(s, quadrant) {
   return Math.round(t);
 }
 
+// ─── MACRO TILT THRESHOLDS ───────────────────────────────────
+// Umbrales de los indicadores del macro_state que disparan ajustes en el tilt.
+// Documentados aquí para facilitar calibración futura.
+const MT = {
+  CREDIT_STRESS_HIGH:   70,   // credit_stress > 70 → penaliza deuda alta
+  CREDIT_DEBT_HIGH:      3,   // netDebt/EBITDA > 3x
+  CREDIT_TILT:         -10,
+  LIQUIDITY_LOW:        35,   // liquidity_cycle < 35 → penaliza P/E alto
+  LIQUIDITY_PE_HIGH:    40,   // P/E > 40
+  LIQUIDITY_TILT:        -5,
+  RECESSION_HIGH:       60,   // recession_prob > 60 → penaliza sectores cíclicos
+  RECESSION_TILT:        -8,
+  GEO_HIGH:             65,   // geopolitical_risk > 65 → bonus sectores defensivos
+  GEO_TILT:              5,
+  MAX_TILT:             15,
+};
+
 async function computeMacroTilt(supabase, sector, netDebtEbitda, peRatio) {
   if (!supabase) return { tilt: 0, reasons: ["Sin Supabase"], quadrant: null, regime: null };
   let m = null;
   try {
     const { data } = await supabase.from("macro_state").select("*").eq("id", 1).maybeSingle();
     m = data;
-  } catch (e) {}
+  } catch (e) { console.warn('[StockLens] macro_state fetch failed:', e?.message); }
   if (!m) return { tilt: 0, reasons: ["Macro no disponible aún"], quadrant: null, regime: null };
   let tilt = 0; const reasons = [];
   const nd = Number(netDebtEbitda) || 0, pe = Number(peRatio) || 0;
-  if (m.credit_stress > 70 && nd > 3) { tilt -= 10; reasons.push(`Credit stress ${Math.round(m.credit_stress)} + deuda ${nd.toFixed(1)}x`); }
-  if (m.liquidity_cycle < 35 && pe > 40) { tilt -= 5; reasons.push(`Liquidez baja ${Math.round(m.liquidity_cycle)} + P/E ${pe.toFixed(0)}`); }
-  if (m.recession_prob > 60 && ["Energy","Industrials","Consumer Cyclical"].includes(sector)) { tilt -= 8; reasons.push(`Recesión ${Math.round(m.recession_prob)} + ${sector} cíclico`); }
-  if (m.geopolitical_risk > 65 && ["Utilities","Healthcare","Basic Materials","Consumer Defensive"].includes(sector)) { tilt += 5; reasons.push(`Geopolítica ${Math.round(m.geopolitical_risk)} + ${sector} defensivo`); }
+  if (m.credit_stress > MT.CREDIT_STRESS_HIGH && nd > MT.CREDIT_DEBT_HIGH) { tilt += MT.CREDIT_TILT; reasons.push(`Credit stress ${Math.round(m.credit_stress)} + deuda ${nd.toFixed(1)}x`); }
+  if (m.liquidity_cycle < MT.LIQUIDITY_LOW && pe > MT.LIQUIDITY_PE_HIGH) { tilt += MT.LIQUIDITY_TILT; reasons.push(`Liquidez baja ${Math.round(m.liquidity_cycle)} + P/E ${pe.toFixed(0)}`); }
+  if (m.recession_prob > MT.RECESSION_HIGH && ["Energy","Industrials","Consumer Cyclical"].includes(sector)) { tilt += MT.RECESSION_TILT; reasons.push(`Recesión ${Math.round(m.recession_prob)} + ${sector} cíclico`); }
+  if (m.geopolitical_risk > MT.GEO_HIGH && ["Utilities","Healthcare","Basic Materials","Consumer Defensive"].includes(sector)) { tilt += MT.GEO_TILT; reasons.push(`Geopolítica ${Math.round(m.geopolitical_risk)} + ${sector} defensivo`); }
   const bonus = { estanflacion:{Energy:5,"Basic Materials":5,Technology:-5}, inflacion:{Energy:5,"Real Estate":5}, defensivo:{Healthcare:5,Utilities:5,"Consumer Defensive":5}, crecimiento:{Technology:5} };
   const b = (bonus[m.cartera_quadrant] && bonus[m.cartera_quadrant][sector]) || 0;
   if (b) { tilt += b; reasons.push(`Cuadrante ${m.cartera_quadrant} → ${sector} ${b>0?"+":""}${b}`); }
-  tilt = Math.max(-15, Math.min(15, tilt));
+  tilt = Math.max(-MT.MAX_TILT, Math.min(MT.MAX_TILT, tilt));
   return { tilt, reasons: reasons.length ? reasons : ["Sin ajustes para este perfil"], quadrant: m.cartera_quadrant, regime: m.regime_label, updatedAt: m.updated_at || null,
     // A8 contrarian sentiment (ya viene en la fila; 0 fetches extra)
     putCall: m.put_call_ratio ?? null, fearGreed: m.fear_greed ?? null, fgRating: m.fear_greed_rating ?? null, sentimentSignal: m.sentiment_signal ?? null };
@@ -831,7 +854,7 @@ function ScoreGauge({score}) {
   const r=getRating(score);
   const cir=2*Math.PI*52;
   const prog=(score/100)*cir;
-  const col=score>=65?'#5ac576':score>=50?'#eca851':'#eb6459';
+  const col=score>=RT.BUY?'#5ac576':score>=RT.HOLD?'#eca851':'#eb6459';
   return (
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
       <div style={{position:'relative',width:136,height:136}}>
@@ -1016,7 +1039,7 @@ function PriceChart({history, ticker, period}) {
       _fredCache.FEDFUNDS=obs;
       setFredObs(obs);
       setFredStatus('idle');
-    }catch(e){ setFredStatus('error'); }
+    }catch(e){ console.warn('[StockLens] FRED fetch failed:', e?.message); setFredStatus('error'); }
   },[fredOn,fredObs,sorted]);
 
   if (!view.length || view.length < 2) return (
@@ -1887,6 +1910,7 @@ function runDCF(inputs) {
 
 function DCFCalculator({inputs,setInputs,currentPrice,profile}) {
   if (!inputs) return null;
+  const rateError = inputs.discountRate <= inputs.terminalGrowth;
   const result=runDCF(inputs);
   const iv=result?.intrinsicValue;
   const mos=(ok(iv)&&ok(currentPrice)&&currentPrice>0)?(iv-currentPrice)/iv:null;
@@ -1940,7 +1964,12 @@ function DCFCalculator({inputs,setInputs,currentPrice,profile}) {
         </div>
         <div style={{padding:'16px 20px',display:'flex',flexDirection:'column',gap:12}}>
           <div style={{fontSize:10,fontWeight:700,color:'#eca851',textTransform:'uppercase',letterSpacing:'1px',marginBottom:4}}>Valuation Result</div>
-          <div style={{textAlign:'center',padding:'16px',background:'#15151c',borderRadius:8,border:'1px solid #24262f'}}>
+          {rateError && (
+            <div style={{background:'#602a25',border:'1px solid #eb6459',borderRadius:6,padding:'8px 12px',fontSize:10,color:'#eb6459',fontWeight:600}}>
+              ⚠ WACC ({inputs.discountRate}%) must exceed terminal growth ({inputs.terminalGrowth}%) — adjust the sliders above.
+            </div>
+          )}
+          <div style={{textAlign:'center',padding:'16px',background:'#15151c',borderRadius:8,border:`1px solid ${rateError?'#eb6459':'#24262f'}`}}>
             <div style={{fontSize:10,color:'#787a83',marginBottom:4}}>Intrinsic Value / Share</div>
             <div style={{fontSize:28,fontWeight:800,color:ok(iv)?mosColor:'#787a83',fontFamily:'Geist Mono,monospace',lineHeight:1}}>
               {ok(iv)?fmt.price(iv):'—'}
@@ -3420,7 +3449,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       const text = data?.content?.[0]?.text;
       if (text) setAiVerdict(text);
     } catch (e) {
-      // Silently fail — fall back to rule-based text
+      console.warn('[StockLens] AI verdict failed:', e?.message);
     } finally {
       setAiLoading(false);
     }
@@ -3621,7 +3650,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               }
             });
             setPeerMetrics(peerMap);
-          } catch(e) { /* silent fail */ }
+          } catch(e) { console.warn('[StockLens] peer metrics fetch failed:', e?.message); }
         })();
       }
 
@@ -3706,8 +3735,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       if (SL_FLAGS.B2_RATE_SENSITIVITY) microTotal_ = Math.max(0, microTotal_ - rateSensitivityPenalty(met_?.netDebtToEBITDATTM, met_?.interestCoverageTTM ?? met_?.interestCoverageRatioTTM, _mt?.quadrant));
       // F4 (gated + weight): reverse-DCF valuation signal into Valuation. DEFAULT
       // weight 0 → no effect even with the flag on. Persisted score = live score.
-      if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0)
-        microTotal_ = Math.max(0, Math.min(100, microTotal_ + RDCF_VALUATION_WEIGHT * RDCF.valuationAdj(_rdcf)));
+      if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0) {
+        const safeWeight = Math.max(0, Math.min(1, RDCF_VALUATION_WEIGHT));
+        microTotal_ = Math.max(0, Math.min(100, microTotal_ + safeWeight * RDCF.valuationAdj(_rdcf)));
+      }
 
       // AI verdict (con contexto macro/régimen)
       fetchAiVerdict(sym, scores_, pD_, met_, _mt);
