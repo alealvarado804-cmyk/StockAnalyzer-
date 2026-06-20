@@ -905,8 +905,8 @@ const icScore = (total, tilt) => Math.max(0, Math.min(100, Math.round((total || 
 // Los pesos _default = los caps actuales (val25/hlth30/mom25/growth20), así que
 // regimeWeightedTotal con quadrant desconocido reproduce scores.total exacto.
 const SL_FLAGS = {
-  B1_REGIME_WEIGHTS: false,
-  B2_RATE_SENSITIVITY: false,
+  B1_REGIME_WEIGHTS: true,
+  B2_RATE_SENSITIVITY: true,
   REVERSE_DCF_ENABLED: true
 };
 
