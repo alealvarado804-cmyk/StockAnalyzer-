@@ -636,7 +636,7 @@ const SL_FLAGS = { B1_REGIME_WEIGHTS: true, B2_RATE_SENSITIVITY: true, REVERSE_D
 // DEFAULT 0 → the signal does NOT move any score, even with REVERSE_DCF_ENABLED on.
 // Raising it is a deliberate, reviewed step (see scripts/rdcf-score-table.js for the
 // before/after preview). Applied only when REVERSE_DCF_ENABLED is on AND this is > 0.
-const RDCF_VALUATION_WEIGHT = 0;
+const RDCF_VALUATION_WEIGHT = 0.2;
 
 // ─── B2 — RATE SENSITIVITY (gated) — MEJORAS_RESEARCH F3 ───
 // Apalancamiento alto + baja cobertura de intereses → penaliza más SOLO en
@@ -3324,6 +3324,69 @@ function ReverseDcfCard({ data, horizonYears }) {
 }
 
 // ─── MAIN APP ────────────────────────────────────────────────
+// ─── WATCHLIST PANEL ────────────────────────────────────────
+// Muestra el análisis más reciente de cada ticker guardado en sl_analyses.
+// Lee solo columnas ligeras (0 API calls). Click en card → re-analiza.
+function WatchlistPanel({ rows, onAnalyze }) {
+  // Deduplicar: un ticker → análisis más reciente
+  const latest = Object.values(
+    rows.reduce((acc, r) => {
+      if (!acc[r.ticker] || r.analysis_date > acc[r.ticker].analysis_date)
+        acc[r.ticker] = r;
+      return acc;
+    }, {})
+  ).sort((a, b) => b.analysis_date.localeCompare(a.analysis_date));
+
+  if (!latest.length) return null;
+
+  return (
+    <div style={{ paddingTop: 28 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#33353f', marginBottom: 14 }}>
+        My Watchlist · {latest.length} ticker{latest.length !== 1 ? 's' : ''}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 10 }}>
+        {latest.map(row => {
+          const ic = icScore(row.score_total, row.macro_tilt);
+          const r  = getRating(ic);
+          const col = ic >= RT.BUY ? '#5ac576' : ic >= RT.HOLD ? '#eca851' : '#eb6459';
+          return (
+            <div key={row.ticker}
+              onClick={() => onAnalyze(row.ticker)}
+              onMouseEnter={e => e.currentTarget.style.borderColor = '#34315f'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = '#24262f'}
+              style={{
+                background: '#1c1d26', border: '1px solid #24262f', borderRadius: 8,
+                padding: '14px 16px', cursor: 'pointer', transition: 'border-color 0.15s',
+              }}>
+              {/* ticker + IC score */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', fontFamily: 'Geist Mono,monospace', lineHeight: 1 }}>{row.ticker}</div>
+                  {row.sector && <div style={{ fontSize: 9, color: '#33353f', marginTop: 3 }}>{row.sector}</div>}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: col, fontFamily: 'Geist Mono,monospace', lineHeight: 1 }}>{ic}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: r.color, letterSpacing: '0.8px', marginTop: 2 }}>{r.label}</div>
+                </div>
+              </div>
+              {/* sub-scores */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 10px', marginBottom: 8 }}>
+                {[['Val', row.score_val, 25], ['Hlth', row.score_hlth, 30], ['Mom', row.score_mom, 25], ['Growth', row.score_growth, 20]].map(([lbl, v, mx]) => (
+                  <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#787a83' }}>
+                    <span>{lbl}</span>
+                    <span style={{ color: '#a6a7b1', fontFamily: 'Geist Mono,monospace' }}>{v ?? '—'}/{mx}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 9, color: '#33353f' }}>{row.analysis_date}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [session,      setSession]      = useState(null);
   const [authChecked,  setAuthChecked]  = useState(false);
@@ -3377,6 +3440,7 @@ function App() {
   const [autoLoaded,    setAutoLoaded]    = useState(false);
   const [scoreHistory,  setScoreHistory]  = useState([]);   // [{date, ic}] histórico IC Score del ticker (lectura sl_analyses, $0)
   const [reverseDcf,    setReverseDcf]    = useState(null);  // Reverse DCF result (gated por SL_FLAGS.REVERSE_DCF_ENABLED; null si flag off)
+  const [watchlist,     setWatchlist]     = useState([]);    // [{ticker,analysis_date,score_total,...}] — lectura sl_analyses al arranque y post-análisis
 
   const scores = useMemo(()=>calcScores(met,rat,hist,stmts),[met,rat,hist,stmts]);
 
@@ -3386,12 +3450,31 @@ function App() {
     return ()=>window.removeEventListener('scroll',fn);
   },[]);
 
+  const loadWatchlist = useCallback(async (sess) => {
+    if (!sb || !sess) return;
+    try {
+      const { data } = await sb.from('sl_analyses')
+        .select('ticker, analysis_date, score_total, score_val, score_hlth, score_mom, score_growth, rating, macro_tilt, sector')
+        .eq('user_id', sess.user.id)
+        .order('analysis_date', { ascending: false })
+        .limit(200);
+      if (Array.isArray(data)) setWatchlist(data);
+    } catch(e) { console.warn('[StockLens] watchlist load failed:', e?.message); }
+  }, []);
+
   useEffect(() => {
     if (!sb) { setAuthChecked(true); return; }
-    sb.auth.getSession().then(({ data }) => { setSession(data.session); setAuthChecked(true); });
-    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
+    sb.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthChecked(true);
+      if (data.session) loadWatchlist(data.session);
+    });
+    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      if (s) loadWatchlist(s);
+    });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [loadWatchlist]);
 
   const fmpGet = useCallback(async (endpoint, params = {}) => {
     const qs = new URLSearchParams(params).toString();
@@ -3764,6 +3847,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
           }
         } catch(e) { /* no romper el análisis si falla el guardado */ }
 
+        // Refrescar watchlist (no-blocking; incluye el análisis recién insertado)
+        sb.auth.getSession().then(({ data: { session: s2 } }) => { if (s2) loadWatchlist(s2); }).catch(()=>{});
+
         // Histórico del IC Score (lectura $0; incluye el análisis recién guardado)
         try {
           const { data: histRows } = await sb.from('sl_analyses')
@@ -3784,7 +3870,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     } finally {
       setLoading(false);
     }
-  },[fmpGet, finnhubGet, fetchAiVerdict]);
+  },[fmpGet, finnhubGet, fetchAiVerdict, loadWatchlist]);
 
   const handleSearch=()=>{const s=inputTicker.trim().toUpperCase();if(s) analyze(s);};
 
@@ -4197,24 +4283,28 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       {/* ── Content ── */}
       <div style={{maxWidth:1120,margin:'0 auto',padding:'0 24px'}}>
 
-        {/* Empty state */}
+        {/* Empty state / Watchlist */}
         {!loading&&!hasData&&!error&&(
-          <div style={{textAlign:'center',padding:'90px 20px'}}>
-            <div style={{fontSize:52,marginBottom:14}}>⚡</div>
-            <div style={{fontSize:26,fontWeight:800,color:'#fff',marginBottom:8}}>StockLens</div>
-            <div style={{fontSize:13,color:'#33353f',maxWidth:400,margin:'0 auto 32px',lineHeight:1.7}}>
-              Professional stock analysis — enter any ticker to get started. 4-dimensional scoring: valuation, financial health, momentum, and growth.
-            </div>
-            <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>
-              {['AAPL','MSFT','NVDA','AMZN','META','COST','V','ASML'].map(t=>(
-                <button key={t} onClick={()=>{setInputTicker(t);analyze(t);}} style={{
-                  background:'#1c1d26',border:'1px solid #24262f',color:'#a6a7b1',
-                  padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,
-                  fontFamily:'Geist Mono,monospace',fontWeight:600
-                }}>{t}</button>
-              ))}
-            </div>
-          </div>
+          watchlist.length > 0
+            ? <WatchlistPanel rows={watchlist} onAnalyze={t=>{setInputTicker(t);analyze(t);}}/>
+            : (
+              <div style={{textAlign:'center',padding:'90px 20px'}}>
+                <div style={{fontSize:52,marginBottom:14}}>⚡</div>
+                <div style={{fontSize:26,fontWeight:800,color:'#fff',marginBottom:8}}>StockLens</div>
+                <div style={{fontSize:13,color:'#33353f',maxWidth:400,margin:'0 auto 32px',lineHeight:1.7}}>
+                  Professional stock analysis — enter any ticker to get started. 4-dimensional scoring: valuation, financial health, momentum, and growth.
+                </div>
+                <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>
+                  {['AAPL','MSFT','NVDA','AMZN','META','COST','V','ASML'].map(t=>(
+                    <button key={t} onClick={()=>{setInputTicker(t);analyze(t);}} style={{
+                      background:'#1c1d26',border:'1px solid #24262f',color:'#a6a7b1',
+                      padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:12,
+                      fontFamily:'Geist Mono,monospace',fontWeight:600
+                    }}>{t}</button>
+                  ))}
+                </div>
+              </div>
+            )
         )}
 
         {/* Loading skeleton */}

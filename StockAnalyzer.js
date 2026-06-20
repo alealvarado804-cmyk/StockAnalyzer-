@@ -914,7 +914,7 @@ const SL_FLAGS = {
 // DEFAULT 0 → the signal does NOT move any score, even with REVERSE_DCF_ENABLED on.
 // Raising it is a deliberate, reviewed step (see scripts/rdcf-score-table.js for the
 // before/after preview). Applied only when REVERSE_DCF_ENABLED is on AND this is > 0.
-const RDCF_VALUATION_WEIGHT = 0;
+const RDCF_VALUATION_WEIGHT = 0.2;
 
 // ─── B2 — RATE SENSITIVITY (gated) — MEJORAS_RESEARCH F3 ───
 // Apalancamiento alto + baja cobertura de intereses → penaliza más SOLO en
@@ -6856,6 +6856,124 @@ function ReverseDcfCard({
 }
 
 // ─── MAIN APP ────────────────────────────────────────────────
+// ─── WATCHLIST PANEL ────────────────────────────────────────
+// Muestra el análisis más reciente de cada ticker guardado en sl_analyses.
+// Lee solo columnas ligeras (0 API calls). Click en card → re-analiza.
+function WatchlistPanel({
+  rows,
+  onAnalyze
+}) {
+  // Deduplicar: un ticker → análisis más reciente
+  const latest = Object.values(rows.reduce((acc, r) => {
+    if (!acc[r.ticker] || r.analysis_date > acc[r.ticker].analysis_date) acc[r.ticker] = r;
+    return acc;
+  }, {})).sort((a, b) => b.analysis_date.localeCompare(a.analysis_date));
+  if (!latest.length) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      paddingTop: 28
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '1px',
+      color: '#33353f',
+      marginBottom: 14
+    }
+  }, "My Watchlist \xB7 ", latest.length, " ticker", latest.length !== 1 ? 's' : ''), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))',
+      gap: 10
+    }
+  }, latest.map(row => {
+    const ic = icScore(row.score_total, row.macro_tilt);
+    const r = getRating(ic);
+    const col = ic >= RT.BUY ? '#5ac576' : ic >= RT.HOLD ? '#eca851' : '#eb6459';
+    return /*#__PURE__*/React.createElement("div", {
+      key: row.ticker,
+      onClick: () => onAnalyze(row.ticker),
+      onMouseEnter: e => e.currentTarget.style.borderColor = '#34315f',
+      onMouseLeave: e => e.currentTarget.style.borderColor = '#24262f',
+      style: {
+        background: '#1c1d26',
+        border: '1px solid #24262f',
+        borderRadius: 8,
+        padding: '14px 16px',
+        cursor: 'pointer',
+        transition: 'border-color 0.15s'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 10
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 16,
+        fontWeight: 800,
+        color: '#fff',
+        fontFamily: 'Geist Mono,monospace',
+        lineHeight: 1
+      }
+    }, row.ticker), row.sector && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: '#33353f',
+        marginTop: 3
+      }
+    }, row.sector)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'right'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 22,
+        fontWeight: 800,
+        color: col,
+        fontFamily: 'Geist Mono,monospace',
+        lineHeight: 1
+      }
+    }, ic), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        fontWeight: 700,
+        color: r.color,
+        letterSpacing: '0.8px',
+        marginTop: 2
+      }
+    }, r.label))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '3px 10px',
+        marginBottom: 8
+      }
+    }, [['Val', row.score_val, 25], ['Hlth', row.score_hlth, 30], ['Mom', row.score_mom, 25], ['Growth', row.score_growth, 20]].map(([lbl, v, mx]) => /*#__PURE__*/React.createElement("div", {
+      key: lbl,
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        fontSize: 9,
+        color: '#787a83'
+      }
+    }, /*#__PURE__*/React.createElement("span", null, lbl), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: '#a6a7b1',
+        fontFamily: 'Geist Mono,monospace'
+      }
+    }, v ?? '—', "/", mx)))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: '#33353f'
+      }
+    }, row.analysis_date));
+  })));
+}
 function App() {
   const [session, setSession] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -6908,6 +7026,7 @@ function App() {
   const [autoLoaded, setAutoLoaded] = useState(false);
   const [scoreHistory, setScoreHistory] = useState([]); // [{date, ic}] histórico IC Score del ticker (lectura sl_analyses, $0)
   const [reverseDcf, setReverseDcf] = useState(null); // Reverse DCF result (gated por SL_FLAGS.REVERSE_DCF_ENABLED; null si flag off)
+  const [watchlist, setWatchlist] = useState([]); // [{ticker,analysis_date,score_total,...}] — lectura sl_analyses al arranque y post-análisis
 
   const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
   useEffect(() => {
@@ -6916,6 +7035,19 @@ function App() {
       passive: true
     });
     return () => window.removeEventListener('scroll', fn);
+  }, []);
+  const loadWatchlist = useCallback(async sess => {
+    if (!sb || !sess) return;
+    try {
+      const {
+        data
+      } = await sb.from('sl_analyses').select('ticker, analysis_date, score_total, score_val, score_hlth, score_mom, score_growth, rating, macro_tilt, sector').eq('user_id', sess.user.id).order('analysis_date', {
+        ascending: false
+      }).limit(200);
+      if (Array.isArray(data)) setWatchlist(data);
+    } catch (e) {
+      console.warn('[StockLens] watchlist load failed:', e?.message);
+    }
   }, []);
   useEffect(() => {
     if (!sb) {
@@ -6927,12 +7059,16 @@ function App() {
     }) => {
       setSession(data.session);
       setAuthChecked(true);
+      if (data.session) loadWatchlist(data.session);
     });
     const {
       data: sub
-    } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
+    } = sb.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      if (s) loadWatchlist(s);
+    });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [loadWatchlist]);
   const fmpGet = useCallback(async (endpoint, params = {}) => {
     const qs = new URLSearchParams(params).toString();
     const res = await authedFetch(`/api/fmp/${endpoint}?${qs}`);
@@ -7404,6 +7540,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
           }
         } catch (e) {/* no romper el análisis si falla el guardado */}
 
+        // Refrescar watchlist (no-blocking; incluye el análisis recién insertado)
+        sb.auth.getSession().then(({
+          data: {
+            session: s2
+          }
+        }) => {
+          if (s2) loadWatchlist(s2);
+        }).catch(() => {});
+
         // Histórico del IC Score (lectura $0; incluye el análisis recién guardado)
         try {
           const {
@@ -7424,7 +7569,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     } finally {
       setLoading(false);
     }
-  }, [fmpGet, finnhubGet, fetchAiVerdict]);
+  }, [fmpGet, finnhubGet, fetchAiVerdict, loadWatchlist]);
   const handleSearch = () => {
     const s = inputTicker.trim().toUpperCase();
     if (s) analyze(s);
@@ -8109,7 +8254,13 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       margin: '0 auto',
       padding: '0 24px'
     }
-  }, !loading && !hasData && !error && /*#__PURE__*/React.createElement("div", {
+  }, !loading && !hasData && !error && (watchlist.length > 0 ? /*#__PURE__*/React.createElement(WatchlistPanel, {
+    rows: watchlist,
+    onAnalyze: t => {
+      setInputTicker(t);
+      analyze(t);
+    }
+  }) : /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       padding: '90px 20px'
@@ -8158,7 +8309,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontFamily: 'Geist Mono,monospace',
       fontWeight: 600
     }
-  }, t)))), loading && /*#__PURE__*/React.createElement(LoadingSkeleton, null), !loading && error && /*#__PURE__*/React.createElement("div", {
+  }, t))))), loading && /*#__PURE__*/React.createElement(LoadingSkeleton, null), !loading && error && /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#602a25',
       border: '1px solid #602a25',
