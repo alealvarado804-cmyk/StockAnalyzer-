@@ -3370,9 +3370,11 @@ function parseIntlTicker(ticker) {
 // Muestra el análisis más reciente de cada ticker guardado en sl_analyses.
 // Lee solo columnas ligeras (0 API calls). Click en card → re-analiza.
 function WatchlistPanel({ rows, onAnalyze }) {
-  // Deduplicar: un ticker → análisis más reciente
+  if (!Array.isArray(rows)) return null;
+  // Deduplicar: un ticker → análisis más reciente (filtra filas corruptas)
   const latest = Object.values(
     rows.reduce((acc, r) => {
+      if (!r || !r.ticker || !r.analysis_date) return acc; // fila corrupta
       if (!acc[r.ticker] || r.analysis_date > acc[r.ticker].analysis_date)
         acc[r.ticker] = r;
       return acc;
@@ -3663,6 +3665,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       if (!summary) { setTranscriptError('Análisis no disponible ahora mismo.'); return; }
 
       const result = { ticker, label, date: dateLabel, summary };
+      if (Object.keys(transcriptCache.current).length >= 50) transcriptCache.current = {};
       transcriptCache.current[ticker] = result;
       setTranscriptSum(result);
     } catch (e) {
@@ -3855,13 +3858,17 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         setReverseDcf(_rdcf);
       }
       // B1 (gated): el régimen re-pondera el micro_total que se persiste/puntúa.
-      // Flag off → idéntico a scores_.total (call directo, sin reponderar).
-      let microTotal_ = SL_FLAGS.B1_REGIME_WEIGHTS ? regimeWeightedTotal(scores_, _mt?.quadrant) : scores_.total;
+      // Flag off → idéntico a scores_.total. Quadrant null → _default → mismo total.
+      let microTotal_ = (SL_FLAGS.B1_REGIME_WEIGHTS && _mt?.quadrant)
+        ? regimeWeightedTotal(scores_, _mt.quadrant)
+        : scores_.total;
+      // NaN guard: si scores_ tiene campos undefined, regimeWeightedTotal puede dar NaN
+      if (!Number.isFinite(microTotal_)) microTotal_ = scores_.total || 0;
       // B2 (gated): penaliza sensibilidad a tipos en regímenes de tipos altos.
       if (SL_FLAGS.B2_RATE_SENSITIVITY) microTotal_ = Math.max(0, microTotal_ - rateSensitivityPenalty(met_?.netDebtToEBITDATTM, met_?.interestCoverageTTM ?? met_?.interestCoverageRatioTTM, _mt?.quadrant));
       // F4 (gated + weight): reverse-DCF valuation signal into Valuation. DEFAULT
       // weight 0 → no effect even with the flag on. Persisted score = live score.
-      if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0) {
+      if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0 && _rdcf?.applicable === true) {
         const safeWeight = Math.max(0, Math.min(1, RDCF_VALUATION_WEIGHT));
         microTotal_ = Math.max(0, Math.min(100, microTotal_ + safeWeight * RDCF.valuationAdj(_rdcf)));
       }
@@ -3921,12 +3928,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   useEffect(() => {
     if (!session) return;                  // espera a estar logueado
     const sym = new URLSearchParams(window.location.search).get('ticker');
-    if (sym && /^[A-Za-z.\-]{1,12}$/.test(sym)) {
+    if (sym && /^[A-Za-z0-9.]{1,12}$/.test(sym)) {
       const s = sym.toUpperCase();
       setInputTicker(s);
       analyze(s);
     }
-  }, [session]);   // una vez al haber sesión
+  }, [session, analyze]);   // analyze en deps para evitar closure stale
 
   // Derived
   const sorted    = useMemo(()=>[...hist].sort((a,b)=>new Date(a.date)-new Date(b.date)),[hist]);
@@ -3946,8 +3953,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   let microTotalLive = (SL_FLAGS.B1_REGIME_WEIGHTS && scores) ? regimeWeightedTotal(scores, macroTilt?.quadrant) : scores?.total;
   if (SL_FLAGS.B2_RATE_SENSITIVITY && scores) microTotalLive = Math.max(0, microTotalLive - rateSensitivityPenalty(met?.netDebtToEBITDATTM, met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM, macroTilt?.quadrant));
   // F4 (gated + weight): reverse-DCF valuation signal. DEFAULT weight 0 → no effect.
-  if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0 && scores && reverseDcf)
-    microTotalLive = Math.max(0, Math.min(100, microTotalLive + RDCF_VALUATION_WEIGHT * RDCF.valuationAdj(reverseDcf)));
+  if (SL_FLAGS.REVERSE_DCF_ENABLED && RDCF_VALUATION_WEIGHT > 0 && scores && reverseDcf?.applicable === true)
+    microTotalLive = Math.max(0, Math.min(100, microTotalLive + Math.max(0, Math.min(1, RDCF_VALUATION_WEIGHT)) * RDCF.valuationAdj(reverseDcf)));
   const macroAdj  = icScore(microTotalLive, tiltN);   // IC Score canónico
   const baseRating = scores ? getRating(microTotalLive) : null;
   const adjRating  = scores ? getRating(macroAdj) : null;
@@ -4405,8 +4412,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                           color:prof.exchange.includes('NASDAQ')?'#968ff7':prof.exchange.includes('NYSE')?'#5ac576':'#eca851'
                         }}>{prof.exchange}</span>
                       )}
-                      {intlMeta&&(
-                        <span title={intlMeta.name} style={{
+                      {intlMeta?.flag && intlMeta?.short &&(
+                        <span title={intlMeta.name || intlMeta.short} style={{
                           fontSize:9,padding:'1px 7px',borderRadius:3,fontWeight:700,
                           background:'#24262f',border:'1px solid #33353f',color:'#a6a7b1',cursor:'help'
                         }}>{intlMeta.flag} {intlMeta.short}</span>
@@ -4541,7 +4548,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                       ) : null}
 
                       {/* ── Histórico del IC Score (sparkline temporal, lee sl_analyses, $0) ── */}
-                      {scoreHistory.length >= 1 && <ScoreHistorySparkline data={scoreHistory}/>}
+                      {scoreHistory.length >= 2 && <ScoreHistorySparkline data={scoreHistory}/>}
 
                       {earnCalendar&&<EarningsCalendarBadge earn={earnCalendar}/>}
                     </div>
