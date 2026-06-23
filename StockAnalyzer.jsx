@@ -5,8 +5,6 @@
 // ============================================================
 
 const { useState, useCallback, useMemo, useRef, useEffect } = React;
-const DEFAULT_FMP_KEY = '';
-
 const PROXY_URL = 'https://ic-proxy-psi.vercel.app';
 const SUPABASE_URL = 'https://acxaosesbsprrusdvgop.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjeGFvc2VzYnNwcnJ1c2R2Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTg2MjIsImV4cCI6MjA4OTA3NDYyMn0.EsRMK92iKgLVZhK2xy692JXKrMUZsuMEq6MG4UKbBk8';
@@ -4219,7 +4217,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       [],
       ['── KEY METRICS (TTM) ──'],
       ['P/E',             n(met?.peRatioTTM ?? met?.priceToEarningsRatioTTM)],
-      ['EV/EBITDA',       n(met?.enterpriseValueOverEBITDATTM)],
+      ['EV/EBITDA',       n(met?.evToEBITDATTM ?? met?.enterpriseValueOverEBITDATTM)],
       ['P/S',             n(met?.priceToSalesRatioTTM)],
       ['P/B',             n(met?.priceToBookRatioTTM)],
       ['ROE',             ok(met?.returnOnEquityTTM ?? met?.roeTTM) ? `${((met?.returnOnEquityTTM ?? met?.roeTTM)*100).toFixed(1)}%` : ''],
