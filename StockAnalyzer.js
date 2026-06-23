@@ -6856,6 +6856,152 @@ function ReverseDcfCard({
 }
 
 // ─── MAIN APP ────────────────────────────────────────────────
+// ─── INTERNATIONAL EXCHANGE SUPPORT ─────────────────────────
+// Mapa sufijo → bolsa. FMP acepta TICKER.XX para mercados no-US.
+// Añadir sufijo aquí para que el badge de bandera aparezca en la UI.
+const EXCHANGE_SUFFIXES = {
+  '.PA': {
+    name: 'Euronext Paris',
+    flag: '🇫🇷',
+    short: 'EURONEXT'
+  },
+  '.DE': {
+    name: 'Xetra Frankfurt',
+    flag: '🇩🇪',
+    short: 'XETRA'
+  },
+  '.L': {
+    name: 'London Stock Exchange',
+    flag: '🇬🇧',
+    short: 'LSE'
+  },
+  '.AS': {
+    name: 'Euronext Amsterdam',
+    flag: '🇳🇱',
+    short: 'AMS'
+  },
+  '.MI': {
+    name: 'Borsa Italiana',
+    flag: '🇮🇹',
+    short: 'BIT'
+  },
+  '.MC': {
+    name: 'Bolsa de Madrid',
+    flag: '🇪🇸',
+    short: 'BME'
+  },
+  '.SW': {
+    name: 'SIX Swiss Exchange',
+    flag: '🇨🇭',
+    short: 'SIX'
+  },
+  '.ST': {
+    name: 'Nasdaq Stockholm',
+    flag: '🇸🇪',
+    short: 'STO'
+  },
+  '.CO': {
+    name: 'Nasdaq Copenhagen',
+    flag: '🇩🇰',
+    short: 'CPH'
+  },
+  '.OL': {
+    name: 'Oslo Børs',
+    flag: '🇳🇴',
+    short: 'OSL'
+  },
+  '.HE': {
+    name: 'Nasdaq Helsinki',
+    flag: '🇫🇮',
+    short: 'HEL'
+  },
+  '.T': {
+    name: 'Tokyo Stock Exchange',
+    flag: '🇯🇵',
+    short: 'TSE'
+  },
+  '.HK': {
+    name: 'Hong Kong Stock Exchange',
+    flag: '🇭🇰',
+    short: 'HKEX'
+  },
+  '.SS': {
+    name: 'Shanghai Stock Exchange',
+    flag: '🇨🇳',
+    short: 'SSE'
+  },
+  '.SZ': {
+    name: 'Shenzhen Stock Exchange',
+    flag: '🇨🇳',
+    short: 'SZSE'
+  },
+  '.KS': {
+    name: 'Korea Stock Exchange',
+    flag: '🇰🇷',
+    short: 'KRX'
+  },
+  '.KQ': {
+    name: 'KOSDAQ',
+    flag: '🇰🇷',
+    short: 'KOSDAQ'
+  },
+  '.AX': {
+    name: 'ASX Australia',
+    flag: '🇦🇺',
+    short: 'ASX'
+  },
+  '.TO': {
+    name: 'Toronto Stock Exchange',
+    flag: '🇨🇦',
+    short: 'TSX'
+  },
+  '.TW': {
+    name: 'Taiwan Stock Exchange',
+    flag: '🇹🇼',
+    short: 'TWSE'
+  },
+  '.SA': {
+    name: 'B3 São Paulo',
+    flag: '🇧🇷',
+    short: 'B3'
+  },
+  '.MX': {
+    name: 'Bolsa Mexicana',
+    flag: '🇲🇽',
+    short: 'BMV'
+  },
+  '.NS': {
+    name: 'NSE India',
+    flag: '🇮🇳',
+    short: 'NSE'
+  },
+  '.BO': {
+    name: 'BSE India',
+    flag: '🇮🇳',
+    short: 'BSE'
+  },
+  '.JO': {
+    name: 'JSE South Africa',
+    flag: '🇿🇦',
+    short: 'JSE'
+  }
+};
+
+// Retorna { base, suffix, name, flag, short } o null si es ticker US sin sufijo.
+function parseIntlTicker(ticker) {
+  if (!ticker) return null;
+  const dot = ticker.lastIndexOf('.');
+  if (dot < 1) return null;
+  const suffix = ticker.slice(dot);
+  const meta = EXCHANGE_SUFFIXES[suffix];
+  if (!meta) return null;
+  return {
+    base: ticker.slice(0, dot),
+    suffix,
+    ...meta
+  };
+}
+
 // ─── WATCHLIST PANEL ────────────────────────────────────────
 // Muestra el análisis más reciente de cada ticker guardado en sl_analyses.
 // Lee solo columnas ligeras (0 API calls). Click en card → re-analiza.
@@ -7029,6 +7175,7 @@ function App() {
   const [watchlist, setWatchlist] = useState([]); // [{ticker,analysis_date,score_total,...}] — lectura sl_analyses al arranque y post-análisis
 
   const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
+  const intlMeta = useMemo(() => parseIntlTicker(ticker), [ticker]);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 180);
     window.addEventListener('scroll', fn, {
@@ -8161,20 +8308,20 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     value: inputTicker,
     onChange: e => setInputTicker(e.target.value.toUpperCase()),
     onKeyDown: e => e.key === 'Enter' && handleSearch(),
-    placeholder: "TICKER",
-    maxLength: 10,
+    placeholder: "AAPL / MC.PA",
+    maxLength: 12,
     style: {
       background: '#1c1d26',
       border: '1px solid #24262f',
       color: '#fff',
       padding: '7px 13px',
       borderRadius: 6,
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: 700,
-      width: 110,
+      width: 130,
       outline: 'none',
       fontFamily: 'Geist Mono,monospace',
-      letterSpacing: '1.5px',
+      letterSpacing: '1px',
       textTransform: 'uppercase'
     }
   }), /*#__PURE__*/React.createElement("button", {
@@ -8309,7 +8456,61 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       fontFamily: 'Geist Mono,monospace',
       fontWeight: 600
     }
-  }, t))))), loading && /*#__PURE__*/React.createElement(LoadingSkeleton, null), !loading && error && /*#__PURE__*/React.createElement("div", {
+  }, t))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#33353f',
+      marginTop: 20,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: '0.8px'
+    }
+  }, "International \u2014 formato TICKER.BOLSA"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      justifyContent: 'center',
+      flexWrap: 'wrap'
+    }
+  }, [{
+    t: 'MC.PA',
+    l: 'LVMH 🇫🇷'
+  }, {
+    t: 'SAP.DE',
+    l: 'SAP 🇩🇪'
+  }, {
+    t: 'NESN.SW',
+    l: 'Nestlé 🇨🇭'
+  }, {
+    t: 'BP.L',
+    l: 'BP 🇬🇧'
+  }, {
+    t: 'AIR.PA',
+    l: 'Airbus 🇫🇷'
+  }, {
+    t: 'SIE.DE',
+    l: 'Siemens 🇩🇪'
+  }].map(({
+    t,
+    l
+  }) => /*#__PURE__*/React.createElement("button", {
+    key: t,
+    onClick: () => {
+      setInputTicker(t);
+      analyze(t);
+    },
+    style: {
+      background: '#1c1d26',
+      border: '1px solid #24262f',
+      color: '#a6a7b1',
+      padding: '6px 14px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: 12,
+      fontFamily: 'Geist Mono,monospace',
+      fontWeight: 600
+    }
+  }, l, " \xB7 ", t))))), loading && /*#__PURE__*/React.createElement(LoadingSkeleton, null), !loading && error && /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#602a25',
       border: '1px solid #602a25',
@@ -8391,7 +8592,19 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       background: prof.exchange.includes('NASDAQ') ? '#34315f' : prof.exchange.includes('NYSE') ? '#194224' : '#54360b',
       color: prof.exchange.includes('NASDAQ') ? '#968ff7' : prof.exchange.includes('NYSE') ? '#5ac576' : '#eca851'
     }
-  }, prof.exchange)), /*#__PURE__*/React.createElement("div", {
+  }, prof.exchange), intlMeta && /*#__PURE__*/React.createElement("span", {
+    title: intlMeta.name,
+    style: {
+      fontSize: 9,
+      padding: '1px 7px',
+      borderRadius: 3,
+      fontWeight: 700,
+      background: '#24262f',
+      border: '1px solid #33353f',
+      color: '#a6a7b1',
+      cursor: 'help'
+    }
+  }, intlMeta.flag, " ", intlMeta.short)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'baseline',
@@ -8405,7 +8618,12 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       color: '#fff',
       fontFamily: 'Geist Mono,monospace'
     }
-  }, ticker), /*#__PURE__*/React.createElement("div", {
+  }, intlMeta ? /*#__PURE__*/React.createElement(React.Fragment, null, intlMeta.base, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#33353f',
+      fontSize: 18
+    }
+  }, intlMeta.suffix)) : ticker), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 16,
       color: '#a6a7b1',
