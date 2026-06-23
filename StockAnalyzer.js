@@ -7221,7 +7221,10 @@ function App() {
   const fmpGet = useCallback(async (endpoint, params = {}) => {
     const qs = new URLSearchParams(params).toString();
     const res = await authedFetch(`/api/fmp/${endpoint}?${qs}`);
-    if (res.status === 401) throw new Error('Session expired — please log in again');
+    if (res.status === 401) {
+      if (sb) sb.auth.signOut();
+      throw new Error('Session expired — please log in again');
+    }
     if (res.status === 429) throw new Error('Rate limit — wait 1 minute');
     if (res.status === 403) throw new Error('Endpoint not allowed');
     if (!res.ok) throw new Error(`API error (HTTP ${res.status})`);
@@ -7379,6 +7382,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       });
       if (res.status === 401) {
         setTranscriptError('Sesión expirada — vuelve a iniciar sesión.');
+        if (sb) sb.auth.signOut();
         return;
       }
       if (res.status === 429) {
@@ -7532,29 +7536,27 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       const peerList = (Array.isArray(peersRaw[0]) ? peersRaw[0] : peersRaw).filter(s => typeof s === 'string' && s !== sym.toUpperCase()).slice(0, 5);
       setPeers(peerList);
 
-      // Fetch peer metrics in background (non-blocking)
+      // Fetch peer metrics in background (non-blocking, sequential per ticker to avoid rate limits)
       if (peerList.length > 0) {
         (async () => {
           try {
-            const peerResults = await Promise.allSettled(peerList.map(ps => Promise.all([fmpGet('key-metrics-ttm', {
-              symbol: ps
-            }), fmpGet('ratios-ttm', {
-              symbol: ps
-            }), fmpGet('profile', {
-              symbol: ps
-            })])));
             const peerMap = {};
-            peerList.forEach((ps, i) => {
-              const r = peerResults[i];
-              if (r.status === 'fulfilled') {
-                const [mRes, rRes, prRes] = r.value;
+            for (const ps of peerList) {
+              try {
+                const [mRes, rRes, prRes] = await Promise.all([fmpGet('key-metrics-ttm', {
+                  symbol: ps
+                }), fmpGet('ratios-ttm', {
+                  symbol: ps
+                }), fmpGet('profile', {
+                  symbol: ps
+                })]);
                 peerMap[ps] = {
                   met: Array.isArray(mRes) ? mRes[0] : mRes,
                   rat: Array.isArray(rRes) ? rRes[0] : rRes,
                   name: (Array.isArray(prRes) ? prRes[0] : prRes)?.companyName || ps
                 };
-              }
-            });
+              } catch (_e) {/* un peer fallido no bloquea los demás */}
+            }
             setPeerMetrics(peerMap);
           } catch (e) {
             console.warn('[StockLens] peer metrics fetch failed:', e?.message);
