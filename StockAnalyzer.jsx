@@ -4186,6 +4186,65 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     doc.save(`${ticker}_StockLens_FullReport_${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
+  // ── Export → CSV (sin dependencias — Blob nativo, abre en Excel/Sheets) ──
+  const exportCSV = () => {
+    if (!scores || !ticker) return;
+    const date = new Date().toISOString().slice(0, 10);
+    const rating = getRating(scores.total);
+    const n = v => (v == null || !Number.isFinite(v)) ? '' : v;
+    const rows = [
+      ['StockLens Export', ticker, date],
+      [],
+      ['Company',         prof?.companyName || ''],
+      ['Ticker',          ticker],
+      ['Exchange',        prof?.exchange || (intlMeta?.name ?? '')],
+      ['Sector',          prof?.sector || ''],
+      ['Industry',        prof?.industry || ''],
+      ['Export Date',     date],
+      [],
+      ['── SCORES ──'],
+      ['Composite Score', n(scores.total), '/ 100'],
+      ['IC Score',        n(macroAdj),     '/ 100'],
+      ['Rating',          rating?.label || ''],
+      ['Macro Tilt',      n(tiltN),        'pts'],
+      ['Valuation',       n(scores.val),   '/ 25'],
+      ['Financial Health',n(scores.hlth),  '/ 30'],
+      ['Momentum',        n(scores.mom),   '/ 25'],
+      ['Growth',          n(scores.growth),'/ 20'],
+      [],
+      ['── PRICE ──'],
+      ['Price',           n(priceNow)],
+      ['DCF Fair Value',  n(dcfVal)],
+      ['Margin of Safety',ok(mosFrac) ? `${(mosFrac*100).toFixed(1)}%` : ''],
+      [],
+      ['── KEY METRICS (TTM) ──'],
+      ['P/E',             n(met?.peRatioTTM ?? met?.priceToEarningsRatioTTM)],
+      ['EV/EBITDA',       n(met?.enterpriseValueOverEBITDATTM)],
+      ['P/S',             n(met?.priceToSalesRatioTTM)],
+      ['P/B',             n(met?.priceToBookRatioTTM)],
+      ['ROE',             ok(met?.returnOnEquityTTM ?? met?.roeTTM) ? `${((met?.returnOnEquityTTM ?? met?.roeTTM)*100).toFixed(1)}%` : ''],
+      ['ROIC',            ok(met?.roicTTM) ? `${(met?.roicTTM*100).toFixed(1)}%` : ''],
+      ['Net Margin',      ok(rat?.netProfitMarginTTM) ? `${(rat?.netProfitMarginTTM*100).toFixed(1)}%` : ''],
+      ['Gross Margin',    ok(rat?.grossProfitMarginTTM) ? `${(rat?.grossProfitMarginTTM*100).toFixed(1)}%` : ''],
+      ['Revenue Growth',  ok(rat?.revenueGrowthTTM ?? met?.revenueGrowthTTM) ? `${((rat?.revenueGrowthTTM ?? met?.revenueGrowthTTM)*100).toFixed(1)}%` : ''],
+      ['Net Debt/EBITDA', n(met?.netDebtToEBITDATTM)],
+      ['Interest Coverage',n(met?.interestCoverageTTM ?? met?.interestCoverageRatioTTM)],
+      ['Current Ratio',   n(met?.currentRatioTTM)],
+      [],
+      ['── ANALYST CONSENSUS ──'],
+      ['PT Consensus',    ptList?.length ? `$${(ptList.reduce((s,p)=>s+(p.priceTarget||0),0)/ptList.length).toFixed(2)}` : ''],
+      ['# Analysts',      n(ptList?.length)],
+      [],
+      ['Disclaimer', 'Solo fines informativos. No es consejo de inversión. Verificar con la fuente.'],
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
+    a.download = `${ticker}_StockLens_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   const dcfVal    = dcf?.dcf;
   const mosFrac   = (ok(dcfVal)&&ok(priceNow)&&dcfVal>0)?(dcfVal-priceNow)/dcfVal:null;
   const mosColor  = !ok(mosFrac)?'#787a83':mosFrac>0.15?'#5ac576':mosFrac>-0.15?'#eca851':'#eb6459';
@@ -4453,10 +4512,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                       style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:5,padding:'5px 12px',color:'#968ff7',fontSize:11,cursor:'pointer'}}
                     >→ See Valuation</button>
                     <button
+                      onClick={exportCSV}
+                      title="Exportar KPIs a CSV (abre en Excel / Google Sheets)"
+                      style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:5,padding:'5px 12px',color:'#5ac576',fontSize:11,cursor:'pointer'}}
+                    >⬇ CSV</button>
+                    <button
                       onClick={exportPDF}
                       title="Descargar informe en PDF"
                       style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:5,padding:'5px 12px',color:'#a6a7b1',fontSize:11,cursor:'pointer'}}
-                    >⬇ Export Report</button>
+                    >⬇ PDF</button>
                     <button
                       onClick={exportFullPDF}
                       title="Informe completo: IC Score + macro + AI Verdict + earnings (si ya se generó)"
