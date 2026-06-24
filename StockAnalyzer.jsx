@@ -371,6 +371,167 @@ function computeRelativeStrength(stockHistory, spyHistory, days=126) {
   return { stockRet, spyRet, alpha, outperforming: alpha > 0 };
 }
 
+// ─── TRADING LATINO INDICATORS — pure computation (no React) ──────────────
+
+// Full EMA series — same length as prices, nulls during warm-up
+function computeEMAFull(prices, period) {
+  if (!prices || prices.length < period) return (prices||[]).map(()=>null);
+  const k = 2/(period+1);
+  const result = new Array(period-1).fill(null);
+  let val = prices.slice(0,period).reduce((a,b)=>a+b,0)/period;
+  result.push(val);
+  for (let i=period;i<prices.length;i++) { val=prices[i]*k+val*(1-k); result.push(val); }
+  return result;
+}
+
+// Linear regression — value of best-fit line at last point of arr
+function _linreg(arr) {
+  const n=arr.length; if(n<2) return arr[n-1]??0;
+  let sx=0,sy=0,sxy=0,sx2=0;
+  for(let i=0;i<n;i++){sx+=i;sy+=arr[i];sxy+=i*arr[i];sx2+=i*i;}
+  const d=n*sx2-sx*sx;
+  if(Math.abs(d)<1e-12) return sy/n;
+  const m=(n*sxy-sx*sy)/d;
+  return m*(n-1)+(sy-m*sx)/n;
+}
+
+// Squeeze Momentum Indicator — faithful LazyBear port
+// returns [{sqzOn,sqzOff,noSqz,momVal}] same length as data
+function computeSqueezeFullSeries(data, bbLen=20, kcLen=20, kcMult=1.5, momLen=12) {
+  if (!data||data.length<Math.max(bbLen,kcLen)+momLen) return (data||[]).map(()=>({sqzOn:false,sqzOff:false,noSqz:true,momVal:null}));
+  const n=data.length;
+  const closes=data.map(d=>d.close);
+  const highs =data.map(d=>d.high||d.close);
+  const lows  =data.map(d=>d.low||d.close);
+  // Precompute sliding max/min and SMA over kcLen
+  const slidMax=new Array(n), slidMin=new Array(n), smaKC=new Array(n);
+  for(let i=0;i<n;i++){
+    const s=Math.max(0,i-kcLen+1);
+    let mx=highs[s],mn=lows[s],sm=0;
+    for(let j=s;j<=i;j++){if(highs[j]>mx)mx=highs[j];if(lows[j]<mn)mn=lows[j];sm+=closes[j];}
+    slidMax[i]=mx; slidMin[i]=mn; smaKC[i]=sm/(i-s+1);
+  }
+  const result=[];
+  for(let i=0;i<n;i++){
+    if(i<bbLen-1){result.push({sqzOn:false,sqzOff:false,noSqz:true,momVal:null});continue;}
+    // Bollinger Bands
+    const bS=closes.slice(i-bbLen+1,i+1);
+    const bbM=bS.reduce((a,b)=>a+b,0)/bbLen;
+    const bbSd=Math.sqrt(bS.reduce((a,v)=>a+(v-bbM)**2,0)/bbLen);
+    const bbU=bbM+2*bbSd, bbL=bbM-2*bbSd;
+    // Keltner Channel
+    let trS=0;
+    for(let j=i-kcLen+1;j<=i;j++){const pC=j>0?closes[j-1]:closes[j];trS+=Math.max(highs[j]-lows[j],Math.abs(highs[j]-pC),Math.abs(lows[j]-pC));}
+    const kcA=trS/kcLen;
+    const kcU=smaKC[i]+kcMult*kcA, kcL=smaKC[i]-kcMult*kcA;
+    const sqzOn=bbU<=kcU&&bbL>=kcL, sqzOff=bbU>=kcU&&bbL<=kcL;
+    // Momentum = linreg(close - avg(midrange_KC, sma_KC), momLen)
+    let momVal=null;
+    if(i>=bbLen-1+momLen-1){
+      const vA=[];
+      for(let j=i-momLen+1;j<=i;j++) vA.push(closes[j]-((slidMax[j]+slidMin[j])/2+smaKC[j])/2);
+      momVal=_linreg(vA);
+    }
+    result.push({sqzOn,sqzOff,noSqz:!sqzOn&&!sqzOff,momVal});
+  }
+  return result;
+}
+
+// ADX + ±DI — Wilder smoothing, period=14
+// returns [{adx,plusDI,minusDI}|null] same length as data
+function computeADXFullSeries(data, period=14) {
+  if (!data||data.length<period*2+1) return (data||[]).map(()=>null);
+  const n=data.length;
+  const closes=data.map(d=>d.close);
+  const highs =data.map(d=>d.high||d.close);
+  const lows  =data.map(d=>d.low||d.close);
+  const tr=[],pDM=[],mDM=[];
+  for(let i=1;i<n;i++){
+    const hi=highs[i],lo=lows[i],pC=closes[i-1],pH=highs[i-1],pL=lows[i-1];
+    tr.push(Math.max(hi-lo,Math.abs(hi-pC),Math.abs(lo-pC)));
+    const up=hi-pH,dn=pL-lo;
+    pDM.push(up>0&&up>dn?up:0); mDM.push(dn>0&&dn>up?dn:0);
+  }
+  const ws=(arr,p)=>{const r=[];let s=arr.slice(0,p).reduce((a,b)=>a+b,0);r.push(s);for(let i=p;i<arr.length;i++){s=s-s/p+arr[i];r.push(s);}return r;};
+  const trS=ws(tr,period),pS=ws(pDM,period),mS=ws(mDM,period);
+  const pDI=[],mDI=[],dx=[];
+  for(let i=0;i<trS.length;i++){
+    const p=trS[i]>0?100*pS[i]/trS[i]:0, m=trS[i]>0?100*mS[i]/trS[i]:0;
+    pDI.push(p); mDI.push(m); dx.push(p+m>0?100*Math.abs(p-m)/(p+m):0);
+  }
+  if(dx.length<period) return data.map(()=>null);
+  const adxS=ws(dx,period);
+  const result=new Array(n).fill(null);
+  const off=2*period-1;
+  for(let j=0;j<adxS.length;j++){
+    const idx=off+j; if(idx<n) result[idx]={adx:adxS[j],plusDI:pDI[j+period-1]??null,minusDI:mDI[j+period-1]??null};
+  }
+  return result;
+}
+
+// Volume Profile — daily OHLCV approximation, 24 buckets
+// returns {buckets,bSz,minP,maxP,pocIdx,pocPrice,vaH,vaL,maxVol,numBuckets}
+function computeVolumeProfile(data, numBuckets=24) {
+  if (!data||data.length<5) return null;
+  const closes=data.map(d=>d.close);
+  const minP=Math.min(...closes), maxP=Math.max(...closes), range=maxP-minP;
+  if(range<0.001) return null;
+  const bSz=range/numBuckets;
+  const buckets=new Array(numBuckets).fill(0);
+  data.forEach(d=>{buckets[Math.min(numBuckets-1,Math.floor((d.close-minP)/bSz))]+=(d.volume||0);});
+  const maxVol=Math.max(...buckets,1);
+  const pocIdx=buckets.indexOf(maxVol);
+  const pocPrice=minP+(pocIdx+0.5)*bSz;
+  // Value Area: 70 % of volume around POC
+  const total=buckets.reduce((a,b)=>a+b,0);
+  let vol=buckets[pocIdx],vaH=pocIdx,vaL=pocIdx;
+  while(vol<total*0.70){
+    const aH=vaH<numBuckets-1?buckets[vaH+1]:0, aL=vaL>0?buckets[vaL-1]:0;
+    if(!aH&&!aL) break;
+    if(aH>=aL&&vaH<numBuckets-1){vaH++;vol+=aH;} else if(vaL>0){vaL--;vol+=aL;} else break;
+  }
+  return {buckets,bSz,minP,maxP,pocIdx,pocPrice,vaH,vaL,maxVol,numBuckets};
+}
+
+// Detect Squeeze divergences in a window of closes + sqz series (same length)
+// returns [{type:'bullish'|'bearish', idx1,idx2,price1,price2}] up to 3 most recent
+function detectSqueezeDivergences(closes, sqzSeries) {
+  const n=closes.length;
+  if(n<20||!sqzSeries||sqzSeries.length<n) return [];
+  const sv=sqzSeries.map(s=>s?.momVal??null);
+  const LB=3;
+  const pH=[],pL=[],sH=[],sL=[];
+  for(let i=LB;i<n-LB;i++){
+    const c=closes[i],q=sv[i];
+    let ph=true,pl=true,sh=true,sl=true;
+    for(let j=1;j<=LB;j++){
+      if(closes[i-j]>=c||closes[i+j]>=c) ph=false;
+      if(closes[i-j]<=c||closes[i+j]<=c) pl=false;
+      if(sv[i-j]==null||sv[i+j]==null){sh=false;sl=false;break;}
+      if(sv[i-j]>=q||sv[i+j]>=q) sh=false;
+      if(sv[i-j]<=q||sv[i+j]<=q) sl=false;
+    }
+    if(ph) pH.push(i); if(pl) pL.push(i);
+    if(q!=null&&sh) sH.push(i); if(q!=null&&sl) sL.push(i);
+  }
+  const PROX=6, divs=[];
+  for(let i=1;i<pH.length;i++){
+    const i1=pH[i-1],i2=pH[i]; if(i2-i1<5) continue;
+    const q1=sH.find(s=>Math.abs(s-i1)<=PROX), q2=sH.find(s=>Math.abs(s-i2)<=PROX);
+    if(q1==null||q2==null) continue;
+    if(closes[i2]>closes[i1]&&sv[q2]!=null&&sv[q1]!=null&&sv[q2]<sv[q1]*0.93)
+      divs.push({type:'bearish',idx1:i1,idx2:i2,price1:closes[i1],price2:closes[i2]});
+  }
+  for(let i=1;i<pL.length;i++){
+    const i1=pL[i-1],i2=pL[i]; if(i2-i1<5) continue;
+    const q1=sL.find(s=>Math.abs(s-i1)<=PROX), q2=sL.find(s=>Math.abs(s-i2)<=PROX);
+    if(q1==null||q2==null) continue;
+    if(closes[i2]<closes[i1]&&sv[q2]!=null&&sv[q1]!=null&&sv[q2]>sv[q1]*1.07)
+      divs.push({type:'bullish',idx1:i1,idx2:i2,price1:closes[i1],price2:closes[i2]});
+  }
+  return divs.filter(d=>d.idx2>n-60).slice(-3);
+}
+
 // ─── QUALITY MOAT SCORECARD (Pedro Escudero Framework) ──────
 function computeMoatScore(metrics, ratios, stmts, profile) {
   const ok = v => v != null && !isNaN(v) && isFinite(v);
@@ -967,34 +1128,25 @@ const PERIODS = {'1M':21,'3M':63,'6M':126,'1Y':365,'5Y':1825};
 const _fredCache = {};   // cache por sesion: series_id -> [{date,val}]
 
 function PriceChart({history, ticker, period}) {
-  const [hoverIdx, setHoverIdx] = useState(null);
-  const [zoom, setZoom] = useState(null);   // {startIdx,endIdx} sobre `filtered`; null = periodo completo
-  const [fredOn, setFredOn] = useState(false);
-  const [fredObs, setFredObs] = useState(null);     // [{date,val}] Fed Funds
-  const [fredStatus, setFredStatus] = useState('idle');  // idle|loading|error
+  const [hoverIdx,   setHoverIdx]   = useState(null);
+  const [zoom,       setZoom]       = useState(null);
+  const [fredOn,     setFredOn]     = useState(false);
+  const [fredObs,    setFredObs]    = useState(null);
+  const [fredStatus, setFredStatus] = useState('idle');
+  const [emaOn,  setEmaOn]  = useState(true);
+  const [sqzOn,  setSqzOn]  = useState(true);
+  const [adxOn,  setAdxOn]  = useState(true);
+  const [vpOn,   setVpOn]   = useState(true);
   const svgRef = useRef(null);
 
-  const sorted = useMemo(()=>[...history].sort((a,b)=>new Date(a.date)-new Date(b.date)),[history]);
-  const filtered = useMemo(()=>{
-    const n=PERIODS[period]||365;
-    return sorted.slice(-n);
-  },[sorted,period]);
+  const sorted   = useMemo(()=>[...history].sort((a,b)=>new Date(a.date)-new Date(b.date)),[history]);
+  const filtered = useMemo(()=>sorted.slice(-(PERIODS[period]||365)),[sorted,period]);
 
-  // cambiar de periodo o ticker resetea el zoom
-  useEffect(()=>{ setZoom(null); setHoverIdx(null); },[period,ticker]);
+  useEffect(()=>{setZoom(null);setHoverIdx(null);},[period,ticker]);
 
-  // ventana visible (slice del periodo segun zoom)
-  const view = useMemo(()=>{
-    if(!zoom) return filtered;
-    const a=Math.max(0,Math.min(zoom.startIdx,zoom.endIdx));
-    const b=Math.min(filtered.length-1,Math.max(zoom.startIdx,zoom.endIdx));
-    return filtered.slice(a,b+1);
-  },[filtered,zoom]);
-
-  // zoom con rueda — listener nativo no-pasivo para poder preventDefault sin scrollear la pagina
+  // wheel zoom (unchanged)
   useEffect(()=>{
-    const el=svgRef.current;
-    if(!el) return;
+    const el=svgRef.current; if(!el) return;
     const onWheel=(e)=>{
       if(filtered.length<2) return;
       e.preventDefault();
@@ -1003,123 +1155,178 @@ function PriceChart({history, ticker, period}) {
       const cur=zoom||{startIdx:0,endIdx:filtered.length-1};
       const span=cur.endIdx-cur.startIdx;
       const anchor=cur.startIdx+frac*span;
-      const factor=e.deltaY<0?0.8:1.25;       // in acerca, out aleja
-      let newSpan=Math.round(span*factor);
-      newSpan=Math.max(10,Math.min(filtered.length-1,newSpan));
-      if(newSpan>=filtered.length-1){ setZoom(null); return; }
-      let start=Math.round(anchor-frac*newSpan);
-      let end=start+newSpan;
-      if(start<0){ start=0; end=newSpan; }
-      if(end>filtered.length-1){ end=filtered.length-1; start=Math.max(0,end-newSpan); }
-      setZoom({startIdx:start,endIdx:end});
+      const factor=e.deltaY<0?0.8:1.25;
+      let ns=Math.round(span*factor);
+      ns=Math.max(10,Math.min(filtered.length-1,ns));
+      if(ns>=filtered.length-1){setZoom(null);return;}
+      let st=Math.round(anchor-frac*ns),en=st+ns;
+      if(st<0){st=0;en=ns;} if(en>filtered.length-1){en=filtered.length-1;st=Math.max(0,en-ns);}
+      setZoom({startIdx:st,endIdx:en});
     };
     el.addEventListener('wheel',onWheel,{passive:false});
     return ()=>el.removeEventListener('wheel',onWheel);
   },[zoom,filtered]);
 
-  // FRED Fed Funds — gated: solo se trae al activar el toggle (cache por sesion)
-  const toggleFred = useCallback(async ()=>{
-    if(fredOn){ setFredOn(false); return; }
+  // FRED toggle (unchanged)
+  const toggleFred=useCallback(async()=>{
+    if(fredOn){setFredOn(false);return;}
     setFredOn(true);
-    if(fredObs && fredObs.length) return;
-    if(_fredCache.FEDFUNDS){ setFredObs(_fredCache.FEDFUNDS); return; }
+    if(fredObs&&fredObs.length) return;
+    if(_fredCache.FEDFUNDS){setFredObs(_fredCache.FEDFUNDS);return;}
     setFredStatus('loading');
     try{
-      const start=(sorted[0]?.date||'').substring(0,10) || '2019-01-01';
+      const start=(sorted[0]?.date||'').substring(0,10)||'2019-01-01';
       const res=await authedFetch(`/api/fred/series?series_id=FEDFUNDS&observation_start=${start}`);
       if(!res.ok) throw new Error('fred '+res.status);
       const data=await res.json();
-      const obs=(data?.observations||[])
-        .filter(o=>o && o.value!=='.' && o.value!=null)
-        .map(o=>({date:o.date, val:parseFloat(o.value)}))
-        .filter(o=>ok(o.val));
+      const obs=(data?.observations||[]).filter(o=>o&&o.value!=='.'&&o.value!=null)
+        .map(o=>({date:o.date,val:parseFloat(o.value)})).filter(o=>ok(o.val));
       if(!obs.length) throw new Error('fred empty');
-      _fredCache.FEDFUNDS=obs;
-      setFredObs(obs);
-      setFredStatus('idle');
-    }catch(e){ console.warn('[StockLens] FRED fetch failed:', e?.message); setFredStatus('error'); }
+      _fredCache.FEDFUNDS=obs; setFredObs(obs); setFredStatus('idle');
+    }catch(e){console.warn('[StockLens] FRED fetch failed:',e?.message);setFredStatus('error');}
   },[fredOn,fredObs,sorted]);
 
-  if (!view.length || view.length < 2) return (
+  // ── Indicators on FULL sorted history (correct warm-up regardless of period) ──
+  const sortedCloses = useMemo(()=>sorted.map(d=>d.close),[sorted]);
+  const ema10All = useMemo(()=>emaOn?computeEMAFull(sortedCloses,10):null,[sortedCloses,emaOn]);
+  const ema55All = useMemo(()=>emaOn?computeEMAFull(sortedCloses,55):null,[sortedCloses,emaOn]);
+  const sqzAll   = useMemo(()=>sqzOn?computeSqueezeFullSeries(sorted):null,[sorted,sqzOn]);
+  const adxAll   = useMemo(()=>adxOn?computeADXFullSeries(sorted,14):null,[sorted,adxOn]);
+
+  // view (zoomed or full period)
+  const view = useMemo(()=>{
+    if(!zoom) return filtered;
+    const a=Math.max(0,Math.min(zoom.startIdx,zoom.endIdx));
+    const b=Math.min(filtered.length-1,Math.max(zoom.startIdx,zoom.endIdx));
+    return filtered.slice(a,b+1);
+  },[filtered,zoom]);
+  const viewStart = useMemo(()=>zoom?Math.max(0,Math.min(zoom.startIdx,zoom.endIdx)):0,[zoom]);
+
+  // Volume Profile from visible view (matches TradingView behavior)
+  const vpData = useMemo(()=>vpOn?computeVolumeProfile(view,24):null,[view,vpOn]);
+
+  // Slice indicator arrays to match visible view (offset into full sorted history)
+  const filtStart = sorted.length - filtered.length;
+  const vs = filtStart + viewStart; // viewStartInSorted
+  const ema10V = useMemo(()=>ema10All?ema10All.slice(vs,vs+view.length):null,[ema10All,vs,view.length]);
+  const ema55V = useMemo(()=>ema55All?ema55All.slice(vs,vs+view.length):null,[ema55All,vs,view.length]);
+  const sqzV   = useMemo(()=>sqzAll  ?sqzAll.slice(vs,vs+view.length)  :null,[sqzAll,vs,view.length]);
+  const adxV   = useMemo(()=>adxAll  ?adxAll.slice(vs,vs+view.length)  :null,[adxAll,vs,view.length]);
+
+  // Divergences from visible window
+  const divs = useMemo(()=>{
+    if(!sqzOn||!sqzV||view.length<20) return [];
+    return detectSqueezeDivergences(view.map(d=>d.close),sqzV);
+  },[view,sqzV,sqzOn]);
+
+  if(!view.length||view.length<2) return (
     <div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'#33353f',fontSize:12}}>No price data</div>
   );
 
-  const prices=view.map(d=>d.close);
-  const volumes=view.map(d=>d.volume||0);
-  const W=800, H=230, pt=10, pb=30, pl=12, pr=12;
-  const priceH=160, volH=30;
-  const priceBottom=pt+priceH;
-  const volTop=priceBottom+8;
-  const volBottom=volTop+volH;
-  const cw=W-pl-pr;
+  const prices  = view.map(d=>d.close);
+  const volumes = view.map(d=>d.volume||0);
+
+  // ── SVG Layout ──────────────────────────────────────────────
+  const W=800, pl=12, pr=12;
+  const vpW  = vpOn&&vpData ? 72 : 0;
+  const cw   = W-pl-pr-(vpW>0?vpW+4:0);  // chart draw width (narrows when VP visible)
+  const pt=10, priceH=155, priceBottom=165;
+  const volTop=171, volH=26, volBottom=197;
+
+  let nextY=volBottom, sqzL=null, adxL=null;
+  if(sqzOn&&sqzV){const SH=65;sqzL={top:nextY+8,h:SH,mid:nextY+8+SH/2,bot:nextY+8+SH};nextY=sqzL.bot;}
+  if(adxOn&&adxV){const AH=50;adxL={top:nextY+8,h:AH,bot:nextY+8+AH};nextY=adxL.bot;}
+  const lblY=nextY+14, H=lblY+10;
 
   const minP=Math.min(...prices), maxP=Math.max(...prices), rngP=maxP-minP||1;
   const maxV=Math.max(...volumes,1);
-
   const px=i=>pl+(i/Math.max(1,view.length-1))*cw;
   const py=p=>pt+(1-(p-minP)/rngP)*priceH;
   const vy=v=>volBottom-(v/maxV)*volH;
 
-  // FRED Fed Funds overlay — alineado por fecha al eje X (step mensual), eje Y secundario propio
-  const fredSamples = (fredOn && fredObs && fredObs.length) ? (()=>{
+  // ── Squeeze histogram scale ──
+  const sqzVals  = sqzV?sqzV.map(s=>s?.momVal??null):[];
+  const maxSqz   = Math.max(0.0001,...sqzVals.filter(v=>v!=null).map(Math.abs));
+  const sy = v => sqzL?sqzL.mid-(v/maxSqz)*(sqzL.h/2-6):0;
+
+  // ── ADX scale ──
+  const adxVals  = adxV?adxV.map(s=>s?.adx??null):[];
+  const maxAdx   = Math.max(50,...adxVals.filter(v=>v!=null))*1.05||80;
+  const ay = v => adxL?adxL.bot-(v/maxAdx)*adxL.h:0;
+  const adx23Y   = adxL?ay(23):0;
+
+  // ── EMA polylines (break on nulls) ──
+  const emaPts=(series)=>{
+    if(!series) return null;
+    const segs=[]; let seg=[];
+    series.forEach((v,i)=>{
+      if(v==null){if(seg.length>1)segs.push(seg.join(' '));seg=[];return;}
+      seg.push(`${px(i).toFixed(1)},${py(v).toFixed(1)}`);
+    });
+    if(seg.length>1) segs.push(seg.join(' '));
+    return segs;
+  };
+  const ema10Pts = emaOn?emaPts(ema10V):null;
+  const ema55Pts = emaOn?emaPts(ema55V):null;
+
+  // ── ADX polyline ──
+  const adxPts=(()=>{
+    if(!adxL||!adxV) return null;
+    const seg=[];
+    adxV.forEach((s,i)=>{if(s?.adx!=null)seg.push(`${px(i).toFixed(1)},${ay(s.adx).toFixed(1)}`);});
+    return seg.length>1?seg.join(' '):null;
+  })();
+
+  // ── FRED overlay ──
+  const fredSamples=(fredOn&&fredObs&&fredObs.length)?(()=>{
     const obsS=[...fredObs].sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const valAt=(t)=>{ let v=null; for(const o of obsS){ if(new Date(o.date).getTime()<=t) v=o.val; else break; } return v ?? obsS[0].val; };
-    return view.map((d,i)=>({i, val:valAt(new Date(d.date).getTime())}));
-  })() : null;
-  const fredVals = fredSamples ? fredSamples.map(s=>s.val) : [];
-  const fMin = fredVals.length ? Math.min(...fredVals) : 0;
-  const fMax = fredVals.length ? Math.max(...fredVals) : 1;
-  const fRng = (fMax-fMin)||1;
-  const fy = v => pt+(1-(v-fMin)/fRng)*priceH;
-  const fredPts = fredSamples ? fredSamples.map(s=>`${px(s.i)},${fy(s.val)}`).join(' ') : null;
+    const valAt=t=>{let v=null;for(const o of obsS){if(new Date(o.date).getTime()<=t)v=o.val;else break;}return v??obsS[0].val;};
+    return view.map((d,i)=>({i,val:valAt(new Date(d.date).getTime())}));
+  })():null;
+  const fredVals=fredSamples?fredSamples.map(s=>s.val):[];
+  const fMin=fredVals.length?Math.min(...fredVals):0, fMax=fredVals.length?Math.max(...fredVals):1;
+  const fRng=(fMax-fMin)||1;
+  const fy=v=>pt+(1-(v-fMin)/fRng)*priceH;
+  const fredPts=fredSamples?fredSamples.map(s=>`${px(s.i)},${fy(s.val)}`).join(' '):null;
 
   const isUp=prices[prices.length-1]>=prices[0];
   const stroke=isUp?'#5ac576':'#eb6459';
-
-  const pts=prices.map((p,i)=>`${px(i)},${py(p)}`).join(' ');
-  const fillPts=`${pl},${priceBottom} ${pts} ${W-pr},${priceBottom}`;
-
-  const sma50pts = useMemo(()=>{
-    if (prices.length < 50) return null;
-    const points=[];
-    for (let i=49;i<prices.length;i++) {
-      const avg=prices.slice(i-49,i+1).reduce((a,b)=>a+b,0)/50;
-      points.push(`${px(i)},${py(avg)}`);
-    }
-    return points.join(' ');
-  },[prices,px,py]);
-
+  const pts=prices.map((p,i)=>`${px(i).toFixed(1)},${py(p).toFixed(1)}`).join(' ');
+  const fillPts=`${pl},${priceBottom} ${pts} ${(pl+cw).toFixed(1)},${priceBottom}`;
   const hi52=Math.max(...prices), lo52=Math.min(...prices);
 
-  const ticks=[];
-  let lastM=-1;
-  view.forEach((d,i)=>{
-    const m=new Date(d.date).getMonth();
-    if(m!==lastM){ticks.push({i,m});lastM=m;}
-  });
+  const ticks=[]; let lastM=-1;
+  view.forEach((d,i)=>{const m=new Date(d.date).getMonth();if(m!==lastM){ticks.push({i,m});lastM=m;}});
   const mLbls=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  const handleMouseMove = useCallback((e)=>{
-    if (!svgRef.current) return;
+  const handleMouseMove=useCallback((e)=>{
+    if(!svgRef.current) return;
     const rect=svgRef.current.getBoundingClientRect();
-    const frac=(e.clientX-rect.left)/rect.width;
-    const idx=Math.round(frac*(view.length-1));
-    setHoverIdx(Math.max(0,Math.min(view.length-1,idx)));
+    setHoverIdx(Math.max(0,Math.min(view.length-1,Math.round((e.clientX-rect.left)/rect.width*(view.length-1)))));
   },[view.length]);
 
-  const hd = hoverIdx!=null ? view[hoverIdx] : null;
-  const hx = hoverIdx!=null ? px(hoverIdx) : null;
+  const hd   = hoverIdx!=null?view[hoverIdx]:null;
+  const hx   = hoverIdx!=null?px(hoverIdx):null;
+  const hE10 = ema10V&&hoverIdx!=null?ema10V[hoverIdx]:null;
+  const hE55 = ema55V&&hoverIdx!=null?ema55V[hoverIdx]:null;
+  const hAdx = adxV  &&hoverIdx!=null?adxV[hoverIdx]:null;
+  const hSqz = sqzV  &&hoverIdx!=null?sqzV[hoverIdx]:null;
+
+  const btnS=(on,c)=>({
+    background:on?c+'22':'#1c1d26', border:`1px solid ${on?c:'#24262f'}`,
+    color:on?c:'#787a83', padding:'2px 8px', borderRadius:4,
+    cursor:'pointer', fontSize:9, fontFamily:'Geist Mono,monospace', fontWeight:600,
+  });
 
   return (
     <div style={{position:'relative'}}>
-      <div style={{position:'absolute',top:6,left:8,zIndex:11,display:'flex',gap:6,alignItems:'center'}}>
-        <button onClick={toggleFred} style={{
-          background:fredOn?'#54360b':'#1c1d26',
-          border:`1px solid ${fredOn?'#eca851':'#24262f'}`,
-          color:fredOn?'#eca851':'#787a83',
-          padding:'2px 9px',borderRadius:4,cursor:'pointer',fontSize:9,
-          fontFamily:'Geist Mono,monospace',fontWeight:600
-        }}>{fredOn?'● ':'○ '}Fed Funds</button>
+      {/* toolbar */}
+      <div style={{position:'absolute',top:6,left:8,zIndex:11,display:'flex',gap:5,alignItems:'center',flexWrap:'wrap'}}>
+        <button onClick={()=>setEmaOn(v=>!v)}  style={btnS(emaOn,'#eca851')}>{emaOn?'●':'○'} EMA</button>
+        <button onClick={()=>setSqzOn(v=>!v)}  style={btnS(sqzOn,'#968ff7')}>{sqzOn?'●':'○'} SQZ</button>
+        <button onClick={()=>setAdxOn(v=>!v)}  style={btnS(adxOn,'#edeef4')}>{adxOn?'●':'○'} ADX</button>
+        <button onClick={()=>setVpOn(v=>!v)}   style={btnS(vpOn,'#5ac576')}>{vpOn?'●':'○'} VOL PROFILE</button>
+        <button onClick={toggleFred}            style={btnS(fredOn,'#eca851')}>{fredOn?'●':'○'} Fed Funds</button>
         {fredStatus==='loading'&&<span style={{fontSize:9,color:'#787a83'}}>cargando…</span>}
         {fredStatus==='error'&&<span style={{fontSize:9,color:'#eb6459'}}>FRED no disponible</span>}
       </div>
@@ -1128,14 +1335,15 @@ function PriceChart({history, ticker, period}) {
           position:'absolute',top:6,right:8,zIndex:11,
           background:'#1c1d26',border:'1px solid #34315f',color:'#968ff7',
           padding:'2px 9px',borderRadius:4,cursor:'pointer',fontSize:9,
-          fontFamily:'Geist Mono,monospace',fontWeight:600
+          fontFamily:'Geist Mono,monospace',fontWeight:600,
         }}>⤢ reset zoom</button>
       )}
+
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
-        style={{width:'100%',height:200,display:'block'}}
+        style={{width:'100%',height:H,display:'block'}}
         onMouseMove={handleMouseMove}
         onMouseLeave={()=>setHoverIdx(null)}
       >
@@ -1144,63 +1352,195 @@ function PriceChart({history, ticker, period}) {
             <stop offset="0%" stopColor={stroke} stopOpacity="0.18"/>
             <stop offset="100%" stopColor={stroke} stopOpacity="0.01"/>
           </linearGradient>
+          <clipPath id="cpPrice"><rect x={pl} y={pt} width={cw} height={priceH}/></clipPath>
+          <clipPath id="cpSqz"><rect x={pl} y={sqzL?sqzL.top:0} width={W-pl-pr} height={sqzL?sqzL.h:0}/></clipPath>
+          <clipPath id="cpAdx"><rect x={pl} y={adxL?adxL.top:0} width={cw} height={adxL?adxL.h:0}/></clipPath>
         </defs>
+
+        {/* price grid */}
         {[0.25,0.5,0.75].map(f=>(
           <line key={f} x1={pl} x2={W-pr} y1={pt+f*priceH} y2={pt+f*priceH} stroke="#1c1d26" strokeWidth="1"/>
         ))}
         <line x1={pl} x2={W-pr} y1={py(hi52)} y2={py(hi52)} stroke="#33353f" strokeWidth="0.8" strokeDasharray="4 4"/>
         <line x1={pl} x2={W-pr} y1={py(lo52)} y2={py(lo52)} stroke="#33353f" strokeWidth="0.8" strokeDasharray="4 4"/>
+
+        {/* Volume Profile — right side of price panel */}
+        {vpOn&&vpData&&(()=>{
+          const {buckets,bSz,minP:vMin,pocIdx,pocPrice,vaH,vaL,maxVol,numBuckets}=vpData;
+          const vpX=pl+cw+4;
+          return (
+            <g>
+              {/* Value Area shading */}
+              <rect x={pl} width={cw} y={py(vMin+(vaH+1)*bSz)} height={Math.abs(py(vMin+vaL*bSz)-py(vMin+(vaH+1)*bSz))} fill="#968ff7" opacity="0.05"/>
+              {/* Bucket bars */}
+              {buckets.map((v,i)=>{
+                const bw=(v/maxVol)*vpW;
+                const bY=py(vMin+(i+1)*bSz), bH=Math.max(1,Math.abs(py(vMin+i*bSz)-bY));
+                const isPOC=i===pocIdx, isVA=i>=vaL&&i<=vaH;
+                return <rect key={i} x={vpX} y={bY} width={bw} height={bH}
+                  fill={isPOC?'#eca851':isVA?'#968ff7':'#33353f'} opacity={isPOC?0.9:isVA?0.6:0.45}/>;
+              })}
+              {/* POC dashed line */}
+              <line x1={pl} x2={pl+cw} y1={py(pocPrice)} y2={py(pocPrice)} stroke="#eca851" strokeWidth="0.9" strokeDasharray="5 3" opacity="0.8"/>
+              <text x={vpX+2} y={py(pocPrice)-2} fontSize="7" fill="#eca851">POC</text>
+            </g>
+          );
+        })()}
+
+        {/* Divergence lines */}
+        {divs.map((d,i)=>{
+          const c=d.type==='bullish'?'#5ac576':'#eb6459';
+          return (
+            <g key={i} clipPath="url(#cpPrice)">
+              <line x1={px(d.idx1)} y1={py(d.price1)} x2={px(d.idx2)} y2={py(d.price2)}
+                stroke={c} strokeWidth="1.4" strokeDasharray="6 3" opacity="0.85"/>
+              <circle cx={px(d.idx1)} cy={py(d.price1)} r="3.5" fill={c} opacity="0.85"/>
+              <circle cx={px(d.idx2)} cy={py(d.price2)} r="3.5" fill={c} opacity="0.85"/>
+            </g>
+          );
+        })}
+
+        {/* Price fill + line */}
         <polygon points={fillPts} fill="url(#sg2)"/>
         <polyline points={pts} fill="none" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round"/>
-        {sma50pts && <polyline points={sma50pts} fill="none" stroke="#968ff7" strokeWidth="1" strokeOpacity="0.7" strokeDasharray="3 2"/>}
-        {fredPts && <polyline points={fredPts} fill="none" stroke="#eca851" strokeWidth="1.4" strokeOpacity="0.9"/>}
-        {fredPts && (
+
+        {/* EMA 55 (brown, wider) */}
+        {ema55Pts&&ema55Pts.map((seg,i)=>(
+          <polyline key={'e55'+i} points={seg} fill="none" stroke="#c8844a" strokeWidth="1.7" clipPath="url(#cpPrice)" opacity="0.9"/>
+        ))}
+        {/* EMA 10 (blue, thinner) */}
+        {ema10Pts&&ema10Pts.map((seg,i)=>(
+          <polyline key={'e10'+i} points={seg} fill="none" stroke="#6ea8ff" strokeWidth="1.3" clipPath="url(#cpPrice)" opacity="0.9"/>
+        ))}
+
+        {/* FRED overlay */}
+        {fredPts&&<polyline points={fredPts} fill="none" stroke="#eca851" strokeWidth="1.4" opacity="0.9"/>}
+        {fredPts&&(
           <g>
             <text x={W-pr-2} y={fy(fMax)+(fy(fMax)<pt+12?12:-2)} fontSize="7.5" fill="#eca851" textAnchor="end">{fMax.toFixed(2)}%</text>
             <text x={W-pr-2} y={fy(fMin)-2} fontSize="7.5" fill="#eca851" textAnchor="end">{fMin.toFixed(2)}%</text>
-            <line x1={W-80} x2={W-68} y1={pt+22} y2={pt+22} stroke="#eca851" strokeWidth="1.4"/>
-            <text x={W-65} y={pt+25} fontSize="7.5" fill="#eca851">Fed Funds</text>
+            <line x1={W-120} x2={W-108} y1={pt+22} y2={pt+22} stroke="#eca851" strokeWidth="1.4"/>
+            <text x={W-105} y={pt+25} fontSize="7.5" fill="#eca851">Fed Funds</text>
           </g>
         )}
+
+        {/* Volume bars up/down */}
         {volumes.map((v,i)=>(
           <rect key={i}
-            x={pl+i*(cw/view.length)}
-            y={vy(v)}
-            width={Math.max(1,cw/view.length-0.5)}
-            height={volBottom-vy(v)}
-            fill={i>0 ? (prices[i] >= prices[i-1] ? '#5ac576' : '#eb6459') : '#787a83'}
+            x={pl+i*(cw/view.length)} y={vy(v)}
+            width={Math.max(1,cw/view.length-0.5)} height={volBottom-vy(v)}
+            fill={i>0?(prices[i]>=prices[i-1]?'#5ac576':'#eb6459'):'#787a83'}
             opacity="0.3"
           />
         ))}
-        {ticks.filter((_,i)=>i%2===0).map(({i,m})=>(
-          <text key={m} x={px(i)} y={H-8} fontSize="8" fill="#33353f" textAnchor="middle">{mLbls[m]}</text>
-        ))}
+
+        {/* Price labels */}
         <text x={pl+2} y={pt+10} fontSize="8" fill="#33353f">${maxP.toFixed(0)}</text>
         <text x={pl+2} y={priceBottom-4} fontSize="8" fill="#33353f">${minP.toFixed(0)}</text>
-        <text x={W-pr-2} y={py(hi52)-3} fontSize="7.5" fill="#787a83" textAnchor="end">52W H</text>
-        <text x={W-pr-2} y={py(lo52)+8} fontSize="7.5" fill="#787a83" textAnchor="end">52W L</text>
+        <text x={pl+cw-2} y={py(hi52)-3} fontSize="7.5" fill="#787a83" textAnchor="end">52W H</text>
+        <text x={pl+cw-2} y={py(lo52)+8} fontSize="7.5" fill="#787a83" textAnchor="end">52W L</text>
+
+        {/* EMA legend */}
+        {emaOn&&(
+          <g>
+            <line x1={W-140} x2={W-128} y1={pt+10} y2={pt+10} stroke="#c8844a" strokeWidth="1.8"/>
+            <text x={W-125} y={pt+13} fontSize="7.5" fill="#c8844a">EMA 55</text>
+            <line x1={W-78} x2={W-66} y1={pt+10} y2={pt+10} stroke="#6ea8ff" strokeWidth="1.3"/>
+            <text x={W-63} y={pt+13} fontSize="7.5" fill="#6ea8ff">EMA 10</text>
+          </g>
+        )}
+
+        {/* ── Squeeze subpanel ── */}
+        {sqzL&&sqzV&&(()=>{
+          const bw=Math.max(1,cw/view.length-0.5);
+          return (
+            <g>
+              <line x1={0} x2={W} y1={sqzL.top} y2={sqzL.top} stroke="#24262f" strokeWidth="1"/>
+              <rect x={0} y={sqzL.top} width={W} height={sqzL.h} fill="#13131a" opacity="0.5"/>
+              <line x1={pl} x2={pl+cw} y1={sqzL.mid} y2={sqzL.mid} stroke="#24262f" strokeWidth="0.8"/>
+              <text x={pl+3} y={sqzL.top+10} fontSize="7.5" fill="#968ff7" fontWeight="700">SQUEEZE MOMENTUM</text>
+              {sqzV.map((s,i)=>{
+                if(!s) return null;
+                const cx=px(i);
+                const dotFill=s.sqzOn?'#787a83':s.sqzOff?'#edeef4':'#2d2d3a';
+                if(s.momVal==null) return <circle key={i} cx={cx} cy={sqzL.top+5} r="1.5" fill={dotFill}/>;
+                const prev=i>0&&sqzV[i-1]?.momVal!=null?sqzV[i-1].momVal:s.momVal;
+                const inc=s.momVal>=prev;
+                const fill=s.momVal>0?(inc?'#5ac576':'#2d6e41'):s.momVal<0?(!inc?'#eb6459':'#8b3530'):'#33353f';
+                const barTop=Math.min(sy(s.momVal),sqzL.mid), barH=Math.max(1,Math.abs(sy(s.momVal)-sqzL.mid));
+                return (
+                  <g key={i}>
+                    <rect x={cx-bw/2} width={bw} y={barTop} height={barH} fill={fill} opacity="0.92" clipPath="url(#cpSqz)"/>
+                    <circle cx={cx} cy={sqzL.top+5} r="1.5" fill={dotFill}/>
+                  </g>
+                );
+              })}
+              {hx!=null&&<line x1={hx} x2={hx} y1={sqzL.top} y2={sqzL.bot} stroke="#787a83" strokeWidth="0.7" strokeDasharray="2 2"/>}
+              {/* Squeeze legend dots */}
+              <circle cx={W-120} cy={sqzL.top+8} r="3" fill="#2d2d3a"/>
+              <text x={W-115} y={sqzL.top+11} fontSize="7" fill="#33353f">No sqz</text>
+              <circle cx={W-80} cy={sqzL.top+8} r="3" fill="#787a83"/>
+              <text x={W-75} y={sqzL.top+11} fontSize="7" fill="#787a83">Loaded</text>
+              <circle cx={W-40} cy={sqzL.top+8} r="3" fill="#edeef4"/>
+              <text x={W-35} y={sqzL.top+11} fontSize="7" fill="#edeef4">Fired</text>
+            </g>
+          );
+        })()}
+
+        {/* ── ADX subpanel ── */}
+        {adxL&&adxV&&(()=>{
+          return (
+            <g>
+              <line x1={0} x2={W} y1={adxL.top} y2={adxL.top} stroke="#24262f" strokeWidth="1"/>
+              <rect x={0} y={adxL.top} width={W} height={adxL.h} fill="#13131a" opacity="0.5"/>
+              <line x1={pl} x2={pl+cw} y1={adx23Y} y2={adx23Y} stroke="#33353f" strokeWidth="0.9" strokeDasharray="3 2"/>
+              <text x={pl+cw-2} y={adx23Y-2} fontSize="7.5" fill="#33353f" textAnchor="end">23</text>
+              <text x={pl+3} y={adxL.top+10} fontSize="7.5" fill="#edeef4" fontWeight="700">ADX  (trend strength)</text>
+              {adxPts&&<polyline points={adxPts} fill="none" stroke="#edeef4" strokeWidth="1.6" clipPath="url(#cpAdx)"/>}
+              {/* +DI / -DI faint lines */}
+              {adxV&&(()=>{
+                const pPts=[],mPts=[];
+                adxV.forEach((s,i)=>{
+                  if(s?.plusDI!=null)  pPts.push(`${px(i).toFixed(1)},${ay(s.plusDI).toFixed(1)}`);
+                  if(s?.minusDI!=null) mPts.push(`${px(i).toFixed(1)},${ay(s.minusDI).toFixed(1)}`);
+                });
+                return (
+                  <>
+                    {pPts.length>1&&<polyline points={pPts.join(' ')} fill="none" stroke="#5ac576" strokeWidth="0.8" opacity="0.45" clipPath="url(#cpAdx)"/>}
+                    {mPts.length>1&&<polyline points={mPts.join(' ')} fill="none" stroke="#eb6459" strokeWidth="0.8" opacity="0.45" clipPath="url(#cpAdx)"/>}
+                  </>
+                );
+              })()}
+              {hx!=null&&<line x1={hx} x2={hx} y1={adxL.top} y2={adxL.bot} stroke="#787a83" strokeWidth="0.7" strokeDasharray="2 2"/>}
+            </g>
+          );
+        })()}
+
+        {/* Date labels */}
+        {ticks.filter((_,i)=>i%2===0).map(({i,m})=>(
+          <text key={m} x={px(i)} y={lblY} fontSize="8" fill="#33353f" textAnchor="middle">{mLbls[m]}</text>
+        ))}
+
+        {/* Hover crosshair */}
         {hx!=null&&(
           <g>
             <line x1={hx} x2={hx} y1={pt} y2={priceBottom} stroke="#787a83" strokeWidth="0.8" strokeDasharray="3 2"/>
             <circle cx={hx} cy={py(prices[hoverIdx])} r="3.5" fill={stroke} stroke="#15151c" strokeWidth="1.5"/>
-          </g>
-        )}
-        {sma50pts&&(
-          <g>
-            <line x1={W-80} x2={W-68} y1={pt+10} y2={pt+10} stroke="#968ff7" strokeWidth="1.2" strokeDasharray="3 2"/>
-            <text x={W-65} y={pt+13} fontSize="7.5" fill="#968ff7">50 SMA</text>
+            {hE10!=null&&<circle cx={hx} cy={py(hE10)} r="2.5" fill="#6ea8ff" stroke="#15151c" strokeWidth="1"/>}
+            {hE55!=null&&<circle cx={hx} cy={py(hE55)} r="2.5" fill="#c8844a" stroke="#15151c" strokeWidth="1"/>}
           </g>
         )}
       </svg>
+
+      {/* Hover tooltip */}
       {hd&&hx!=null&&(
         <div style={{
-          position:'absolute',top:8,
-          left:Math.min(hx/800*100, 72)+'%',
-          background:'#1c1d26',border:'1px solid #24262f',
-          borderRadius:6,padding:'8px 11px',fontSize:11,
-          fontFamily:'Geist Mono,monospace',
-          pointerEvents:'none',minWidth:130,zIndex:10,
-          boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
+          position:'absolute', top:28,
+          left:Math.min((hx/W)*100, 65)+'%',
+          background:'#1c1d26', border:'1px solid #24262f',
+          borderRadius:6, padding:'8px 11px', fontSize:11,
+          fontFamily:'Geist Mono,monospace', pointerEvents:'none',
+          minWidth:148, zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,0.5)',
         }}>
           <div style={{color:'#787a83',fontSize:9,marginBottom:5}}>{hd.date?.substring(0,10)}</div>
           <div style={{color:'#edeef4',marginBottom:2}}>C: <span style={{color:stroke}}>${hd.close?.toFixed(2)}</span></div>
@@ -1208,8 +1548,222 @@ function PriceChart({history, ticker, period}) {
           {hd.high&&<div style={{color:'#a6a7b1'}}>H: ${hd.high?.toFixed(2)}</div>}
           {hd.low &&<div style={{color:'#a6a7b1'}}>L: ${hd.low?.toFixed(2)}</div>}
           {hd.volume&&<div style={{color:'#787a83',fontSize:9,marginTop:3}}>Vol: {fmt.usd(hd.volume)}</div>}
+          {(hE10!=null||hE55!=null)&&(
+            <div style={{borderTop:'1px solid #24262f',marginTop:5,paddingTop:5}}>
+              {hE10!=null&&<div style={{color:'#6ea8ff',fontSize:9}}>EMA 10: ${hE10.toFixed(2)}</div>}
+              {hE55!=null&&<div style={{color:'#c8844a',fontSize:9}}>EMA 55: ${hE55.toFixed(2)}</div>}
+            </div>
+          )}
+          {hAdx?.adx!=null&&(
+            <div style={{borderTop:'1px solid #24262f',marginTop:4,paddingTop:4}}>
+              <div style={{color:'#edeef4',fontSize:9}}>ADX: {hAdx.adx.toFixed(1)}{hAdx.adx>23?' ▲':' —'}</div>
+              {hAdx.plusDI!=null&&<div style={{color:'#5ac576',fontSize:9}}>+DI: {hAdx.plusDI.toFixed(1)}</div>}
+              {hAdx.minusDI!=null&&<div style={{color:'#eb6459',fontSize:9}}>-DI: {hAdx.minusDI.toFixed(1)}</div>}
+            </div>
+          )}
+          {hSqz?.momVal!=null&&(
+            <div style={{marginTop:3,color:hSqz.momVal>0?'#5ac576':'#eb6459',fontSize:9}}>
+              SQZ: {hSqz.momVal>0?'+':''}{hSqz.momVal.toFixed(4)}{hSqz.sqzOn?' ⚙':hSqz.sqzOff?' 🔥':''}
+            </div>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── TL SIGNAL PANEL (Trading Latino Confluence Strategy) ──────
+function TLSignalPanel({history, scores, macroTilt}) {
+  const data = useMemo(()=>{
+    if(!history||history.length<60) return null;
+    const sorted=[...history].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const closes=sorted.map(d=>d.close);
+    const n=sorted.length;
+    const cur=closes[n-1];
+
+    // Compute on full history for correct warm-up
+    const e10s=computeEMAFull(closes,10);
+    const e55s=computeEMAFull(closes,55);
+    const e10=e10s[n-1], e55=e55s[n-1];
+    const e10p=e10s[n-2], e55p=e55s[n-2];
+
+    const sqzS=computeSqueezeFullSeries(sorted);
+    const sqzLast=sqzS[n-1], sqzPrev=sqzS[n-2];
+
+    const adxS=computeADXFullSeries(sorted,14);
+    const adxLast=adxS[n-1], adxPrev=adxS[n-2];
+
+    // VP from last 252 sessions (≈1Y)
+    const vp=computeVolumeProfile(sorted.slice(-252),24);
+
+    // Divergences in last 60 bars
+    const last60=sorted.slice(-60);
+    const divs=detectSqueezeDivergences(last60.map(d=>d.close),sqzS.slice(-60));
+
+    // ── Signal 1: EMA alignment ──
+    const emaOk   = e10!=null&&e55!=null;
+    const emaLong = emaOk&&e10>e55, emaShort=emaOk&&e10<e55;
+    const emaCross= emaOk&&e10p!=null&&e55p!=null&&((emaLong&&e10p<=e55p)||(emaShort&&e10p>=e55p));
+
+    // ── Signal 2: ADX ──
+    const adxVal   = adxLast?.adx??null;
+    const adxRising= adxVal!=null&&adxPrev?.adx!=null&&adxVal>adxPrev.adx;
+    const adxStrong= adxVal!=null&&adxVal>23;
+    const adxActive= adxStrong&&adxRising;
+
+    // ── Signal 3: Squeeze Momentum ──
+    const sqzMom  = sqzLast?.momVal??null;
+    const sqzLong = sqzMom!=null&&sqzMom>0;
+    const sqzShort= sqzMom!=null&&sqzMom<0;
+    const sqzFired= sqzLast?.sqzOff===true;
+    const sqzLoaded=sqzLast?.sqzOn===true;
+
+    // ── Signal 4: Volume Profile vs POC ──
+    const vpAbove= vp&&cur>vp.pocPrice;
+    const vpBelow= vp&&cur<vp.pocPrice;
+    const vpInVA = vp&&cur>=vp.minP+vp.vaL*vp.bSz&&cur<=vp.minP+(vp.vaH+1)*vp.bSz;
+
+    // ── Confluence count & bias ──
+    const lS=[emaLong,adxActive,sqzLong,vpAbove].filter(Boolean).length;
+    const sS=[emaShort,adxActive,sqzShort,vpBelow].filter(Boolean).length;
+    const bias=lS>=3?'LONG':sS>=3?'SHORT':lS===2&&sS<2?'LEAN LONG':sS===2&&lS<2?'LEAN SHORT':'NEUTRAL';
+
+    // ── Risk levels (based on last 20-bar swing + EMA55) ──
+    const rH=sorted.slice(-20).map(d=>d.high||d.close), rL=sorted.slice(-20).map(d=>d.low||d.close);
+    const swHigh=Math.max(...rH), swLow=Math.min(...rL);
+    const stopL=e55!=null?Math.min(e55*0.993,swLow*0.995):swLow*0.995;
+    const stopS=e55!=null?Math.max(e55*1.007,swHigh*1.005):swHigh*1.005;
+    const riskL=(cur-stopL)/cur, riskS=(stopS-cur)/cur;
+    const tp1L=cur+2*(cur-stopL), tp1S=cur-2*(stopS-cur);
+
+    return {cur,e10,e55,emaLong,emaShort,emaCross,emaOk,
+      adxVal,adxRising,adxStrong,adxActive,
+      adxPDI:adxLast?.plusDI??null, adxMDI:adxLast?.minusDI??null,
+      sqzMom,sqzLong,sqzShort,sqzFired,sqzLoaded,
+      vp,vpAbove,vpBelow,vpInVA,
+      lS,sS,bias,stopL,stopS,riskL,riskS,tp1L,tp1S,divs};
+  },[history]);
+
+  if(!data) return null;
+
+  const {cur,e10,e55,emaLong,emaShort,emaCross,emaOk,
+    adxVal,adxRising,adxStrong,adxActive,adxPDI,adxMDI,
+    sqzMom,sqzLong,sqzShort,sqzFired,sqzLoaded,
+    vp,vpAbove,vpBelow,vpInVA,lS,sS,bias,stopL,stopS,riskL,riskS,tp1L,tp1S,divs}=data;
+
+  const biasColor=bias==='LONG'||bias==='LEAN LONG'?'#5ac576':bias==='SHORT'||bias==='LEAN SHORT'?'#eb6459':'#787a83';
+  const scoreCount=bias.includes('LONG')?lS:bias.includes('SHORT')?sS:Math.max(lS,sS);
+  const scoreBias=bias.includes('LONG')?'LONG':bias.includes('SHORT')?'SHORT':'—';
+
+  const icS = icScore(scores?.total||0, macroTilt?.tilt||0);
+  const icR = getRating(icS);
+
+  // IC dual gate message
+  let gateMsg='', gateColor='#33353f';
+  if(!scores){gateMsg='Analiza el ticker para activar el IC Gate';}
+  else if(lS>=3&&icS>=65){gateMsg='Entrada confirmada — IC Score positivo + 3/4 señales TL LONG alineadas';gateColor='#5ac576';}
+  else if(sS>=3&&icS<=35){gateMsg='Entrada SHORT — IC Score AVOID + 3/4 señales TL SHORT alineadas';gateColor='#eb6459';}
+  else if(lS>=3&&icS<=35){gateMsg='CONFLICTO — señal TL LONG pero fundamentales AVOID';gateColor='#eca851';}
+  else if(sS>=3&&icS>=65){gateMsg='CONFLICTO — señal TL SHORT pero fundamentales BUY';gateColor='#eca851';}
+  else if(lS>=2&&icS>=65){gateMsg='En espera — fundamentales fuertes; aguardando confirmación técnica LONG';gateColor='#968ff7';}
+  else if(sS>=2&&icS<=35){gateMsg='En espera — fundamentales débiles; señal técnica SHORT acumulándose';gateColor='#968ff7';}
+  else{gateMsg='Sin confluencia suficiente — mercado en consolidación o transición';gateColor='#33353f';}
+
+  const Pill=({on,label,detail,color})=>(
+    <div style={{background:on?color+'18':'#1c1d26',border:`1px solid ${on?color:'#24262f'}`,
+      borderRadius:6,padding:'8px 11px',flex:'1 1 130px',opacity:on?1:0.5,minWidth:130}}>
+      <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:4}}>
+        <span style={{color:on?color:'#33353f',fontSize:11,lineHeight:1}}>●</span>
+        <span style={{fontSize:9,fontWeight:700,color:on?color:'#33353f',textTransform:'uppercase',letterSpacing:'0.5px'}}>{label}</span>
+      </div>
+      <div style={{fontSize:10,color:on?'#a6a7b1':'#33353f',fontFamily:'Geist Mono,monospace',lineHeight:1.4}}>{detail}</div>
+    </div>
+  );
+
+  const isDirectional=bias!=='NEUTRAL';
+  const isLong=bias==='LONG'||bias==='LEAN LONG';
+
+  return (
+    <div style={{background:'#15151c',border:'1px solid #24262f',borderRadius:8,padding:'16px 20px',marginTop:4}}>
+      {/* header */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8}}>
+        <div>
+          <span style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.5px',color:'#33353f'}}>TL Confluence™ Strategy</span>
+          <span style={{fontSize:9,color:'#33353f',marginLeft:10}}>EMA 10/55  ·  Squeeze Momentum  ·  ADX  ·  Volume Profile</span>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          {bias!=='NEUTRAL'&&<span style={{fontSize:10,color:'#33353f',fontFamily:'Geist Mono,monospace'}}>{scoreCount}/4</span>}
+          <div style={{background:biasColor+'22',border:`1px solid ${biasColor}55`,
+            borderRadius:5,padding:'4px 14px',fontSize:12,fontWeight:700,color:biasColor,letterSpacing:'1px'}}>{bias}</div>
+        </div>
+      </div>
+
+      {/* 4 signal pills */}
+      <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+        <Pill on={emaLong||emaShort} color={emaLong?'#5ac576':emaShort?'#eb6459':'#787a83'}
+          label={`EMA ${emaCross?'⚡ CROSS':'ALIGNED'}`}
+          detail={emaOk&&e10!=null&&e55!=null?`EMA10 $${e10.toFixed(2)}  ·  EMA55 $${e55.toFixed(2)}  (${((e10/e55-1)*100).toFixed(1)}% spread)`:' insuf. datos'}/>
+        <Pill on={adxActive} color={adxStrong?'#edeef4':'#787a83'}
+          label={`ADX ${adxRising?'↑ rising':'— flat'}`}
+          detail={adxVal!=null?`${adxVal.toFixed(1)} ${adxStrong?'(trend)':'(< 23 — weak)'}   +DI ${adxPDI?.toFixed(1)??'—'}   -DI ${adxMDI?.toFixed(1)??'—'}`:' insuf. datos'}/>
+        <Pill on={sqzLong||sqzShort} color={sqzLong?'#5ac576':sqzShort?'#eb6459':'#787a83'}
+          label={`SQZ ${sqzFired?'🔥 FIRED':sqzLoaded?'⚙ LOADED':'MOM'}`}
+          detail={sqzMom!=null?`mom ${sqzMom>0?'+':''}${sqzMom.toFixed(5)}${sqzFired?' · acaba de disparar':sqzLoaded?' · comprimido — pendiente breakout':''}`:' insuf. datos'}/>
+        <Pill on={vpAbove||vpBelow} color={vpAbove?'#5ac576':vpBelow?'#eb6459':'#787a83'}
+          label={`VOL PROFILE${vpInVA?' (VA)':''}`}
+          detail={vp?`POC $${vp.pocPrice.toFixed(2)}  ·  precio ${vpAbove?'sobre':'bajo'} POC  ·  VA [$${(vp.minP+vp.vaL*vp.bSz).toFixed(1)} – $${(vp.minP+(vp.vaH+1)*vp.bSz).toFixed(1)}]`:' insuf. datos'}/>
+      </div>
+
+      {/* divergences */}
+      {divs.length>0&&(
+        <div style={{marginBottom:12,display:'flex',flexWrap:'wrap',gap:6}}>
+          {divs.map((d,i)=>{
+            const c=d.type==='bullish'?'#5ac576':'#eb6459';
+            return (
+              <div key={i} style={{background:c+'18',border:`1px solid ${c}44`,borderRadius:5,padding:'5px 10px',fontSize:10,color:c}}>
+                {d.type==='bullish'?'▲ Divergencia alcista':'▼ Divergencia bajista'} — Squeeze vs precio
+                <span style={{color:'#787a83',marginLeft:6}}>precio1 ${d.price1.toFixed(2)} → ${d.price2.toFixed(2)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* risk levels */}
+      {isDirectional&&(
+        <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+          {[
+            {label:'Entry',val:`$${cur.toFixed(2)}`,color:'#edeef4',sub:'precio actual'},
+            isLong
+              ?{label:'Stop Loss',val:`$${stopL.toFixed(2)}`,color:'#eb6459',sub:`−${(riskL*100).toFixed(1)}%  (bajo EMA55 + swing low)`}
+              :{label:'Stop Loss',val:`$${stopS.toFixed(2)}`,color:'#eb6459',sub:`+${(riskS*100).toFixed(1)}%  (sobre EMA55 + swing high)`},
+            isLong
+              ?{label:'TP  1:2',val:`$${tp1L.toFixed(2)}`,color:'#5ac576',sub:`+${(riskL*200).toFixed(1)}%`}
+              :{label:'TP  1:2',val:`$${tp1S.toFixed(2)}`,color:'#5ac576',sub:`−${(riskS*200).toFixed(1)}%`},
+          ].map(({label,val,color,sub})=>(
+            <div key={label} style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:6,padding:'7px 11px',flex:'1 1 100px'}}>
+              <div style={{fontSize:9,color:'#33353f',textTransform:'uppercase',marginBottom:3}}>{label}</div>
+              <div style={{fontSize:13,fontWeight:700,color,fontFamily:'Geist Mono,monospace'}}>{val}</div>
+              {sub&&<div style={{fontSize:9,color:'#787a83',marginTop:2}}>{sub}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* IC dual gate */}
+      {scores&&(
+        <div style={{background:gateColor+'14',border:`1px solid ${gateColor}30`,borderRadius:6,padding:'10px 14px',
+          display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+          <div style={{display:'flex',gap:10,alignItems:'center',flexShrink:0}}>
+            <span style={{fontSize:9,color:'#33353f',textTransform:'uppercase',letterSpacing:'0.5px'}}>IC Gate</span>
+            <span style={{fontSize:11,fontWeight:700,color:icR.color,fontFamily:'Geist Mono,monospace'}}>{icS}/100 {icR.label}</span>
+            <span style={{fontSize:9,color:'#33353f'}}>×</span>
+            <span style={{fontSize:11,fontWeight:700,color:biasColor}}>{scoreCount}/4 TL {scoreBias}</span>
+          </div>
+          <div style={{flex:1,fontSize:11,color:gateColor,fontWeight:600,minWidth:200}}>→ {gateMsg}</div>
+        </div>
+      )}
+      <div style={{fontSize:8,color:'#33353f',marginTop:8}}>Análisis técnico educativo · No constituye asesoría de inversión</div>
     </div>
   );
 }
@@ -4828,6 +5382,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                       : <div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'#33353f',fontSize:12}}>No price data</div>
                     }
                   </div>
+                  {hist.length>0&&<TLSignalPanel history={hist} scores={scores} macroTilt={macroTilt}/>}
                   <TechnicalSignals history={hist} spyHistory={spyHistory}/>
                   {stmts.length>=1&&hist.length>0&&(()=>{
                     const annualEps=(stmts[0]?.eps||0)*4;
