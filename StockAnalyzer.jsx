@@ -2764,6 +2764,67 @@ function CarteraKMatrix({ activeQuadrant, onSelect }) {
   );
 }
 
+// ─── INSIDER TRACKER ─────────────────────────────────────────
+function InsiderTrackerPanel({ supabase }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      if (!supabase) { setLoading(false); return; }
+      const { data } = await supabase
+        .from('smart_money_top_buyers')
+        .select('rank,ticker,sector,net_insider_buying_usd,num_insiders,month')
+        .order('month', { ascending: false })
+        .order('rank', { ascending: true })
+        .limit(20);
+      setRows(data || []);
+      setLoading(false);
+    })();
+  }, [supabase]);
+
+  const month = rows[0]?.month?.slice(0, 7) ?? null;
+  const fmt = (v) => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : '$' + (v / 1e3).toFixed(0) + 'K';
+
+  return (
+    <div>
+      <SectionTitle>Insider Tracker — Top Open-Market Buys{month ? ` (${month})` : ''}</SectionTitle>
+      {loading
+        ? <LoadingSkeleton/>
+        : rows.length === 0
+          ? (
+            <div style={{color:'#787a83',padding:16,textAlign:'center'}}>
+              Sin datos todavía — el cron corre cada lunes (FMP Form 4s).
+            </div>
+          )
+          : (
+            <table style={{width:'100%',fontSize:11,fontFamily:'Geist Mono,monospace'}}>
+              <thead>
+                <tr style={{color:'#787a83',textAlign:'left',borderBottom:'1px solid #24262f'}}>
+                  <th style={{padding:'4px 6px'}}>#</th>
+                  <th style={{padding:'4px 6px'}}>Ticker</th>
+                  <th style={{padding:'4px 6px'}}>Net Buy</th>
+                  <th style={{padding:'4px 6px'}}>Insiders</th>
+                  <th style={{padding:'4px 6px'}}>Sector</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(r => (
+                  <tr key={r.rank} style={{borderBottom:'1px solid #15151c'}}>
+                    <td style={{padding:'4px 6px',color:'#787a83'}}>{r.rank}</td>
+                    <td style={{padding:'4px 6px',fontWeight:700,color:'#968ff7'}}>{r.ticker}</td>
+                    <td style={{padding:'4px 6px',color:'#5ac576'}}>{r.net_insider_buying_usd ? fmt(r.net_insider_buying_usd) : '—'}</td>
+                    <td style={{padding:'4px 6px',color:'#a6a7b1'}}>{r.num_insiders ?? '—'}</td>
+                    <td style={{padding:'4px 6px',color:'#787a83',fontSize:10}}>{r.sector ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )
+      }
+    </div>
+  );
+}
+
 // ─── 13F TRACKER PANELS ──────────────────────────────────────
 function Funds13FPanel({ supabase }) {
   const [data, setData] = useState({});
@@ -4813,8 +4874,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                 <div style={{display:'flex',flexDirection:'column',gap:24}}>
                   {autoLoaded
                     ? <>
-                        <Funds13FPanel supabase={sb}/>
+                        <InsiderTrackerPanel supabase={sb}/>
                         <ConsensusPanel supabase={sb}/>
+                        <Funds13FPanel supabase={sb}/>
                         <JensenPatternPanel fmpGet={fmpGet}/>
                       </>
                     : <div style={{textAlign:'center',padding:'60px 20px'}}>

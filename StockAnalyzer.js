@@ -5668,6 +5668,104 @@ function CarteraKMatrix({
   }));
 }
 
+// ─── INSIDER TRACKER ─────────────────────────────────────────
+function InsiderTrackerPanel({
+  supabase
+}) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+      const {
+        data
+      } = await supabase.from('smart_money_top_buyers').select('rank,ticker,sector,net_insider_buying_usd,num_insiders,month').order('month', {
+        ascending: false
+      }).order('rank', {
+        ascending: true
+      }).limit(20);
+      setRows(data || []);
+      setLoading(false);
+    })();
+  }, [supabase]);
+  const month = rows[0]?.month?.slice(0, 7) ?? null;
+  const fmt = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : '$' + (v / 1e3).toFixed(0) + 'K';
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(SectionTitle, null, "Insider Tracker \u2014 Top Open-Market Buys", month ? ` (${month})` : ''), loading ? /*#__PURE__*/React.createElement(LoadingSkeleton, null) : rows.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#787a83',
+      padding: 16,
+      textAlign: 'center'
+    }
+  }, "Sin datos todav\xEDa \u2014 el cron corre cada lunes (FMP Form 4s).") : /*#__PURE__*/React.createElement("table", {
+    style: {
+      width: '100%',
+      fontSize: 11,
+      fontFamily: 'Geist Mono,monospace'
+    }
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      color: '#787a83',
+      textAlign: 'left',
+      borderBottom: '1px solid #24262f'
+    }
+  }, /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "#"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Ticker"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Net Buy"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Insiders"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '4px 6px'
+    }
+  }, "Sector"))), /*#__PURE__*/React.createElement("tbody", null, rows.map(r => /*#__PURE__*/React.createElement("tr", {
+    key: r.rank,
+    style: {
+      borderBottom: '1px solid #15151c'
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      color: '#787a83'
+    }
+  }, r.rank), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      fontWeight: 700,
+      color: '#968ff7'
+    }
+  }, r.ticker), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      color: '#5ac576'
+    }
+  }, r.net_insider_buying_usd ? fmt(r.net_insider_buying_usd) : '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      color: '#a6a7b1'
+    }
+  }, r.num_insiders ?? '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '4px 6px',
+      color: '#787a83',
+      fontSize: 10
+    }
+  }, r.sector ?? '—'))))));
+}
+
 // ─── 13F TRACKER PANELS ──────────────────────────────────────
 function Funds13FPanel({
   supabase
@@ -9367,9 +9465,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       flexDirection: 'column',
       gap: 24
     }
-  }, autoLoaded ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Funds13FPanel, {
+  }, autoLoaded ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(InsiderTrackerPanel, {
     supabase: sb
   }), /*#__PURE__*/React.createElement(ConsensusPanel, {
+    supabase: sb
+  }), /*#__PURE__*/React.createElement(Funds13FPanel, {
     supabase: sb
   }), /*#__PURE__*/React.createElement(JensenPatternPanel, {
     fmpGet: fmpGet
