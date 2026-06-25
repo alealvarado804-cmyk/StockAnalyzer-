@@ -3490,6 +3490,122 @@ function CarteraKMatrix({ activeQuadrant, onSelect }) {
   );
 }
 
+// ─── CAPITAL GAINS BUDGET TRACKER ────────────────────────────
+const CG_STORE_KEY = 'sl_cg_positions';
+function CapGainsBudgetPanel() {
+  const [positions, setPositions] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(CG_STORE_KEY) || '[]'); }
+    catch { return []; }
+  });
+  const [sym,      setSym]      = useState('');
+  const [shares,   setShares]   = useState('');
+  const [costB,    setCostB]    = useState('');
+  const [buyDate,  setBuyDate]  = useState('');
+  const [curPx,    setCurPx]    = useState('');
+
+  const save = (ps) => {
+    setPositions(ps);
+    try { localStorage.setItem(CG_STORE_KEY, JSON.stringify(ps)); } catch {}
+  };
+
+  const addPos = () => {
+    const s = sym.trim().toUpperCase();
+    const sh = parseFloat(shares);
+    const cb = parseFloat(costB);
+    const cp = parseFloat(curPx);
+    const d  = buyDate;
+    if (!s || !sh || !cb || !cp || !d) return;
+    save([...positions, { sym: s, shares: sh, costB: cb, curPx: cp, buyDate: d, added: Date.now() }]);
+    setSym(''); setShares(''); setCostB(''); setCurPx(''); setBuyDate('');
+  };
+  const removePos = (i) => save(positions.filter((_, j) => j !== i));
+
+  const enriched = positions.map(p => {
+    const days = Math.floor((Date.now() - new Date(p.buyDate + 'T12:00:00').getTime()) / 86400000);
+    const isLTCG = days >= 365;
+    const gl = (p.curPx - p.costB) * p.shares;
+    const rate = isLTCG ? 0.20 : 0.37;
+    const tax  = gl > 0 ? gl * rate : 0;
+    const tlh  = gl < 0 ? Math.abs(gl) * 0.37 : 0;
+    return { ...p, days, isLTCG, gl, tax, tlh, daysLeft: isLTCG ? 0 : 365 - days };
+  });
+
+  const totGL      = enriched.reduce((s, e) => s + e.gl, 0);
+  const totTax     = enriched.reduce((s, e) => s + e.tax, 0);
+  const totTLH     = enriched.reduce((s, e) => s + e.tlh, 0);
+  const ltcgGL     = enriched.filter(e => e.isLTCG  && e.gl > 0).reduce((s, e) => s + e.gl, 0);
+  const stcgGL     = enriched.filter(e => !e.isLTCG && e.gl > 0).reduce((s, e) => s + e.gl, 0);
+
+  const fK = v => { const a = Math.abs(v); const s = v < 0 ? '-' : '+'; return s + '$' + (a >= 1000 ? (a/1000).toFixed(1)+'K' : a.toFixed(0)); };
+  const f$ = v => '$' + Math.abs(v).toFixed(0);
+
+  const inputStyle = {
+    background:'#15151c', border:'1px solid #33353f', borderRadius:5,
+    color:'#edeef4', fontSize:11, padding:'5px 8px', outline:'none'
+  };
+
+  return (
+    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
+      <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}}>
+        Capital Gains Budget Tracker
+      </div>
+
+      {/* Summary row */}
+      {enriched.length > 0 && (
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}>
+          {[
+            { label:'P&L Total',   val: fK(totGL),   color: totGL>=0?'#5ac576':'#eb6459' },
+            { label:'LTCG Gains',  val: f$(ltcgGL),  color:'#5ac576' },
+            { label:'STCG Gains',  val: f$(stcgGL),  color:'#eca851' },
+            { label:'Tax Estimado',val: '-'+f$(totTax), color:'#eb6459' },
+            ...(totTLH>0 ? [{ label:'TLH Disponible', val:'+'+f$(totTLH), color:'#5ac576' }] : []),
+          ].map(({label,val,color}) => (
+            <div key={label} style={{background:'#15151c',borderRadius:6,padding:'7px 10px',flex:1,minWidth:90}}>
+              <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',marginBottom:2}}>{label}</div>
+              <div style={{fontSize:13,fontWeight:700,color,fontFamily:'Geist Mono,monospace'}}>{val}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Positions table */}
+      {enriched.length > 0 && (
+        <div style={{display:'flex',flexDirection:'column',gap:3,marginBottom:12}}>
+          {enriched.map((e,i) => (
+            <div key={i} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 8px',background:'#15151c',borderRadius:5,flexWrap:'wrap'}}>
+              <span style={{fontSize:11,fontWeight:700,color:'#edeef4',minWidth:44}}>{e.sym}</span>
+              <span style={{fontSize:10,color:'#787a83'}}>{e.shares}×</span>
+              <span style={{fontSize:10,color:'#787a83',flex:1}}>${e.costB} → ${e.curPx}</span>
+              <span style={{fontSize:10,fontWeight:600,color:e.isLTCG?'#5ac576':'#eca851'}}>{e.isLTCG?'LTCG':'STCG'} {e.days}d</span>
+              <span style={{fontSize:10,fontWeight:700,color:e.gl>=0?'#5ac576':'#eb6459',fontFamily:'Geist Mono,monospace'}}>{fK(e.gl)}</span>
+              {e.gl>0&&<span style={{fontSize:9,color:'#eb6459'}}>−{f$(e.tax)} tax</span>}
+              {e.gl<0&&<span style={{fontSize:9,color:'#5ac576'}}>TLH +{f$(e.tlh)}</span>}
+              {!e.isLTCG&&e.gl>0&&<span style={{fontSize:9,color:'#787a83'}}>{e.daysLeft}d→LTCG</span>}
+              <button onClick={()=>removePos(i)} style={{background:'none',border:'none',color:'#33353f',cursor:'pointer',fontSize:13,padding:'0 2px',lineHeight:1}}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add position form */}
+      <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'flex-end'}}>
+        <input placeholder="TICKER" value={sym}     onChange={e=>setSym(e.target.value)}     style={{...inputStyle,width:65,textTransform:'uppercase'}}/>
+        <input placeholder="Acciones" type="number" value={shares}  onChange={e=>setShares(e.target.value)}  style={{...inputStyle,width:72}}/>
+        <input placeholder="Costo $"  type="number" value={costB}   onChange={e=>setCostB(e.target.value)}   style={{...inputStyle,width:72}}/>
+        <input placeholder="Precio $" type="number" value={curPx}   onChange={e=>setCurPx(e.target.value)}   style={{...inputStyle,width:72}}/>
+        <input type="date" value={buyDate} onChange={e=>setBuyDate(e.target.value)} style={{...inputStyle,colorScheme:'dark'}}/>
+        <button
+          onClick={addPos}
+          style={{background:'#968ff7',color:'#fff',border:'none',borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}
+        >+ Añadir</button>
+      </div>
+      <div style={{fontSize:9,color:'#33353f',marginTop:8,fontStyle:'italic'}}>
+        Datos en localStorage del browser · tasas top bracket (LTCG 20%, STCG 37%) · no es asesoría fiscal
+      </div>
+    </div>
+  );
+}
+
 // ─── INSIDER TRACKER ─────────────────────────────────────────
 function InsiderTrackerPanel({ supabase }) {
   const [rows, setRows] = useState([]);
@@ -5614,6 +5730,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               {/* ── SMART MONEY TAB ── */}
               {activeTab==='Smart Money'&&(
                 <div style={{display:'flex',flexDirection:'column',gap:24}}>
+                  <CapGainsBudgetPanel/>
                   {autoLoaded
                     ? <>
                         <InsiderTrackerPanel supabase={sb}/>
