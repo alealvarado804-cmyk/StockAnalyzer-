@@ -2189,6 +2189,70 @@ function InsiderTable({ data }) {
   );
 }
 
+// ─── INSTITUTIONAL HOLDERS ───────────────────────────────────
+function InstitutionalHoldersPanel({ holders }) {
+  if (!holders || holders.length === 0) return null;
+  const top = holders.slice(0, 10);
+  const increasing = top.filter(h => (h.change || 0) > 0).length;
+  const bias = top.length ? increasing / top.length : 0.5;
+  const biasColor = bias >= 0.6 ? '#5ac576' : bias <= 0.4 ? '#eb6459' : '#b0b2be';
+  return (
+    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+        <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px'}}>Institutional Holders</div>
+        <div style={{fontSize:11,color:biasColor,fontWeight:600}}>{increasing}/{top.length} increasing ↑</div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:3}}>
+        {top.map((h,i) => {
+          const chg = h.change || 0;
+          const chgColor = chg > 0 ? '#5ac576' : chg < 0 ? '#eb6459' : '#787a83';
+          const arrow = chg > 0 ? '▲' : chg < 0 ? '▼' : '–';
+          const absChg = Math.abs(chg);
+          const chgFmt = absChg >= 1e6 ? (absChg/1e6).toFixed(1)+'M' : absChg >= 1e3 ? Math.round(absChg/1e3)+'K' : absChg;
+          return (
+            <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 8px',background:'#15151c',borderRadius:5}}>
+              <span style={{fontSize:11,color:'#edeef4',flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.holder}</span>
+              <span style={{fontSize:10,color:'#787a83',fontFamily:'Geist Mono,monospace',flexShrink:0}}>{(h.dateReported||'').substring(0,7)}</span>
+              <span style={{fontSize:10,color:chgColor,fontWeight:600,fontFamily:'Geist Mono,monospace',flexShrink:0}}>{arrow} {chgFmt}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{fontSize:9,color:'#33353f',marginTop:8,fontStyle:'italic'}}>Datos FMP · SEC 13F trimestrales</div>
+    </div>
+  );
+}
+
+// ─── CONGRESSIONAL TRADES ────────────────────────────────────
+function CongressionalTradesPanel({ trades }) {
+  if (!trades || trades.length === 0) return null;
+  return (
+    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
+      <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}}>
+        Congressional Trades · últimos 90 días
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:3}}>
+        {trades.map((t,i) => {
+          const isBuy = /purchase|buy/i.test(t.type);
+          const tradeColor = isBuy ? '#5ac576' : '#eb6459';
+          const partyColor = t.party==='R' ? '#eb6459' : t.party==='D' ? '#5b9cf6' : '#787a83';
+          return (
+            <div key={i} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 8px',background:'#15151c',borderRadius:5,flexWrap:'wrap'}}>
+              <span style={{fontSize:10,color:'#787a83',fontFamily:'Geist Mono,monospace',flexShrink:0}}>{t.date}</span>
+              <span style={{fontSize:9,color:partyColor,fontWeight:700,background:partyColor+'15',borderRadius:3,padding:'1px 5px',flexShrink:0}}>{t.party||'?'}</span>
+              <span style={{fontSize:11,color:'#edeef4',flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.name}</span>
+              <span style={{fontSize:9,color:'#787a83',flexShrink:0}}>{t.chamber}</span>
+              <span style={{fontSize:10,color:tradeColor,fontWeight:700,flexShrink:0}}>{isBuy?'BUY':'SELL'}</span>
+              <span style={{fontSize:10,color:'#787a83',flexShrink:0}}>{t.amount}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{fontSize:9,color:'#33353f',marginTop:8,fontStyle:'italic'}}>Fuente: Senate/House STOCK Act disclosures · últimos 90 días</div>
+    </div>
+  );
+}
+
 // ─── QUALITY MOAT CARD ──────────────────────────────────────
 function QualityMoatCard({ metrics, ratios, stmts, profile }) {
   const moat = useMemo(
@@ -4079,6 +4143,8 @@ function App() {
   const [earnSurprise, setEarnSurprise] = useState([]);
   const [insiderTxns,  setInsiderTxns]  = useState([]);
   const [shortInt,     setShortInt]     = useState(null);
+  const [instHolders,    setInstHolders]    = useState([]);
+  const [congressTrades, setCongressTrades] = useState([]);
 
   // Earnings transcript summary (gated by button — costs 1 Anthropic call)
   const [transcriptSum,     setTranscriptSum]     = useState(null);
@@ -4296,6 +4362,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setPtC(null); setAnalystEst(null); setUdC(null); setDcf(null);
     setDcfInputs(null); setPtList(null);
     setAiVerdict(null); setEarnCalendar(null); setEarnSurprise([]); setInsiderTxns([]); setShortInt(null);
+    setInstHolders([]); setCongressTrades([]);
     setTranscriptSum(null); setTranscriptError(null); setTranscriptLoading(false);
     setPeers([]); setPeerMetrics({}); setCfStmts([]); setBalanceSheets([]); setHistoricalDivs([]);
     setSpyHistory([]);
@@ -4320,10 +4387,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         fmpGet('cash-flow-statement',          { symbol: sym, period: 'quarter', limit: '8' }),
         fmpGet('peers',                        { symbol: sym }),
         fmpGet('historical-dividends',         { symbol: sym, limit: '30' }),
+        fmpGet(`institutional-holder/${sym}`,  {}),
       ]);
 
       const get=r=>r.status==='fulfilled'?r.value:null;
-      const [qD,pD,mD,rD,hD,sD,nD,ptD,aeD,udD,dcfD,bsD,ptListD,cfD,peersD,divD]=results.map(get);
+      const [qD,pD,mD,rD,hD,sD,nD,ptD,aeD,udD,dcfD,bsD,ptListD,cfD,peersD,divD,ihD]=results.map(get);
 
       if (!qD && !pD) throw new Error(`Ticker "${sym}" not found — check the symbol and try again`);
 
@@ -4440,6 +4508,17 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         setInsiderTxns(Array.isArray(it?.data) ? it.data.slice(0, 10) : []);
         setShortInt(si || null);
       }
+
+      setInstHolders(Array.isArray(ihD) ? ihD.slice(0, 15) : []);
+
+      // Congressional trades (Senate + House Stock Watchers, last 90 days)
+      try {
+        const ctRes = await authedFetch(`/api/congress/${sym}`);
+        if (ctRes.ok) {
+          const ct = await ctRes.json();
+          setCongressTrades(Array.isArray(ct) ? ct : []);
+        }
+      } catch {}
 
       // Compute macro tilt from IC DataLayer macro_state (antes del verdict para alimentar la IA)
       const scores_ = calcScores(met_, rat_, hD_, sD_);
@@ -5507,6 +5586,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   <>
                     {earnSurprise.length>0&&<EarningsSurpriseChart data={earnSurprise}/>}
                     {insiderTxns.length>0&&<InsiderTable data={insiderTxns}/>}
+                    {instHolders.length>0&&<InstitutionalHoldersPanel holders={instHolders}/>}
+                    {congressTrades.length>0&&<CongressionalTradesPanel trades={congressTrades}/>}
                   </>
 
                   <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>

@@ -4287,6 +4287,200 @@ function InsiderTable({
   })));
 }
 
+// ─── INSTITUTIONAL HOLDERS ───────────────────────────────────
+function InstitutionalHoldersPanel({
+  holders
+}) {
+  if (!holders || holders.length === 0) return null;
+  const top = holders.slice(0, 10);
+  const increasing = top.filter(h => (h.change || 0) > 0).length;
+  const bias = top.length ? increasing / top.length : 0.5;
+  const biasColor = bias >= 0.6 ? '#5ac576' : bias <= 0.4 ? '#eb6459' : '#b0b2be';
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1c1d26',
+      border: '1px solid #24262f',
+      borderRadius: 8,
+      padding: '14px 18px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '1px'
+    }
+  }, "Institutional Holders"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: biasColor,
+      fontWeight: 600
+    }
+  }, increasing, "/", top.length, " increasing \u2191")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 3
+    }
+  }, top.map((h, i) => {
+    const chg = h.change || 0;
+    const chgColor = chg > 0 ? '#5ac576' : chg < 0 ? '#eb6459' : '#787a83';
+    const arrow = chg > 0 ? '▲' : chg < 0 ? '▼' : '–';
+    const absChg = Math.abs(chg);
+    const chgFmt = absChg >= 1e6 ? (absChg / 1e6).toFixed(1) + 'M' : absChg >= 1e3 ? Math.round(absChg / 1e3) + 'K' : absChg;
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '5px 8px',
+        background: '#15151c',
+        borderRadius: 5
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        color: '#edeef4',
+        flex: 1,
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, h.holder), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10,
+        color: '#787a83',
+        fontFamily: 'Geist Mono,monospace',
+        flexShrink: 0
+      }
+    }, (h.dateReported || '').substring(0, 7)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10,
+        color: chgColor,
+        fontWeight: 600,
+        fontFamily: 'Geist Mono,monospace',
+        flexShrink: 0
+      }
+    }, arrow, " ", chgFmt));
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#33353f',
+      marginTop: 8,
+      fontStyle: 'italic'
+    }
+  }, "Datos FMP \xB7 SEC 13F trimestrales"));
+}
+
+// ─── CONGRESSIONAL TRADES ────────────────────────────────────
+function CongressionalTradesPanel({
+  trades
+}) {
+  if (!trades || trades.length === 0) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1c1d26',
+      border: '1px solid #24262f',
+      borderRadius: 8,
+      padding: '14px 18px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '1px',
+      marginBottom: 10
+    }
+  }, "Congressional Trades \xB7 \xFAltimos 90 d\xEDas"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 3
+    }
+  }, trades.map((t, i) => {
+    const isBuy = /purchase|buy/i.test(t.type);
+    const tradeColor = isBuy ? '#5ac576' : '#eb6459';
+    const partyColor = t.party === 'R' ? '#eb6459' : t.party === 'D' ? '#5b9cf6' : '#787a83';
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '5px 8px',
+        background: '#15151c',
+        borderRadius: 5,
+        flexWrap: 'wrap'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10,
+        color: '#787a83',
+        fontFamily: 'Geist Mono,monospace',
+        flexShrink: 0
+      }
+    }, t.date), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 9,
+        color: partyColor,
+        fontWeight: 700,
+        background: partyColor + '15',
+        borderRadius: 3,
+        padding: '1px 5px',
+        flexShrink: 0
+      }
+    }, t.party || '?'), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        color: '#edeef4',
+        flex: 1,
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, t.name), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 9,
+        color: '#787a83',
+        flexShrink: 0
+      }
+    }, t.chamber), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10,
+        color: tradeColor,
+        fontWeight: 700,
+        flexShrink: 0
+      }
+    }, isBuy ? 'BUY' : 'SELL'), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10,
+        color: '#787a83',
+        flexShrink: 0
+      }
+    }, t.amount));
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#33353f',
+      marginTop: 8,
+      fontStyle: 'italic'
+    }
+  }, "Fuente: Senate/House STOCK Act disclosures \xB7 \xFAltimos 90 d\xEDas"));
+}
+
 // ─── QUALITY MOAT CARD ──────────────────────────────────────
 function QualityMoatCard({
   metrics,
@@ -8441,6 +8635,8 @@ function App() {
   const [earnSurprise, setEarnSurprise] = useState([]);
   const [insiderTxns, setInsiderTxns] = useState([]);
   const [shortInt, setShortInt] = useState(null);
+  const [instHolders, setInstHolders] = useState([]);
+  const [congressTrades, setCongressTrades] = useState([]);
 
   // Earnings transcript summary (gated by button — costs 1 Anthropic call)
   const [transcriptSum, setTranscriptSum] = useState(null);
@@ -8722,6 +8918,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setEarnSurprise([]);
     setInsiderTxns([]);
     setShortInt(null);
+    setInstHolders([]);
+    setCongressTrades([]);
     setTranscriptSum(null);
     setTranscriptError(null);
     setTranscriptLoading(false);
@@ -8777,9 +8975,9 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       }), fmpGet('historical-dividends', {
         symbol: sym,
         limit: '30'
-      })]);
+      }), fmpGet(`institutional-holder/${sym}`, {})]);
       const get = r => r.status === 'fulfilled' ? r.value : null;
-      const [qD, pD, mD, rD, hD, sD, nD, ptD, aeD, udD, dcfD, bsD, ptListD, cfD, peersD, divD] = results.map(get);
+      const [qD, pD, mD, rD, hD, sD, nD, ptD, aeD, udD, dcfD, bsD, ptListD, cfD, peersD, divD, ihD] = results.map(get);
       if (!qD && !pD) throw new Error(`Ticker "${sym}" not found — check the symbol and try again`);
       const quote_ = Array.isArray(qD) ? qD[0] : qD;
       const pD_ = Array.isArray(pD) ? pD[0] : pD;
@@ -8902,6 +9100,16 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
         setInsiderTxns(Array.isArray(it?.data) ? it.data.slice(0, 10) : []);
         setShortInt(si || null);
       }
+      setInstHolders(Array.isArray(ihD) ? ihD.slice(0, 15) : []);
+
+      // Congressional trades (Senate + House Stock Watchers, last 90 days)
+      try {
+        const ctRes = await authedFetch(`/api/congress/${sym}`);
+        if (ctRes.ok) {
+          const ct = await ctRes.json();
+          setCongressTrades(Array.isArray(ct) ? ct : []);
+        }
+      } catch {}
 
       // Compute macro tilt from IC DataLayer macro_state (antes del verdict para alimentar la IA)
       const scores_ = calcScores(met_, rat_, hD_, sD_);
@@ -10838,6 +11046,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     data: earnSurprise
   }), insiderTxns.length > 0 && /*#__PURE__*/React.createElement(InsiderTable, {
     data: insiderTxns
+  }), instHolders.length > 0 && /*#__PURE__*/React.createElement(InstitutionalHoldersPanel, {
+    holders: instHolders
+  }), congressTrades.length > 0 && /*#__PURE__*/React.createElement(CongressionalTradesPanel, {
+    trades: congressTrades
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#1c1d26',
