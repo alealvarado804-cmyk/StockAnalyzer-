@@ -2253,6 +2253,114 @@ function CongressionalTradesPanel({ trades }) {
   );
 }
 
+// ─── TAX-AWARE P&L ──────────────────────────────────────────
+function TaxAwareCard({ currentPrice, ticker }) {
+  const [basis, setBasis]   = useState('');
+  const [buyDate, setBuyDate] = useState('');
+  if (!ticker) return null;
+
+  const price   = parseFloat(basis);
+  const dateBuy = buyDate ? new Date(buyDate + 'T12:00:00') : null;
+  const valid   = !isNaN(price) && price > 0 && dateBuy && !isNaN(dateBuy.getTime()) && currentPrice > 0;
+
+  let res = null;
+  if (valid) {
+    const days      = Math.floor((Date.now() - dateBuy.getTime()) / 86400000);
+    const isLTCG    = days >= 365;
+    const daysLeft  = isLTCG ? 0 : 365 - days;
+    const gl        = currentPrice - price;
+    const glPct     = (gl / price) * 100;
+    const taxRate   = isLTCG ? 0.20 : 0.37;
+    const taxNow    = gl > 0 ? gl * taxRate : 0;
+    const taxSaveLT = (gl > 0 && !isLTCG) ? gl * (0.37 - 0.20) : 0;
+    const tlhSave   = gl < 0 ? Math.abs(gl) * 0.37 : 0;
+    res = { days, isLTCG, daysLeft, gl, glPct, taxNow, taxSaveLT, tlhSave };
+  }
+
+  const glColor  = res ? (res.gl >= 0 ? '#5ac576' : '#eb6459') : '#787a83';
+  const ltcgColor = res ? (res.isLTCG ? '#5ac576' : res.daysLeft < 30 ? '#eca851' : '#787a83') : '#787a83';
+  const f$ = v => (v >= 0 ? '+' : '') + '$' + Math.abs(v).toFixed(2);
+  const fK = v => { const a = Math.abs(v); return (v>=0?'+':'-') + '$' + (a>=1000?(a/1000).toFixed(1)+'K':a.toFixed(2)); };
+
+  return (
+    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
+      <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}}>
+        Tax-Aware P&L — {ticker}
+      </div>
+      <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:res?12:0}}>
+        <div style={{display:'flex',flexDirection:'column',gap:4}}>
+          <label style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.5px'}}>Costo base / acción</label>
+          <input
+            type="number" min="0.01" step="0.01" placeholder="0.00"
+            value={basis} onChange={e=>setBasis(e.target.value)}
+            style={{background:'#15151c',border:'1px solid #33353f',borderRadius:5,color:'#edeef4',
+              fontSize:12,padding:'6px 10px',width:110,outline:'none',fontFamily:'Geist Mono,monospace'}}
+          />
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:4}}>
+          <label style={{fontSize:9,color:'#787a83',textTransform:'uppercase',letterSpacing:'0.5px'}}>Fecha de compra</label>
+          <input
+            type="date" value={buyDate} onChange={e=>setBuyDate(e.target.value)}
+            style={{background:'#15151c',border:'1px solid #33353f',borderRadius:5,color:'#edeef4',
+              fontSize:12,padding:'6px 10px',outline:'none',colorScheme:'dark'}}
+          />
+        </div>
+      </div>
+
+      {res && (
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            <div style={{background:'#15151c',borderRadius:6,padding:'8px 12px',flex:1,minWidth:110}}>
+              <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',marginBottom:2}}>P&L / acción</div>
+              <div style={{fontSize:16,fontWeight:700,color:glColor,fontFamily:'Geist Mono,monospace'}}>
+                {f$(res.gl)} <span style={{fontSize:11}}>({res.glPct>=0?'+':''}{res.glPct.toFixed(1)}%)</span>
+              </div>
+            </div>
+            <div style={{background:'#15151c',borderRadius:6,padding:'8px 12px',flex:1,minWidth:110}}>
+              <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',marginBottom:2}}>Tenencia</div>
+              <div style={{fontSize:14,fontWeight:700,color:ltcgColor,fontFamily:'Geist Mono,monospace'}}>
+                {res.days}d — {res.isLTCG?'✓ LTCG':'STCG'}
+              </div>
+              {!res.isLTCG&&(
+                <div style={{fontSize:10,color:res.daysLeft<30?'#eca851':'#787a83',marginTop:2}}>
+                  {res.daysLeft}d para LTCG{res.daysLeft<30?' ⚡':''}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {res.gl > 0 && (
+              <div style={{background:'#15151c',borderRadius:6,padding:'8px 12px',flex:1,minWidth:110}}>
+                <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',marginBottom:2}}>Impuesto estimado</div>
+                <div style={{fontSize:13,fontWeight:600,color:'#eb6459',fontFamily:'Geist Mono,monospace'}}>${res.taxNow.toFixed(2)}/acción</div>
+                <div style={{fontSize:9,color:'#787a83',marginTop:2}}>{res.isLTCG?'LTCG 20%':'STCG 37%'}</div>
+              </div>
+            )}
+            {res.gl > 0 && !res.isLTCG && (
+              <div style={{background:'#15151c',borderRadius:6,padding:'8px 12px',flex:1,minWidth:110}}>
+                <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',marginBottom:2}}>Ahorro si esperas LTCG</div>
+                <div style={{fontSize:13,fontWeight:600,color:'#5ac576',fontFamily:'Geist Mono,monospace'}}>${res.taxSaveLT.toFixed(2)}/acción</div>
+                <div style={{fontSize:9,color:'#787a83',marginTop:2}}>{res.daysLeft}d más → pasa de 37% a 20%</div>
+              </div>
+            )}
+            {res.gl < 0 && (
+              <div style={{background:'#152520',border:'1px solid #1c4a3a',borderRadius:6,padding:'8px 12px',flex:1}}>
+                <div style={{fontSize:9,color:'#5ac576',textTransform:'uppercase',fontWeight:700,marginBottom:2}}>TLH — Tax-Loss Harvesting</div>
+                <div style={{fontSize:13,fontWeight:600,color:'#5ac576',fontFamily:'Geist Mono,monospace'}}>${res.tlhSave.toFixed(2)} ahorro / acción</div>
+                <div style={{fontSize:9,color:'#787a83',marginTop:2}}>Vender + recomprar +31 días (wash-sale rule). Offset contra ganancias al 37%.</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      <div style={{fontSize:9,color:'#33353f',marginTop:10,fontStyle:'italic'}}>
+        Estimación orientativa · tasas EE.UU. top bracket (LTCG 20%, STCG 37%) · consulta un asesor fiscal
+      </div>
+    </div>
+  );
+}
+
 // ─── QUALITY MOAT CARD ──────────────────────────────────────
 function QualityMoatCard({ metrics, ratios, stmts, profile }) {
   const moat = useMemo(
@@ -5589,6 +5697,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     {instHolders.length>0&&<InstitutionalHoldersPanel holders={instHolders}/>}
                     {congressTrades.length>0&&<CongressionalTradesPanel trades={congressTrades}/>}
                   </>
+
+                  <TaxAwareCard currentPrice={quote?.price} ticker={ticker}/>
 
                   <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
                     <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}}>SEC EDGAR Filings</div>

@@ -4481,6 +4481,294 @@ function CongressionalTradesPanel({
   }, "Fuente: Senate/House STOCK Act disclosures \xB7 \xFAltimos 90 d\xEDas"));
 }
 
+// ─── TAX-AWARE P&L ──────────────────────────────────────────
+function TaxAwareCard({
+  currentPrice,
+  ticker
+}) {
+  const [basis, setBasis] = useState('');
+  const [buyDate, setBuyDate] = useState('');
+  if (!ticker) return null;
+  const price = parseFloat(basis);
+  const dateBuy = buyDate ? new Date(buyDate + 'T12:00:00') : null;
+  const valid = !isNaN(price) && price > 0 && dateBuy && !isNaN(dateBuy.getTime()) && currentPrice > 0;
+  let res = null;
+  if (valid) {
+    const days = Math.floor((Date.now() - dateBuy.getTime()) / 86400000);
+    const isLTCG = days >= 365;
+    const daysLeft = isLTCG ? 0 : 365 - days;
+    const gl = currentPrice - price;
+    const glPct = gl / price * 100;
+    const taxRate = isLTCG ? 0.20 : 0.37;
+    const taxNow = gl > 0 ? gl * taxRate : 0;
+    const taxSaveLT = gl > 0 && !isLTCG ? gl * (0.37 - 0.20) : 0;
+    const tlhSave = gl < 0 ? Math.abs(gl) * 0.37 : 0;
+    res = {
+      days,
+      isLTCG,
+      daysLeft,
+      gl,
+      glPct,
+      taxNow,
+      taxSaveLT,
+      tlhSave
+    };
+  }
+  const glColor = res ? res.gl >= 0 ? '#5ac576' : '#eb6459' : '#787a83';
+  const ltcgColor = res ? res.isLTCG ? '#5ac576' : res.daysLeft < 30 ? '#eca851' : '#787a83' : '#787a83';
+  const f$ = v => (v >= 0 ? '+' : '') + '$' + Math.abs(v).toFixed(2);
+  const fK = v => {
+    const a = Math.abs(v);
+    return (v >= 0 ? '+' : '-') + '$' + (a >= 1000 ? (a / 1000).toFixed(1) + 'K' : a.toFixed(2));
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1c1d26',
+      border: '1px solid #24262f',
+      borderRadius: 8,
+      padding: '14px 18px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '1px',
+      marginBottom: 12
+    }
+  }, "Tax-Aware P&L \u2014 ", ticker), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      flexWrap: 'wrap',
+      marginBottom: res ? 12 : 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 4
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "Costo base / acci\xF3n"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "0.01",
+    step: "0.01",
+    placeholder: "0.00",
+    value: basis,
+    onChange: e => setBasis(e.target.value),
+    style: {
+      background: '#15151c',
+      border: '1px solid #33353f',
+      borderRadius: 5,
+      color: '#edeef4',
+      fontSize: 12,
+      padding: '6px 10px',
+      width: 110,
+      outline: 'none',
+      fontFamily: 'Geist Mono,monospace'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 4
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }
+  }, "Fecha de compra"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: buyDate,
+    onChange: e => setBuyDate(e.target.value),
+    style: {
+      background: '#15151c',
+      border: '1px solid #33353f',
+      borderRadius: 5,
+      color: '#edeef4',
+      fontSize: 12,
+      padding: '6px 10px',
+      outline: 'none',
+      colorScheme: 'dark'
+    }
+  }))), res && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#15151c',
+      borderRadius: 6,
+      padding: '8px 12px',
+      flex: 1,
+      minWidth: 110
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      marginBottom: 2
+    }
+  }, "P&L / acci\xF3n"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 16,
+      fontWeight: 700,
+      color: glColor,
+      fontFamily: 'Geist Mono,monospace'
+    }
+  }, f$(res.gl), " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11
+    }
+  }, "(", res.glPct >= 0 ? '+' : '', res.glPct.toFixed(1), "%)"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#15151c',
+      borderRadius: 6,
+      padding: '8px 12px',
+      flex: 1,
+      minWidth: 110
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      marginBottom: 2
+    }
+  }, "Tenencia"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: ltcgColor,
+      fontFamily: 'Geist Mono,monospace'
+    }
+  }, res.days, "d \u2014 ", res.isLTCG ? '✓ LTCG' : 'STCG'), !res.isLTCG && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: res.daysLeft < 30 ? '#eca851' : '#787a83',
+      marginTop: 2
+    }
+  }, res.daysLeft, "d para LTCG", res.daysLeft < 30 ? ' ⚡' : ''))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      flexWrap: 'wrap'
+    }
+  }, res.gl > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#15151c',
+      borderRadius: 6,
+      padding: '8px 12px',
+      flex: 1,
+      minWidth: 110
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      marginBottom: 2
+    }
+  }, "Impuesto estimado"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: '#eb6459',
+      fontFamily: 'Geist Mono,monospace'
+    }
+  }, "$", res.taxNow.toFixed(2), "/acci\xF3n"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      marginTop: 2
+    }
+  }, res.isLTCG ? 'LTCG 20%' : 'STCG 37%')), res.gl > 0 && !res.isLTCG && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#15151c',
+      borderRadius: 6,
+      padding: '8px 12px',
+      flex: 1,
+      minWidth: 110
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      textTransform: 'uppercase',
+      marginBottom: 2
+    }
+  }, "Ahorro si esperas LTCG"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: '#5ac576',
+      fontFamily: 'Geist Mono,monospace'
+    }
+  }, "$", res.taxSaveLT.toFixed(2), "/acci\xF3n"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      marginTop: 2
+    }
+  }, res.daysLeft, "d m\xE1s \u2192 pasa de 37% a 20%")), res.gl < 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#152520',
+      border: '1px solid #1c4a3a',
+      borderRadius: 6,
+      padding: '8px 12px',
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#5ac576',
+      textTransform: 'uppercase',
+      fontWeight: 700,
+      marginBottom: 2
+    }
+  }, "TLH \u2014 Tax-Loss Harvesting"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: '#5ac576',
+      fontFamily: 'Geist Mono,monospace'
+    }
+  }, "$", res.tlhSave.toFixed(2), " ahorro / acci\xF3n"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      marginTop: 2
+    }
+  }, "Vender + recomprar +31 d\xEDas (wash-sale rule). Offset contra ganancias al 37%.")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#33353f',
+      marginTop: 10,
+      fontStyle: 'italic'
+    }
+  }, "Estimaci\xF3n orientativa \xB7 tasas EE.UU. top bracket (LTCG 20%, STCG 37%) \xB7 consulta un asesor fiscal"));
+}
+
 // ─── QUALITY MOAT CARD ──────────────────────────────────────
 function QualityMoatCard({
   metrics,
@@ -11050,7 +11338,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     holders: instHolders
   }), congressTrades.length > 0 && /*#__PURE__*/React.createElement(CongressionalTradesPanel, {
     trades: congressTrades
-  })), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(TaxAwareCard, {
+    currentPrice: quote?.price,
+    ticker: ticker
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#1c1d26',
       border: '1px solid #24262f',
