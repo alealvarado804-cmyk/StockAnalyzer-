@@ -2333,7 +2333,8 @@ function RdcfEntryZoneCard({ rdcf, currentPrice, hist }) {
   else if (prem < 30)  { zone = 'Premium';     zColor = '#fca5a5'; action = 'Reducir en rebotes'; }
   else                 { zone = 'Overvalued';  zColor = '#eb6459'; action = 'Evitar / reducir'; }
 
-  const closes = (hist || []).map(d => d.close).filter(Boolean);
+  // hist is newest-first (FMP); RSI/EMA need oldest-first
+  const closes = [...(hist || [])].reverse().map(d => d.close).filter(Boolean);
   const rsi    = computeRSI(closes, 14);
   const ema50s = closes.length >= 50 ? computeEMAFull(closes, 50) : null;
   const ema50  = ema50s ? ema50s[ema50s.length - 1] : null;
