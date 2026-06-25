@@ -2253,6 +2253,161 @@ function CongressionalTradesPanel({ trades }) {
   );
 }
 
+// ─── SECTOR RELATIVE STRENGTH ────────────────────────────────
+const SECTOR_ETF = {
+  'Technology':'XLK','Healthcare':'XLV','Consumer Cyclical':'XLY',
+  'Consumer Defensive':'XLP','Energy':'XLE','Financials':'XLF',
+  'Financial Services':'XLF','Industrials':'XLI','Utilities':'XLU',
+  'Real Estate':'XLRE','Communication Services':'XLC','Basic Materials':'XLB',
+};
+
+function SectorRelStrengthCard({ tickerHist, sectorHist, sectorEtf, sector, ticker }) {
+  if (!tickerHist?.length || !sectorHist?.length || !sectorEtf) return null;
+
+  // Build return for N trading days ago from newest-first arrays
+  const ret = (hist, days) => {
+    if (hist.length < days + 1) return null;
+    const cur  = hist[0]?.close;
+    const prev = hist[days]?.close;
+    if (!cur || !prev) return null;
+    return (cur / prev - 1) * 100;
+  };
+
+  const PERIODS = [
+    { label: '1M', days: 21 },
+    { label: '3M', days: 63 },
+    { label: '6M', days: 126 },
+    { label: '1Y', days: 252 },
+  ];
+
+  const rows = PERIODS.map(({ label, days }) => {
+    const tR = ret(tickerHist, days);
+    const sR = ret(sectorHist, days);
+    const rel = (tR != null && sR != null) ? tR - sR : null;
+    return { label, tR, sR, rel };
+  }).filter(r => r.tR != null || r.sR != null);
+
+  if (!rows.length) return null;
+
+  const fPct = v => v == null ? '–' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  const col  = v => v == null ? '#787a83' : v >= 0 ? '#5ac576' : '#eb6459';
+
+  return (
+    <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:6}}>
+        <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px'}}>
+          Sector Relative Strength
+        </div>
+        <div style={{fontSize:10,color:'#787a83'}}>{ticker} vs {sectorEtf} ({sector})</div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'48px repeat(3, 1fr)',gap:4}}>
+        <div style={{fontSize:9,color:'#33353f'}}></div>
+        {['Ticker','ETF','Alpha'].map(h=>(
+          <div key={h} style={{fontSize:9,color:'#787a83',textTransform:'uppercase',textAlign:'right'}}>{h}</div>
+        ))}
+        {rows.map(({label,tR,sR,rel})=>(
+          <React.Fragment key={label}>
+            <div style={{fontSize:10,color:'#787a83',fontWeight:600}}>{label}</div>
+            <div style={{fontSize:11,color:col(tR),fontWeight:600,textAlign:'right',fontFamily:'Geist Mono,monospace'}}>{fPct(tR)}</div>
+            <div style={{fontSize:11,color:col(sR),textAlign:'right',fontFamily:'Geist Mono,monospace'}}>{fPct(sR)}</div>
+            <div style={{fontSize:11,color:col(rel),fontWeight:700,textAlign:'right',fontFamily:'Geist Mono,monospace'}}>{rel!=null?(rel>=0?'↑':'↓')+Math.abs(rel).toFixed(1)+'%':'–'}</div>
+          </React.Fragment>
+        ))}
+      </div>
+      <div style={{fontSize:9,color:'#33353f',marginTop:8,fontStyle:'italic'}}>Alpha = ticker − sector ETF · datos EOD FMP</div>
+    </div>
+  );
+}
+
+// ─── RDCF ENTRY ZONE ─────────────────────────────────────────
+function RdcfEntryZoneCard({ rdcf, currentPrice, hist }) {
+  if (!rdcf?.applicable || !currentPrice || currentPrice <= 0) return null;
+  const fair = rdcf.perShare;
+  if (!fair || fair <= 0) return null;
+
+  const prem  = (currentPrice / fair - 1) * 100;
+  let zone, zColor, action;
+  if (prem < -30)      { zone = 'Deep Value';  zColor = '#5ac576'; action = 'Fuerte acumulación'; }
+  else if (prem < -10) { zone = 'Value Zone';  zColor = '#86efac'; action = 'Acumular gradualmente'; }
+  else if (prem < 10)  { zone = 'Fair Value';  zColor = '#eca851'; action = 'Neutral — mantener'; }
+  else if (prem < 30)  { zone = 'Premium';     zColor = '#fca5a5'; action = 'Reducir en rebotes'; }
+  else                 { zone = 'Overvalued';  zColor = '#eb6459'; action = 'Evitar / reducir'; }
+
+  const closes = (hist || []).map(d => d.close).filter(Boolean);
+  const rsi    = computeRSI(closes, 14);
+  const ema50s = closes.length >= 50 ? computeEMAFull(closes, 50) : null;
+  const ema50  = ema50s ? ema50s[ema50s.length - 1] : null;
+  const aboveE50 = ema50 != null && currentPrice > ema50;
+
+  // Combined entry signal
+  let signal = 'NEUTRAL';
+  let sigColor = '#eca851';
+  if (prem < -10 && rsi != null && rsi < 45) {
+    signal = aboveE50 ? '✓ ENTRADA TÉCNICA' : '⚡ OVERSOLD — esperar soporte';
+    sigColor = '#5ac576';
+  } else if (prem > 20 && rsi != null && rsi > 65) {
+    signal = '✗ SOBRECOMPRADO'; sigColor = '#eb6459';
+  } else if (prem < -10) {
+    signal = 'INFRAVALORADO — confirmar técnicos'; sigColor = '#86efac';
+  }
+
+  const f$ = v => '$' + v.toFixed(2);
+  const fp = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+
+  return (
+    <div style={{background:'#1c1d26',border:`1px solid ${zColor}44`,borderRadius:8,padding:'14px 18px'}}>
+      <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}}>
+        RDCF Entry Zone
+      </div>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
+        <div style={{background:'#15151c',borderRadius:6,padding:'8px 12px',flex:1,minWidth:100}}>
+          <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',marginBottom:2}}>Precio actual</div>
+          <div style={{fontSize:15,fontWeight:700,color:'#edeef4',fontFamily:'Geist Mono,monospace'}}>{f$(currentPrice)}</div>
+        </div>
+        <div style={{background:'#15151c',borderRadius:6,padding:'8px 12px',flex:1,minWidth:100}}>
+          <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',marginBottom:2}}>Valor RDCF</div>
+          <div style={{fontSize:15,fontWeight:700,color:'#968ff7',fontFamily:'Geist Mono,monospace'}}>{f$(fair)}</div>
+        </div>
+        <div style={{background:'#15151c',borderRadius:6,padding:'8px 12px',flex:1,minWidth:100,border:`1px solid ${zColor}44`}}>
+          <div style={{fontSize:9,color:'#787a83',textTransform:'uppercase',marginBottom:2}}>{zone}</div>
+          <div style={{fontSize:15,fontWeight:700,color:zColor,fontFamily:'Geist Mono,monospace'}}>{fp(prem)}</div>
+          <div style={{fontSize:9,color:'#787a83',marginTop:2}}>{action}</div>
+        </div>
+      </div>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
+        {rsi != null && (
+          <div style={{background:'#15151c',borderRadius:6,padding:'6px 10px'}}>
+            <span style={{fontSize:9,color:'#787a83'}}>RSI(14) </span>
+            <span style={{fontSize:11,fontWeight:700,color:rsi<30?'#5ac576':rsi>70?'#eb6459':'#eca851',fontFamily:'Geist Mono,monospace'}}>{rsi.toFixed(0)}</span>
+          </div>
+        )}
+        {ema50 != null && (
+          <div style={{background:'#15151c',borderRadius:6,padding:'6px 10px'}}>
+            <span style={{fontSize:9,color:'#787a83'}}>EMA50 </span>
+            <span style={{fontSize:11,fontWeight:700,color:aboveE50?'#5ac576':'#eb6459',fontFamily:'Geist Mono,monospace'}}>{f$(ema50)} {aboveE50?'↑':'↓'}</span>
+          </div>
+        )}
+        {rdcf.revCagr != null && (
+          <div style={{background:'#15151c',borderRadius:6,padding:'6px 10px'}}>
+            <span style={{fontSize:9,color:'#787a83'}}>Crecimiento implícito </span>
+            <span style={{fontSize:11,fontWeight:700,color:'#968ff7',fontFamily:'Geist Mono,monospace'}}>{(rdcf.revCagr*100).toFixed(1)}%</span>
+            {rdcf.analystGrowth != null && <span style={{fontSize:9,color:'#787a83'}}> (consenso {(rdcf.analystGrowth*100).toFixed(1)}%)</span>}
+          </div>
+        )}
+      </div>
+      <div style={{background:sigColor+'18',border:`1px solid ${sigColor}44`,borderRadius:6,padding:'7px 12px',fontSize:11,fontWeight:700,color:sigColor}}>
+        {signal}
+      </div>
+      {rdcf.lowConfidence && (
+        <div style={{fontSize:9,color:'#787a83',marginTop:6,fontStyle:'italic'}}>⚠ Baja confianza (rf por defecto — sin macro_state). Usar orientativamente.</div>
+      )}
+      <div style={{fontSize:9,color:'#33353f',marginTop:6,fontStyle:'italic'}}>
+        RDCF basado en FCF proyectado y WACC. No es asesoría de inversión.
+      </div>
+    </div>
+  );
+}
+
 // ─── TAX-AWARE P&L ──────────────────────────────────────────
 function TaxAwareCard({ currentPrice, ticker }) {
   const [basis, setBasis]   = useState('');
@@ -4369,6 +4524,8 @@ function App() {
   const [shortInt,     setShortInt]     = useState(null);
   const [instHolders,    setInstHolders]    = useState([]);
   const [congressTrades, setCongressTrades] = useState([]);
+  const [sectorHist,     setSectorHist]     = useState([]);
+  const [sectorEtfSym,   setSectorEtfSym]   = useState('');
 
   // Earnings transcript summary (gated by button — costs 1 Anthropic call)
   const [transcriptSum,     setTranscriptSum]     = useState(null);
@@ -4587,6 +4744,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setDcfInputs(null); setPtList(null);
     setAiVerdict(null); setEarnCalendar(null); setEarnSurprise([]); setInsiderTxns([]); setShortInt(null);
     setInstHolders([]); setCongressTrades([]);
+    setSectorHist([]); setSectorEtfSym('');
     setTranscriptSum(null); setTranscriptError(null); setTranscriptLoading(false);
     setPeers([]); setPeerMetrics({}); setCfStmts([]); setBalanceSheets([]); setHistoricalDivs([]);
     setSpyHistory([]);
@@ -4734,6 +4892,15 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       }
 
       setInstHolders(Array.isArray(ihD) ? ihD.slice(0, 15) : []);
+
+      // Sector ETF relative strength
+      const sEtf = SECTOR_ETF[pD_?.sector];
+      if (sEtf) {
+        try {
+          const sh = await fmpGet('historical-price-eod/full', { symbol: sEtf });
+          if (Array.isArray(sh) && sh.length) { setSectorHist(sh); setSectorEtfSym(sEtf); }
+        } catch {}
+      }
 
       // Congressional trades (Senate + House Stock Watchers, last 90 days)
       try {
@@ -5750,7 +5917,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               {SL_FLAGS.REVERSE_DCF_ENABLED && activeTab==='Descuento' && (
                 <div style={{display:'flex',flexDirection:'column',gap:16}}>
                   {reverseDcf
-                    ? <ReverseDcfCard data={reverseDcf}/>
+                    ? <>
+                        <ReverseDcfCard data={reverseDcf}/>
+                        <RdcfEntryZoneCard rdcf={reverseDcf} currentPrice={quote?.price} hist={hist}/>
+                      </>
                     : <div style={{textAlign:'center',padding:'60px 20px',fontSize:13,color:'#787a83'}}>Analiza un ticker para ver qué descuenta su precio.</div>}
                 </div>
               )}
@@ -5814,6 +5984,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                     {instHolders.length>0&&<InstitutionalHoldersPanel holders={instHolders}/>}
                     {congressTrades.length>0&&<CongressionalTradesPanel trades={congressTrades}/>}
                   </>
+
+                  {sectorHist.length>0&&<SectorRelStrengthCard tickerHist={hist} sectorHist={sectorHist} sectorEtf={sectorEtfSym} sector={prof?.sector} ticker={ticker}/>}
 
                   <TaxAwareCard currentPrice={quote?.price} ticker={ticker}/>
 
