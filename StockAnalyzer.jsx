@@ -4588,6 +4588,11 @@ function App() {
   const [taxBasis,      setTaxBasis]      = useState('');    // TaxAwareCard — persists between tab changes
   const [taxBuyDate,    setTaxBuyDate]    = useState('');
 
+  // Ticker autocomplete
+  const [suggestions,   setSuggestions]   = useState([]);
+  const [suggIdx,       setSuggIdx]       = useState(-1);
+  const searchTimer = useRef(null);
+
   const scores    = useMemo(()=>calcScores(met,rat,hist,stmts),[met,rat,hist,stmts]);
   const intlMeta  = useMemo(()=>parseIntlTicker(ticker),[ticker]);
 
@@ -4596,6 +4601,21 @@ function App() {
     window.addEventListener('scroll',fn,{passive:true});
     return ()=>window.removeEventListener('scroll',fn);
   },[]);
+
+  useEffect(() => {
+    const q = inputTicker.trim();
+    if (q.length < 2) { setSuggestions([]); setSuggIdx(-1); return; }
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const res = await authedFetch(`/api/fmp/search?query=${encodeURIComponent(q)}&limit=8`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data)) setSuggestions(data.slice(0, 8));
+      } catch { /* silencioso — no rompe el flujo */ }
+    }, 300);
+    return () => clearTimeout(searchTimer.current);
+  }, [inputTicker]);
 
   const loadWatchlist = useCallback(async (sess) => {
     if (!sb || !sess) return;
@@ -5464,19 +5484,59 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                style={{fontSize:11,color:'#968ff7',textDecoration:'none'}}>🌐 Macro ↗</a>
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <input
-              value={inputTicker}
-              onChange={e=>setInputTicker(e.target.value.toUpperCase())}
-              onKeyDown={e=>e.key==='Enter'&&handleSearch()}
-              placeholder="AAPL / MC.PA"
-              maxLength={12}
-              style={{
-                background:'#1c1d26',border:'1px solid #24262f',color:'#fff',
-                padding:'7px 13px',borderRadius:6,fontSize:13,fontWeight:700,
-                width:130,outline:'none',fontFamily:'Geist Mono,monospace',
-                letterSpacing:'1px',textTransform:'uppercase'
-              }}
-            />
+            <div style={{position:'relative'}}>
+              <input
+                value={inputTicker}
+                onChange={e=>{ setInputTicker(e.target.value.toUpperCase()); setSuggIdx(-1); }}
+                onKeyDown={e=>{
+                  if(e.key==='ArrowDown'){ e.preventDefault(); setSuggIdx(i=>Math.min(i+1,suggestions.length-1)); }
+                  else if(e.key==='ArrowUp'){ e.preventDefault(); setSuggIdx(i=>Math.max(i-1,-1)); }
+                  else if(e.key==='Enter'){
+                    if(suggIdx>=0&&suggestions[suggIdx]){
+                      const s=suggestions[suggIdx].symbol;
+                      setInputTicker(s); setSuggestions([]); setSuggIdx(-1); analyze(s);
+                    } else { setSuggestions([]); handleSearch(); }
+                  } else if(e.key==='Escape'){ setSuggestions([]); setSuggIdx(-1); }
+                }}
+                onBlur={()=>setTimeout(()=>setSuggestions([]),150)}
+                placeholder="Empresa o ticker…"
+                maxLength={15}
+                style={{
+                  background:'#1c1d26',border:'1px solid #24262f',color:'#fff',
+                  padding:'7px 13px',borderRadius:6,fontSize:13,fontWeight:700,
+                  width:180,outline:'none',fontFamily:'Geist Mono,monospace',
+                  letterSpacing:'0.5px',textTransform:'uppercase'
+                }}
+              />
+              {suggestions.length>0&&(
+                <div style={{
+                  position:'absolute',top:'calc(100% + 4px)',right:0,width:340,
+                  background:'#1c1d26',border:'1px solid #33353f',borderRadius:6,
+                  boxShadow:'0 8px 28px rgba(0,0,0,0.55)',zIndex:999,overflow:'hidden'
+                }}>
+                  {suggestions.map((s,i)=>{
+                    const intl=parseIntlTicker(s.symbol);
+                    const flag=intl?.flag||(s.exchangeShortName==='NASDAQ'||s.exchangeShortName==='NYSE'||s.exchangeShortName==='AMEX'?'🇺🇸':'');
+                    return (
+                      <div key={s.symbol}
+                        onMouseDown={()=>{ setInputTicker(s.symbol); setSuggestions([]); setSuggIdx(-1); analyze(s.symbol); }}
+                        onMouseEnter={()=>setSuggIdx(i)}
+                        style={{
+                          display:'flex',alignItems:'center',gap:8,padding:'8px 12px',cursor:'pointer',
+                          background:i===suggIdx?'#24262f':'transparent',
+                          borderBottom:i<suggestions.length-1?'1px solid #1f2030':'none'
+                        }}
+                      >
+                        <span style={{fontSize:14,minWidth:20}}>{flag}</span>
+                        <span style={{fontFamily:'Geist Mono,monospace',fontWeight:700,color:'#968ff7',fontSize:12,minWidth:90}}>{s.symbol}</span>
+                        <span style={{color:'#a6a7b1',fontSize:11,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</span>
+                        <span style={{color:'#33353f',fontSize:10,fontWeight:600,whiteSpace:'nowrap',marginLeft:4}}>{s.exchangeShortName}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <button onClick={handleSearch} disabled={loading||!inputTicker.trim()} style={{
               background:loading?'#24262f':'#968ff7',color:loading?'#edeef4':'#15151c',border:'none',
               padding:'7px 18px',borderRadius:6,cursor:loading?'not-allowed':'pointer',
