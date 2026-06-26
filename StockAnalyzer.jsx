@@ -478,7 +478,10 @@ function computeVolumeProfile(data, numBuckets=24) {
   if(range<0.001) return null;
   const bSz=range/numBuckets;
   const buckets=new Array(numBuckets).fill(0);
-  data.forEach(d=>{buckets[Math.min(numBuckets-1,Math.floor((d.close-minP)/bSz))]+=(d.volume||0);});
+  data.forEach(d=>{
+    const tp=((d.high||d.close)+(d.low||d.close)+d.close)/3;
+    buckets[Math.max(0,Math.min(numBuckets-1,Math.floor((tp-minP)/bSz)))]+=(d.volume||0);
+  });
   const maxVol=Math.max(...buckets,1);
   const pocIdx=buckets.indexOf(maxVol);
   const pocPrice=minP+(pocIdx+0.5)*bSz;
@@ -1323,6 +1326,7 @@ function PriceChart({history, ticker, period}) {
       {/* toolbar */}
       <div style={{position:'absolute',top:6,left:8,zIndex:11,display:'flex',gap:5,alignItems:'center',flexWrap:'wrap'}}>
         <button onClick={()=>setEmaOn(v=>!v)}  style={btnS(emaOn,'#eca851')}>{emaOn?'●':'○'} EMA</button>
+        {emaOn&&sorted.length<55&&<span style={{fontSize:8,color:'#787a83',border:'1px solid #33353f',borderRadius:3,padding:'1px 5px'}}>EMA55 necesita ≥55 barras totales</span>}
         <button onClick={()=>setSqzOn(v=>!v)}  style={btnS(sqzOn,'#968ff7')}>{sqzOn?'●':'○'} SQZ</button>
         <button onClick={()=>setAdxOn(v=>!v)}  style={btnS(adxOn,'#edeef4')}>{adxOn?'●':'○'} ADX</button>
         <button onClick={()=>setVpOn(v=>!v)}   style={btnS(vpOn,'#5ac576')}>{vpOn?'●':'○'} VOL PROFILE</button>
@@ -2191,17 +2195,22 @@ function InsiderTable({ data }) {
 }
 
 // ─── INSTITUTIONAL HOLDERS ───────────────────────────────────
-function InstitutionalHoldersPanel({ holders }) {
+function InstitutionalHoldersPanel({ holders, sharesOut }) {
   if (!holders || holders.length === 0) return null;
   const top = holders.slice(0, 10);
   const increasing = top.filter(h => (h.change || 0) > 0).length;
   const bias = top.length ? increasing / top.length : 0.5;
   const biasColor = bias >= 0.6 ? '#5ac576' : bias <= 0.4 ? '#eb6459' : '#b0b2be';
+  const totalHeld = holders.reduce((s, h) => s + (h.shares || 0), 0);
+  const pctFloat = sharesOut > 0 && totalHeld > 0 ? (totalHeld / sharesOut * 100) : null;
   return (
     <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:6}}>
         <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px'}}>Institutional Holders</div>
-        <div style={{fontSize:11,color:biasColor,fontWeight:600}}>{increasing}/{top.length} increasing ↑</div>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          {pctFloat!=null&&<div style={{fontSize:10,color:'#968ff7',fontFamily:'Geist Mono,monospace',fontWeight:600}}>{pctFloat.toFixed(1)}% float</div>}
+          <div style={{fontSize:11,color:biasColor,fontWeight:600}}>{increasing}/{top.length} increasing ↑</div>
+        </div>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:3}}>
         {top.map((h,i) => {
@@ -2295,6 +2304,11 @@ function SectorRelStrengthCard({ tickerHist, sectorHist, sectorEtf, sector, tick
   const fPct = v => v == null ? '–' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   const col  = v => v == null ? '#787a83' : v >= 0 ? '#5ac576' : '#eb6459';
 
+  const tR1Y = ret(tickerHist, 252);
+  const sR1Y = ret(sectorHist, 252);
+  const impliedBeta = tR1Y != null && sR1Y != null && Math.abs(sR1Y) > 0.1
+    ? parseFloat((tR1Y / sR1Y).toFixed(2)) : null;
+
   return (
     <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:6}}>
@@ -2317,7 +2331,19 @@ function SectorRelStrengthCard({ tickerHist, sectorHist, sectorEtf, sector, tick
           </React.Fragment>
         ))}
       </div>
-      <div style={{fontSize:9,color:'#33353f',marginTop:8,fontStyle:'italic'}}>Alpha = ticker − sector ETF · datos EOD FMP</div>
+      {impliedBeta != null && (
+        <div style={{display:'flex',alignItems:'center',gap:8,marginTop:8,paddingTop:8,borderTop:'1px solid #24262f'}}>
+          <span style={{fontSize:9,color:'#787a83',textTransform:'uppercase'}}>Beta implícita vs sector (1Y)</span>
+          <span style={{fontSize:12,fontWeight:700,fontFamily:'Geist Mono,monospace',
+            color:impliedBeta>1.5?'#eb6459':impliedBeta>1.1?'#eca851':impliedBeta<0.7?'#968ff7':'#5ac576'}}>
+            {impliedBeta.toFixed(2)}x
+          </span>
+          <span style={{fontSize:9,color:'#33353f'}}>
+            {impliedBeta>1.5?'alta volatilidad':impliedBeta>1.1?'amplifica sector':impliedBeta<0.7?'defensivo':'en línea con sector'}
+          </span>
+        </div>
+      )}
+      <div style={{fontSize:9,color:'#33353f',marginTop:8,fontStyle:'italic'}}>Alpha = ticker − sector ETF · Beta implícita = retorno ticker / retorno ETF (1Y) · datos EOD FMP</div>
     </div>
   );
 }
@@ -2391,11 +2417,17 @@ function RdcfEntryZoneCard({ rdcf, currentPrice, hist }) {
             <span style={{fontSize:11,fontWeight:700,color:aboveE50?'#5ac576':'#eb6459',fontFamily:'Geist Mono,monospace'}}>{f$(ema50)} {aboveE50?'↑':'↓'}</span>
           </div>
         )}
+        {rdcf.impliedG1 != null && (
+          <div style={{background:'#15151c',borderRadius:6,padding:'6px 10px'}}>
+            <span style={{fontSize:9,color:'#787a83'}}>g₁ implícito (año 1) </span>
+            <span style={{fontSize:11,fontWeight:700,color:'#968ff7',fontFamily:'Geist Mono,monospace'}}>{(rdcf.impliedG1*100).toFixed(1)}%</span>
+          </div>
+        )}
         {rdcf.revCagr != null && (
           <div style={{background:'#15151c',borderRadius:6,padding:'6px 10px'}}>
-            <span style={{fontSize:9,color:'#787a83'}}>Crecimiento implícito </span>
-            <span style={{fontSize:11,fontWeight:700,color:'#968ff7',fontFamily:'Geist Mono,monospace'}}>{(rdcf.revCagr*100).toFixed(1)}%</span>
-            {rdcf.analystGrowth != null && <span style={{fontSize:9,color:'#787a83'}}> (consenso {(rdcf.analystGrowth*100).toFixed(1)}%)</span>}
+            <span style={{fontSize:9,color:'#787a83'}}>CAGR implícito ({rdcf.last?.horizon??5}a) </span>
+            <span style={{fontSize:11,fontWeight:700,color:'#a5b4fc',fontFamily:'Geist Mono,monospace'}}>{(rdcf.revCagr*100).toFixed(1)}%</span>
+            {rdcf.analystGrowth != null && <span style={{fontSize:9,color:'#787a83'}}> · consenso {(rdcf.analystGrowth*100).toFixed(1)}%</span>}
           </div>
         )}
       </div>
@@ -2413,9 +2445,7 @@ function RdcfEntryZoneCard({ rdcf, currentPrice, hist }) {
 }
 
 // ─── TAX-AWARE P&L ──────────────────────────────────────────
-function TaxAwareCard({ currentPrice, ticker }) {
-  const [basis, setBasis]   = useState('');
-  const [buyDate, setBuyDate] = useState('');
+function TaxAwareCard({ currentPrice, ticker, basis, setBasis, buyDate, setBuyDate }) {
   if (!ticker) return null;
 
   const price   = parseFloat(basis);
@@ -3651,7 +3681,7 @@ function CarteraKMatrix({ activeQuadrant, onSelect }) {
 
 // ─── CAPITAL GAINS BUDGET TRACKER ────────────────────────────
 const CG_STORE_KEY = 'sl_cg_positions';
-function CapGainsBudgetPanel() {
+function CapGainsBudgetPanel({ activeTicker, activePrice }) {
   const [positions, setPositions] = useState(() => {
     try { return JSON.parse(localStorage.getItem(CG_STORE_KEY) || '[]'); }
     catch { return []; }
@@ -3661,6 +3691,12 @@ function CapGainsBudgetPanel() {
   const [costB,    setCostB]    = useState('');
   const [buyDate,  setBuyDate]  = useState('');
   const [curPx,    setCurPx]    = useState('');
+
+  // Auto-fill price when user types the active ticker
+  useEffect(()=>{
+    if(activeTicker && sym.toUpperCase()===activeTicker.toUpperCase() && activePrice>0 && curPx==='')
+      setCurPx(String(activePrice.toFixed(2)));
+  },[sym,activeTicker,activePrice]);
 
   const save = (ps) => {
     setPositions(ps);
@@ -4549,6 +4585,8 @@ function App() {
   const [scoreHistory,  setScoreHistory]  = useState([]);   // [{date, ic}] histórico IC Score del ticker (lectura sl_analyses, $0)
   const [reverseDcf,    setReverseDcf]    = useState(null);  // Reverse DCF result (gated por SL_FLAGS.REVERSE_DCF_ENABLED; null si flag off)
   const [watchlist,     setWatchlist]     = useState([]);    // [{ticker,analysis_date,score_total,...}] — lectura sl_analyses al arranque y post-análisis
+  const [taxBasis,      setTaxBasis]      = useState('');    // TaxAwareCard — persists between tab changes
+  const [taxBuyDate,    setTaxBuyDate]    = useState('');
 
   const scores    = useMemo(()=>calcScores(met,rat,hist,stmts),[met,rat,hist,stmts]);
   const intlMeta  = useMemo(()=>parseIntlTicker(ticker),[ticker]);
@@ -4749,6 +4787,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setAiVerdict(null); setEarnCalendar(null); setEarnSurprise([]); setInsiderTxns([]); setShortInt(null);
     setInstHolders([]); setCongressTrades([]);
     setSectorHist([]); setSectorEtfSym('');
+    setTaxBasis(''); setTaxBuyDate('');
     setTranscriptSum(null); setTranscriptError(null); setTranscriptLoading(false);
     setPeers([]); setPeerMetrics({}); setCfStmts([]); setBalanceSheets([]); setHistoricalDivs([]);
     setSpyHistory([]);
@@ -5901,7 +5940,7 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
               {/* ── SMART MONEY TAB ── */}
               {activeTab==='Smart Money'&&(
                 <div style={{display:'flex',flexDirection:'column',gap:24}}>
-                  <CapGainsBudgetPanel/>
+                  <CapGainsBudgetPanel activeTicker={ticker} activePrice={quote?.price}/>
                   {autoLoaded
                     ? <>
                         <InsiderTrackerPanel supabase={sb}/>
@@ -5985,13 +6024,13 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
                   <>
                     {earnSurprise.length>0&&<EarningsSurpriseChart data={earnSurprise}/>}
                     {insiderTxns.length>0&&<InsiderTable data={insiderTxns}/>}
-                    {instHolders.length>0&&<InstitutionalHoldersPanel holders={instHolders}/>}
+                    {instHolders.length>0&&<InstitutionalHoldersPanel holders={instHolders} sharesOut={quote?.sharesOutstanding??prof?.sharesOutstanding}/>}
                     {congressTrades.length>0&&<CongressionalTradesPanel trades={congressTrades}/>}
                   </>
 
                   {sectorHist.length>0&&<SectorRelStrengthCard tickerHist={hist} sectorHist={sectorHist} sectorEtf={sectorEtfSym} sector={prof?.sector} ticker={ticker}/>}
 
-                  <TaxAwareCard currentPrice={quote?.price} ticker={ticker}/>
+                  <TaxAwareCard currentPrice={quote?.price} ticker={ticker} basis={taxBasis} setBasis={setTaxBasis} buyDate={taxBuyDate} setBuyDate={setTaxBuyDate}/>
 
                   <div style={{background:'#1c1d26',border:'1px solid #24262f',borderRadius:8,padding:'14px 18px'}}>
                     <div style={{fontSize:10,fontWeight:700,color:'#787a83',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}}>SEC EDGAR Filings</div>

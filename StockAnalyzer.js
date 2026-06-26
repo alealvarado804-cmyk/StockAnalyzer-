@@ -750,7 +750,8 @@ function computeVolumeProfile(data, numBuckets = 24) {
   const bSz = range / numBuckets;
   const buckets = new Array(numBuckets).fill(0);
   data.forEach(d => {
-    buckets[Math.min(numBuckets - 1, Math.floor((d.close - minP) / bSz))] += d.volume || 0;
+    const tp = ((d.high || d.close) + (d.low || d.close) + d.close) / 3;
+    buckets[Math.max(0, Math.min(numBuckets - 1, Math.floor((tp - minP) / bSz)))] += d.volume || 0;
   });
   const maxVol = Math.max(...buckets, 1);
   const pocIdx = buckets.indexOf(maxVol);
@@ -2365,7 +2366,15 @@ function PriceChart({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setEmaOn(v => !v),
     style: btnS(emaOn, '#eca851')
-  }, emaOn ? '●' : '○', " EMA"), /*#__PURE__*/React.createElement("button", {
+  }, emaOn ? '●' : '○', " EMA"), emaOn && sorted.length < 55 && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 8,
+      color: '#787a83',
+      border: '1px solid #33353f',
+      borderRadius: 3,
+      padding: '1px 5px'
+    }
+  }, "EMA55 necesita \u226555 barras totales"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSqzOn(v => !v),
     style: btnS(sqzOn, '#968ff7')
   }, sqzOn ? '●' : '○', " SQZ"), /*#__PURE__*/React.createElement("button", {
@@ -4290,13 +4299,16 @@ function InsiderTable({
 
 // ─── INSTITUTIONAL HOLDERS ───────────────────────────────────
 function InstitutionalHoldersPanel({
-  holders
+  holders,
+  sharesOut
 }) {
   if (!holders || holders.length === 0) return null;
   const top = holders.slice(0, 10);
   const increasing = top.filter(h => (h.change || 0) > 0).length;
   const bias = top.length ? increasing / top.length : 0.5;
   const biasColor = bias >= 0.6 ? '#5ac576' : bias <= 0.4 ? '#eb6459' : '#b0b2be';
+  const totalHeld = holders.reduce((s, h) => s + (h.shares || 0), 0);
+  const pctFloat = sharesOut > 0 && totalHeld > 0 ? totalHeld / sharesOut * 100 : null;
   return /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#1c1d26',
@@ -4309,7 +4321,9 @@ function InstitutionalHoldersPanel({
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 10
+      marginBottom: 10,
+      flexWrap: 'wrap',
+      gap: 6
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4321,11 +4335,24 @@ function InstitutionalHoldersPanel({
     }
   }, "Institutional Holders"), /*#__PURE__*/React.createElement("div", {
     style: {
+      display: 'flex',
+      gap: 10,
+      alignItems: 'center'
+    }
+  }, pctFloat != null && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#968ff7',
+      fontFamily: 'Geist Mono,monospace',
+      fontWeight: 600
+    }
+  }, pctFloat.toFixed(1), "% float"), /*#__PURE__*/React.createElement("div", {
+    style: {
       fontSize: 11,
       color: biasColor,
       fontWeight: 600
     }
-  }, increasing, "/", top.length, " increasing \u2191")), /*#__PURE__*/React.createElement("div", {
+  }, increasing, "/", top.length, " increasing \u2191"))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
@@ -4547,6 +4574,9 @@ function SectorRelStrengthCard({
   if (!rows.length) return null;
   const fPct = v => v == null ? '–' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   const col = v => v == null ? '#787a83' : v >= 0 ? '#5ac576' : '#eb6459';
+  const tR1Y = ret(tickerHist, 252);
+  const sR1Y = ret(sectorHist, 252);
+  const impliedBeta = tR1Y != null && sR1Y != null && Math.abs(sR1Y) > 0.1 ? parseFloat((tR1Y / sR1Y).toFixed(2)) : null;
   return /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#1c1d26',
@@ -4631,14 +4661,41 @@ function SectorRelStrengthCard({
       textAlign: 'right',
       fontFamily: 'Geist Mono,monospace'
     }
-  }, rel != null ? (rel >= 0 ? '↑' : '↓') + Math.abs(rel).toFixed(1) + '%' : '–')))), /*#__PURE__*/React.createElement("div", {
+  }, rel != null ? (rel >= 0 ? '↑' : '↓') + Math.abs(rel).toFixed(1) + '%' : '–')))), impliedBeta != null && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 8,
+      paddingTop: 8,
+      borderTop: '1px solid #24262f'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#787a83',
+      textTransform: 'uppercase'
+    }
+  }, "Beta impl\xEDcita vs sector (1Y)"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      fontFamily: 'Geist Mono,monospace',
+      color: impliedBeta > 1.5 ? '#eb6459' : impliedBeta > 1.1 ? '#eca851' : impliedBeta < 0.7 ? '#968ff7' : '#5ac576'
+    }
+  }, impliedBeta.toFixed(2), "x"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#33353f'
+    }
+  }, impliedBeta > 1.5 ? 'alta volatilidad' : impliedBeta > 1.1 ? 'amplifica sector' : impliedBeta < 0.7 ? 'defensivo' : 'en línea con sector')), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
       color: '#33353f',
       marginTop: 8,
       fontStyle: 'italic'
     }
-  }, "Alpha = ticker \u2212 sector ETF \xB7 datos EOD FMP"));
+  }, "Alpha = ticker \u2212 sector ETF \xB7 Beta impl\xEDcita = retorno ticker / retorno ETF (1Y) \xB7 datos EOD FMP"));
 }
 
 // ─── RDCF ENTRY ZONE ─────────────────────────────────────────
@@ -4835,7 +4892,7 @@ function RdcfEntryZoneCard({
       color: aboveE50 ? '#5ac576' : '#eb6459',
       fontFamily: 'Geist Mono,monospace'
     }
-  }, f$(ema50), " ", aboveE50 ? '↑' : '↓')), rdcf.revCagr != null && /*#__PURE__*/React.createElement("div", {
+  }, f$(ema50), " ", aboveE50 ? '↑' : '↓')), rdcf.impliedG1 != null && /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#15151c',
       borderRadius: 6,
@@ -4846,11 +4903,29 @@ function RdcfEntryZoneCard({
       fontSize: 9,
       color: '#787a83'
     }
-  }, "Crecimiento impl\xEDcito "), /*#__PURE__*/React.createElement("span", {
+  }, "g\u2081 impl\xEDcito (a\xF1o 1) "), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
       fontWeight: 700,
       color: '#968ff7',
+      fontFamily: 'Geist Mono,monospace'
+    }
+  }, (rdcf.impliedG1 * 100).toFixed(1), "%")), rdcf.revCagr != null && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#15151c',
+      borderRadius: 6,
+      padding: '6px 10px'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#787a83'
+    }
+  }, "CAGR impl\xEDcito (", rdcf.last?.horizon ?? 5, "a) "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      color: '#a5b4fc',
       fontFamily: 'Geist Mono,monospace'
     }
   }, (rdcf.revCagr * 100).toFixed(1), "%"), rdcf.analystGrowth != null && /*#__PURE__*/React.createElement("span", {
@@ -4858,7 +4933,7 @@ function RdcfEntryZoneCard({
       fontSize: 9,
       color: '#787a83'
     }
-  }, " (consenso ", (rdcf.analystGrowth * 100).toFixed(1), "%)"))), /*#__PURE__*/React.createElement("div", {
+  }, " \xB7 consenso ", (rdcf.analystGrowth * 100).toFixed(1), "%"))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: sigColor + '18',
       border: `1px solid ${sigColor}44`,
@@ -4888,10 +4963,12 @@ function RdcfEntryZoneCard({
 // ─── TAX-AWARE P&L ──────────────────────────────────────────
 function TaxAwareCard({
   currentPrice,
-  ticker
+  ticker,
+  basis,
+  setBasis,
+  buyDate,
+  setBuyDate
 }) {
-  const [basis, setBasis] = useState('');
-  const [buyDate, setBuyDate] = useState('');
   if (!ticker) return null;
   const price = parseFloat(basis);
   const dateBuy = buyDate ? new Date(buyDate + 'T12:00:00') : null;
@@ -7744,7 +7821,10 @@ function CarteraKMatrix({
 
 // ─── CAPITAL GAINS BUDGET TRACKER ────────────────────────────
 const CG_STORE_KEY = 'sl_cg_positions';
-function CapGainsBudgetPanel() {
+function CapGainsBudgetPanel({
+  activeTicker,
+  activePrice
+}) {
   const [positions, setPositions] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(CG_STORE_KEY) || '[]');
@@ -7757,6 +7837,11 @@ function CapGainsBudgetPanel() {
   const [costB, setCostB] = useState('');
   const [buyDate, setBuyDate] = useState('');
   const [curPx, setCurPx] = useState('');
+
+  // Auto-fill price when user types the active ticker
+  useEffect(() => {
+    if (activeTicker && sym.toUpperCase() === activeTicker.toUpperCase() && activePrice > 0 && curPx === '') setCurPx(String(activePrice.toFixed(2)));
+  }, [sym, activeTicker, activePrice]);
   const save = ps => {
     setPositions(ps);
     try {
@@ -9649,7 +9734,8 @@ function App() {
   const [scoreHistory, setScoreHistory] = useState([]); // [{date, ic}] histórico IC Score del ticker (lectura sl_analyses, $0)
   const [reverseDcf, setReverseDcf] = useState(null); // Reverse DCF result (gated por SL_FLAGS.REVERSE_DCF_ENABLED; null si flag off)
   const [watchlist, setWatchlist] = useState([]); // [{ticker,analysis_date,score_total,...}] — lectura sl_analyses al arranque y post-análisis
-
+  const [taxBasis, setTaxBasis] = useState(''); // TaxAwareCard — persists between tab changes
+  const [taxBuyDate, setTaxBuyDate] = useState('');
   const scores = useMemo(() => calcScores(met, rat, hist, stmts), [met, rat, hist, stmts]);
   const intlMeta = useMemo(() => parseIntlTicker(ticker), [ticker]);
   useEffect(() => {
@@ -9915,6 +10001,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     setCongressTrades([]);
     setSectorHist([]);
     setSectorEtfSym('');
+    setTaxBasis('');
+    setTaxBuyDate('');
     setTranscriptSum(null);
     setTranscriptError(null);
     setTranscriptLoading(false);
@@ -11874,7 +11962,10 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
       flexDirection: 'column',
       gap: 24
     }
-  }, /*#__PURE__*/React.createElement(CapGainsBudgetPanel, null), autoLoaded ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(InsiderTrackerPanel, {
+  }, /*#__PURE__*/React.createElement(CapGainsBudgetPanel, {
+    activeTicker: ticker,
+    activePrice: quote?.price
+  }), autoLoaded ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(InsiderTrackerPanel, {
     supabase: sb
   }), /*#__PURE__*/React.createElement(ConsensusPanel, {
     supabase: sb
@@ -12060,7 +12151,8 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
   }), insiderTxns.length > 0 && /*#__PURE__*/React.createElement(InsiderTable, {
     data: insiderTxns
   }), instHolders.length > 0 && /*#__PURE__*/React.createElement(InstitutionalHoldersPanel, {
-    holders: instHolders
+    holders: instHolders,
+    sharesOut: quote?.sharesOutstanding ?? prof?.sharesOutstanding
   }), congressTrades.length > 0 && /*#__PURE__*/React.createElement(CongressionalTradesPanel, {
     trades: congressTrades
   })), sectorHist.length > 0 && /*#__PURE__*/React.createElement(SectorRelStrengthCard, {
@@ -12071,7 +12163,11 @@ Write 2-3 crisp sentences. No bullet points. Reference specific metrics. End wit
     ticker: ticker
   }), /*#__PURE__*/React.createElement(TaxAwareCard, {
     currentPrice: quote?.price,
-    ticker: ticker
+    ticker: ticker,
+    basis: taxBasis,
+    setBasis: setTaxBasis,
+    buyDate: taxBuyDate,
+    setBuyDate: setTaxBuyDate
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#1c1d26',
