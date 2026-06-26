@@ -2270,7 +2270,7 @@ function PriceChart({
       seg.push(`${px(i).toFixed(1)},${py(v).toFixed(1)}`);
     });
     if (seg.length > 1) segs.push(seg.join(' '));
-    return segs;
+    return segs.length ? segs : null;
   };
   const ema10Pts = emaOn ? emaPts(ema10V) : null;
   const ema55Pts = emaOn ? emaPts(ema55V) : null;
@@ -3117,9 +3117,10 @@ function TLSignalPanel({
   const icR = getRating(icS);
 
   // IC dual gate message
+  const fundamentalsLoaded = scores && (scores.hlth > 0 || scores.growth > 0 || scores.val > 0);
   let gateMsg = '',
     gateColor = '#33353f';
-  if (!scores) {
+  if (!fundamentalsLoaded) {
     gateMsg = 'Analiza el ticker para activar el IC Gate';
   } else if (lS >= 3 && icS >= 65) {
     gateMsg = 'Entrada confirmada — IC Score positivo + 3/4 señales TL LONG alineadas';
@@ -3361,7 +3362,7 @@ function TLSignalPanel({
       color: '#787a83',
       marginTop: 2
     }
-  }, sub)))), scores && /*#__PURE__*/React.createElement("div", {
+  }, sub)))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: gateColor + '14',
       border: `1px solid ${gateColor}30`,
@@ -4486,7 +4487,9 @@ const SECTOR_ETF = {
   'Technology': 'XLK',
   'Healthcare': 'XLV',
   'Consumer Cyclical': 'XLY',
+  'Consumer Discretionary': 'XLY',
   'Consumer Defensive': 'XLP',
+  'Consumer Staples': 'XLP',
   'Energy': 'XLE',
   'Financials': 'XLF',
   'Financial Services': 'XLF',
@@ -4494,7 +4497,8 @@ const SECTOR_ETF = {
   'Utilities': 'XLU',
   'Real Estate': 'XLRE',
   'Communication Services': 'XLC',
-  'Basic Materials': 'XLB'
+  'Basic Materials': 'XLB',
+  'Materials': 'XLB'
 };
 function SectorRelStrengthCard({
   tickerHist,

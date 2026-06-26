@@ -1264,7 +1264,7 @@ function PriceChart({history, ticker, period}) {
       seg.push(`${px(i).toFixed(1)},${py(v).toFixed(1)}`);
     });
     if(seg.length>1) segs.push(seg.join(' '));
-    return segs;
+    return segs.length ? segs : null;
   };
   const ema10Pts = emaOn?emaPts(ema10V):null;
   const ema55Pts = emaOn?emaPts(ema55V):null;
@@ -1659,8 +1659,9 @@ function TLSignalPanel({history, scores, macroTilt}) {
   const icR = getRating(icS);
 
   // IC dual gate message
+  const fundamentalsLoaded = scores && (scores.hlth > 0 || scores.growth > 0 || scores.val > 0);
   let gateMsg='', gateColor='#33353f';
-  if(!scores){gateMsg='Analiza el ticker para activar el IC Gate';}
+  if(!fundamentalsLoaded){gateMsg='Analiza el ticker para activar el IC Gate';}
   else if(lS>=3&&icS>=65){gateMsg='Entrada confirmada — IC Score positivo + 3/4 señales TL LONG alineadas';gateColor='#5ac576';}
   else if(sS>=3&&icS<=35){gateMsg='Entrada SHORT — IC Score AVOID + 3/4 señales TL SHORT alineadas';gateColor='#eb6459';}
   else if(lS>=3&&icS<=35){gateMsg='CONFLICTO — señal TL LONG pero fundamentales AVOID';gateColor='#eca851';}
@@ -1750,8 +1751,8 @@ function TLSignalPanel({history, scores, macroTilt}) {
         </div>
       )}
 
-      {/* IC dual gate */}
-      {scores&&(
+      {/* IC dual gate — always visible; message adapts to whether fundamentals are loaded */}
+      {(
         <div style={{background:gateColor+'14',border:`1px solid ${gateColor}30`,borderRadius:6,padding:'10px 14px',
           display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
           <div style={{display:'flex',gap:10,alignItems:'center',flexShrink:0}}>
@@ -2255,10 +2256,12 @@ function CongressionalTradesPanel({ trades }) {
 
 // ─── SECTOR RELATIVE STRENGTH ────────────────────────────────
 const SECTOR_ETF = {
-  'Technology':'XLK','Healthcare':'XLV','Consumer Cyclical':'XLY',
-  'Consumer Defensive':'XLP','Energy':'XLE','Financials':'XLF',
-  'Financial Services':'XLF','Industrials':'XLI','Utilities':'XLU',
-  'Real Estate':'XLRE','Communication Services':'XLC','Basic Materials':'XLB',
+  'Technology':'XLK','Healthcare':'XLV',
+  'Consumer Cyclical':'XLY','Consumer Discretionary':'XLY',
+  'Consumer Defensive':'XLP','Consumer Staples':'XLP',
+  'Energy':'XLE','Financials':'XLF','Financial Services':'XLF',
+  'Industrials':'XLI','Utilities':'XLU','Real Estate':'XLRE',
+  'Communication Services':'XLC','Basic Materials':'XLB','Materials':'XLB',
 };
 
 function SectorRelStrengthCard({ tickerHist, sectorHist, sectorEtf, sector, ticker }) {
